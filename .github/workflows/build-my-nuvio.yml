@@ -56,12 +56,15 @@ jobs:
           set -euo pipefail
           releases=$(gh api "repos/${UPSTREAM_REPO}/releases?per_page=30")
           # Same rule as the app's updater: drafts ignored, highest version code wins.
-          tag=$(jq -r '
+          best=$(jq -c '
             [ .[] | select(.draft | not)
               | { tag: .tag_name,
                   code: ([ (.body // "") | capture("nuvio-fork-version-code: (?<c>[0-9]+)") | .c ][0] // "0" | tonumber) } ]
-            | sort_by(.code) | last | .tag // empty' <<<"$releases")
+            | sort_by(.code) | last // {}' <<<"$releases")
+          tag=$(jq -r '.tag // empty' <<<"$best")
+          code=$(jq -r '.code // 0' <<<"$best")
           if [ -z "$tag" ]; then echo "::error::Could not find any Nuvio Arc release."; exit 1; fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
 
           key="${tag}@$(git -C mine rev-parse HEAD)"
           last_key=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=1" --jq '.[0].body // ""' \
@@ -100,10 +103,11 @@ jobs:
         working-directory: arc
         run: |
           set -euo pipefail
-          python3 - "$GITHUB_REPOSITORY" "${{ github.run_number }}" "$APP_LABEL" <<'PY'
+          python3 - "$GITHUB_REPOSITORY" "${{ github.run_number }}" "$APP_LABEL" "${{ steps.arc.outputs.tag }}" "${{ steps.arc.outputs.code }}" <<'PY'
           import pathlib, re, sys
 
           repo_full, run, label = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+          arc_tag, arc_code = sys.argv[4], int(sys.argv[5] or 0)
           owner, repo = repo_full.split("/", 1)
           gradle = pathlib.Path("app/build.gradle.kts")
           s = gradle.read_text()
@@ -119,15 +123,19 @@ jobs:
               sub(rf'^(\s*)buildConfigField\("String",\s*"{name}",.*$',
                   lambda m, n=name, v=value: f'{m.group(1)}buildConfigField("String", "{n}", "\\"{v}\\"")', name)
 
-          # Version: Arc's version + a build number, always higher than the previous build.
-          m = re.search(r'^\s*versionCode = (\d+)\s*$', s, re.M)
-          n = re.search(r'^\s*versionName = "([^"]+)"\s*$', s, re.M)
-          if not m or not n:
+          # Version: Arc's release version + a build number, always higher than the previous build.
+          # Arc's release number comes from its release notes (what its updater reads);
+          # the number written in the build file is only a fallback.
+          m = re.search(r'^\s*versionCode = (.+)$', s, re.M)
+          if not m:
               sys.exit("Arc's build file changed: could not read its version.")
-          code = int(m.group(1)) * 1000 + run % 1000
-          name = n.group(1) + (".mod." if "-" in n.group(1) else "-mod.") + str(run)
-          sub(r'^(\s*)versionCode = \d+\s*$', lambda x: f'{x.group(1)}versionCode = {code}', "versionCode")
-          sub(r'^(\s*)versionName = "[^"]+"\s*$', lambda x: f'{x.group(1)}versionName = "{name}"', "versionName")
+          base = arc_code or int(re.findall(r'\d+', m.group(1))[-1])
+          code = base * 1000 + run % 1000
+          if code > 2_100_000_000:
+              sys.exit(f"Arc's version number ({base}) is too large for this numbering scheme.")
+          name = arc_tag + (".mod." if "-" in arc_tag else "-mod.") + str(run)
+          sub(r'^(\s*)versionCode = .+$', lambda x: f'{x.group(1)}versionCode = {code}', "versionCode")
+          sub(r'^(\s*)versionName = .+$', lambda x: f'{x.group(1)}versionName = "{name}"', "versionName")
 
           if "nuvioAppIdSuffix" not in s:
               sys.exit("Arc's build file changed: the package suffix option is gone, refusing to build.")
