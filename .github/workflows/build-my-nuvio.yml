@@ -28,7 +28,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  UPSTREAM_REPO: ysosrs123/Nuvio-Arc
+  UPSTREAM_REPO: ysosrs123/NuvioTV-Fork
   APP_ID_SUFFIX: .mod
   EXPECTED_PACKAGE: com.nuvio.tv.test.mod
   APP_LABEL: Nuvio Mod
@@ -40,7 +40,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Check out my changes
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: mine
           sparse-checkout: mod
@@ -175,14 +175,14 @@ jobs:
 
       - name: Set up Java
         if: steps.arc.outputs.skip == 'false'
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Gradle
         if: steps.arc.outputs.skip == 'false'
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Build
         if: steps.arc.outputs.skip == 'false'
