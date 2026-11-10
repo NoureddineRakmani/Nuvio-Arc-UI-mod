@@ -1,0 +1,216 @@
+name: Build my Nuvio
+
+# What this does, every 6 hours (or when I push a change, or press "Run workflow"):
+#   1. Finds the newest Nuvio Arc release.
+#   2. Downloads Arc's source for that release and applies my UI changes from mod/patches/.
+#   3. Builds it as a SEPARATE app: "Nuvio Mod" (package com.nuvio.tv.test.mod),
+#      signed with my own key, with its built-in updater pointed at this repository.
+#   4. Publishes it as a release here, so the app updates itself on the TV.
+# It never builds anything that could replace the official Nuvio (com.nuvio.tv)
+# or Nuvio Arc (com.nuvio.tv.test): the build stops if the package name is wrong.
+
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "mod/**"
+      - ".github/workflows/build-my-nuvio.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-my-nuvio
+  cancel-in-progress: false
+
+env:
+  UPSTREAM_REPO: ysosrs123/Nuvio-Arc
+  APP_ID_SUFFIX: .mod
+  EXPECTED_PACKAGE: com.nuvio.tv.test.mod
+  APP_LABEL: Nuvio Mod
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Check out my changes
+        uses: actions/checkout@v4
+        with:
+          path: mine
+          sparse-checkout: mod
+
+      - name: Find the newest Nuvio Arc release
+        id: arc
+        run: |
+          set -euo pipefail
+          releases=$(gh api "repos/${UPSTREAM_REPO}/releases?per_page=30")
+          # Same rule as the app's updater: drafts ignored, highest version code wins.
+          tag=$(jq -r '
+            [ .[] | select(.draft | not)
+              | { tag: .tag_name,
+                  code: ([ (.body // "") | capture("nuvio-fork-version-code: (?<c>[0-9]+)") | .c ][0] // "0" | tonumber) } ]
+            | sort_by(.code) | last | .tag // empty' <<<"$releases")
+          if [ -z "$tag" ]; then echo "::error::Could not find any Nuvio Arc release."; exit 1; fi
+
+          key="${tag}@$(git -C mine rev-parse HEAD)"
+          last_key=$(gh api "repos/${GITHUB_REPOSITORY}/releases?per_page=1" --jq '.[0].body // ""' \
+            | grep -oP 'mod-key: \K\S+' || true)
+
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+          if [ "$key" = "$last_key" ] && [ "$GITHUB_EVENT_NAME" = "schedule" ]; then
+            echo "Nothing new since the last build ($key). Stopping here."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Building Arc $tag with my changes."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download Arc's source for that release
+        if: steps.arc.outputs.skip == 'false'
+        run: git clone --depth 1 --branch "${{ steps.arc.outputs.tag }}" "https://github.com/${UPSTREAM_REPO}.git" arc
+
+      - name: Apply my changes (mod/patches)
+        if: steps.arc.outputs.skip == 'false'
+        working-directory: arc
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          for p in ../mine/mod/patches/*.patch; do
+            echo "Applying $(basename "$p")"
+            if ! git apply --3way --whitespace=nowarn "$p"; then
+              echo "::error::$(basename "$p") no longer fits Arc ${{ steps.arc.outputs.tag }}. Ask Claude to update it."
+              exit 1
+            fi
+          done
+
+      - name: Turn it into a separate "Nuvio Mod" app
+        if: steps.arc.outputs.skip == 'false'
+        working-directory: arc
+        run: |
+          set -euo pipefail
+          python3 - "$GITHUB_REPOSITORY" "${{ github.run_number }}" "$APP_LABEL" <<'PY'
+          import pathlib, re, sys
+
+          repo_full, run, label = sys.argv[1], int(sys.argv[2]), sys.argv[3]
+          owner, repo = repo_full.split("/", 1)
+          gradle = pathlib.Path("app/build.gradle.kts")
+          s = gradle.read_text()
+
+          def sub(pattern, repl, what):
+              global s
+              s, n = re.subn(pattern, repl, s, flags=re.M)
+              if n != 1:
+                  sys.exit(f"Arc's build file changed: could not set {what} (matched {n} times).")
+
+          # The in-app updater must follow this repository, never Arc's.
+          for name, value in (("GITHUB_OWNER", owner), ("GITHUB_REPO", repo), ("GITHUB_REPO_NEW_NAME", repo)):
+              sub(rf'^(\s*)buildConfigField\("String",\s*"{name}",.*$',
+                  lambda m, n=name, v=value: f'{m.group(1)}buildConfigField("String", "{n}", "\\"{v}\\"")', name)
+
+          # Version: Arc's version + a build number, always higher than the previous build.
+          m = re.search(r'^\s*versionCode = (\d+)\s*$', s, re.M)
+          n = re.search(r'^\s*versionName = "([^"]+)"\s*$', s, re.M)
+          if not m or not n:
+              sys.exit("Arc's build file changed: could not read its version.")
+          code = int(m.group(1)) * 1000 + run % 1000
+          name = n.group(1) + (".mod." if "-" in n.group(1) else "-mod.") + str(run)
+          sub(r'^(\s*)versionCode = \d+\s*$', lambda x: f'{x.group(1)}versionCode = {code}', "versionCode")
+          sub(r'^(\s*)versionName = "[^"]+"\s*$', lambda x: f'{x.group(1)}versionName = "{name}"', "versionName")
+
+          if "nuvioAppIdSuffix" not in s:
+              sys.exit("Arc's build file changed: the package suffix option is gone, refusing to build.")
+          gradle.write_text(s)
+
+          # Launcher name, in every language.
+          count = 0
+          for f in pathlib.Path("app/src/main/res").glob("values*/strings.xml"):
+              t = f.read_text(encoding="utf-8")
+              t2, k = re.subn(r'(<string name="app_name"[^>]*>)[^<]*(</string>)', rf'\g<1>{label}\g<2>', t)
+              if k:
+                  f.write_text(t2, encoding="utf-8")
+                  count += k
+          if not count:
+              sys.exit("Could not find the app name to rename.")
+
+          with open(pathlib.Path.home() / "mod.env", "w") as out:
+              out.write(f"MOD_VERSION={name}\nMOD_CODE={code}\n")
+          print(f"Nuvio Mod {name} (code {code}), updates from {owner}/{repo}")
+          PY
+          cat ~/mod.env >> "$GITHUB_ENV"
+
+      - name: Signing key and app settings
+        if: steps.arc.outputs.skip == 'false'
+        working-directory: arc
+        env:
+          MOD_KEYSTORE_BASE64: ${{ secrets.MOD_KEYSTORE_BASE64 }}
+          MOD_KEYSTORE_PASSWORD: ${{ secrets.MOD_KEYSTORE_PASSWORD }}
+          MOD_LOCAL_PROPERTIES: ${{ secrets.MOD_LOCAL_PROPERTIES }}
+        run: |
+          set -euo pipefail
+          if [ -z "$MOD_KEYSTORE_BASE64" ] || [ -z "$MOD_KEYSTORE_PASSWORD" ]; then
+            echo "::error::The signing key secrets (MOD_KEYSTORE_BASE64, MOD_KEYSTORE_PASSWORD) are not set yet."
+            exit 1
+          fi
+          printf '%s' "$MOD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nuvio-mod.p12"
+          printf '%s\n' "$MOD_LOCAL_PROPERTIES" > local.properties
+          touch local.dev.properties
+          {
+            echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/nuvio-mod.p12"
+            echo "NUVIO_RELEASE_KEY_ALIAS=nuvio-mod"
+            echo "NUVIO_RELEASE_KEY_PASSWORD=$MOD_KEYSTORE_PASSWORD"
+            echo "NUVIO_RELEASE_STORE_PASSWORD=$MOD_KEYSTORE_PASSWORD"
+          } >> "$GITHUB_ENV"
+
+      - name: Set up Java
+        if: steps.arc.outputs.skip == 'false'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        if: steps.arc.outputs.skip == 'false'
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        if: steps.arc.outputs.skip == 'false'
+        working-directory: arc
+        run: ./gradlew :app:assembleFullRelease "-PnuvioAppIdSuffix=${APP_ID_SUFFIX}" --stacktrace
+
+      - name: Safety check (must not replace Nuvio or Nuvio Arc)
+        if: steps.arc.outputs.skip == 'false'
+        working-directory: arc
+        run: |
+          set -euo pipefail
+          aapt2=$(ls "$ANDROID_HOME"/build-tools/*/aapt2 | sort -V | tail -1)
+          shopt -s nullglob
+          apks=(app/build/outputs/apk/full/release/*.apk)
+          [ ${#apks[@]} -gt 0 ] || { echo "::error::No APK was built."; exit 1; }
+          for apk in "${apks[@]}"; do
+            pkg=$("$aapt2" dump packagename "$apk")
+            echo "$(basename "$apk"): $pkg"
+            if [ "$pkg" != "$EXPECTED_PACKAGE" ]; then
+              echo "::error::$(basename "$apk") has package $pkg instead of $EXPECTED_PACKAGE. Not publishing."
+              exit 1
+            fi
+          done
+
+      - name: Publish the release
+        if: steps.arc.outputs.skip == 'false'
+        working-directory: arc
+        run: |
+          set -euo pipefail
+          printf 'Nuvio Arc %s + my changes.\n\n<!-- nuvio-fork-version-code: %s -->\n<!-- mod-key: %s -->\n' \
+            "${{ steps.arc.outputs.tag }}" "$MOD_CODE" "${{ steps.arc.outputs.key }}" > notes.md
+          gh release create "$MOD_VERSION" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Nuvio Mod $MOD_VERSION" \
+            --notes-file notes.md \
+            app/build/outputs/apk/full/release/*.apk
