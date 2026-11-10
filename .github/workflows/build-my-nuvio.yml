@@ -21,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: build-my-nuvio
@@ -43,6 +44,11 @@ jobs:
         with:
           path: mine
           sparse-checkout: mod
+
+      - name: Keep the 6-hour schedule switched on
+        # GitHub turns off scheduled runs after 60 days without commits; this resets that timer.
+        continue-on-error: true
+        run: gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/build-my-nuvio.yml/enable"
 
       - name: Find the newest Nuvio Arc release
         id: arc
