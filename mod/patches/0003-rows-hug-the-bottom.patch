@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 647f0e4..1d552cc 100644
+index 647f0e4..fdb323c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 @@ -1031,14 +1031,14 @@ fun ModernHomeContent(
@@ -8,7 +8,7 @@ index 647f0e4..1d552cc 100644
              val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
 -                val topInsetPx = with(localDensity) { MODERN_ROW_HEADER_FOCUS_INSET.toPx() }
 +                // Nuvio Mod: bring the focused card's bottom edge to the bottom of the rows area.
-+                val bottomRoomPx = with(localDensity) { 8.dp.toPx() }
++                val bottomRoomPx = with(localDensity) { MODERN_ROW_CARD_BOTTOM_ROOM.toPx() }
                  @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
                  object : BringIntoViewSpec {
                      override val scrollAnimationSpec: AnimationSpec<Float> = defaultBringIntoViewSpec.scrollAnimationSpec
@@ -21,8 +21,34 @@ index 647f0e4..1d552cc 100644
                          if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
                          return distance
                      }
+@@ -1119,9 +1119,24 @@ fun ModernHomeContent(
+             val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
+ 
+             val foregroundModifier = Modifier.sidebarPageContent()
+-            val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight, screenHeight, foregroundModifier) {
++            // Nuvio Mod: the title/description block sits just above the current row. Rows with
++            // shorter cards (continue watching, landscape) leave room, so the block slides down.
++            val heroRowIsWide by remember {
++                derivedStateOf {
++                    val key = activeRowKey.value
++                    key == MODERN_CONTINUE_WATCHING_ROW_KEY || key == MODERN_UPCOMING_ROW_KEY
++                }
++            }
++            val heroTextDropTarget = (tallestRowCardHeight - when {
++                heroRowIsWide -> continueWatchingCardHeight
++                useLandscapePosters -> landscapeCatalogCardHeight
++                else -> portraitCatalogCardHeight
++            }).coerceAtLeast(0.dp)
++            val heroTextDrop = androidx.compose.animation.core.animateDpAsState(heroTextDropTarget, label = "modHeroTextDrop")
++            val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight, screenHeight, foregroundModifier, heroTextDrop) {
+                 foregroundModifier
+                     .align(Alignment.BottomStart)
++                    .offset { androidx.compose.ui.unit.IntOffset(0, heroTextDrop.value.roundToPx()) }
+                     .padding(
+                         start = rowHorizontalPadding,
+                         end = NuvioTheme.spacing.xxxl,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
-index 1d0abdc..ca48682 100644
+index 1d0abdc..f408d9c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 @@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -53,7 +79,7 @@ index 1d0abdc..ca48682 100644
 +                // Nuvio Mod: every row takes the full height of the rows area and sits at its bottom,
 +                // so short (landscape) cards hug the bottom of the screen like tall (portrait) ones.
 +                Box(
-+                    modifier = Modifier.fillMaxWidth().heightIn(min = rowsViewportHeight - 8.dp),
++                    modifier = Modifier.fillMaxWidth().heightIn(min = rowsViewportHeight - MODERN_ROW_CARD_BOTTOM_ROOM),
 +                    contentAlignment = Alignment.BottomStart
 +                ) {
                  androidx.compose.runtime.CompositionLocalProvider(
