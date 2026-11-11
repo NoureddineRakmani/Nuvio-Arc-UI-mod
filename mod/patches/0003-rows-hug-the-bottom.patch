@@ -1,0 +1,69 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
+index 647f0e4..1d552cc 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
+@@ -1031,14 +1031,14 @@ fun ModernHomeContent(
+                     .coerceAtMost(screenHeight)
+             }
+             val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
+-                val topInsetPx = with(localDensity) { MODERN_ROW_HEADER_FOCUS_INSET.toPx() }
++                // Nuvio Mod: bring the focused card's bottom edge to the bottom of the rows area.
++                val bottomRoomPx = with(localDensity) { 8.dp.toPx() }
+                 @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+                 object : BringIntoViewSpec {
+                     override val scrollAnimationSpec: AnimationSpec<Float> = defaultBringIntoViewSpec.scrollAnimationSpec
+                     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+-                        val currentLeadingEdge = offset
+-                        if (abs(currentLeadingEdge - topInsetPx) < 1f) return 0f
+-                        val distance = currentLeadingEdge - topInsetPx
++                        val distance = (offset + size) - (containerSize - bottomRoomPx)
++                        if (abs(distance) < 1f) return 0f
+                         if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
+                         return distance
+                     }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+index 1d0abdc..ca48682 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+@@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.PaddingValues
+ import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.heightIn
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.LazyListItemInfo
+@@ -582,7 +584,9 @@ internal fun ModernHomeRowsList(
+                     },
+                 ),
+             contentPadding = PaddingValues(bottom = rowsViewportHeight),
+-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
++            // Nuvio Mod: rows are a full viewport apart, so the row above or below never peeks in,
++            // whatever the card shape.
++            verticalArrangement = Arrangement.spacedBy(rowsViewportHeight)
+         ) {
+             itemsIndexed(
+                 items = carouselRows.list,
+@@ -638,6 +642,12 @@ internal fun ModernHomeRowsList(
+                         }
+                     }
+                 }
++                // Nuvio Mod: every row takes the full height of the rows area and sits at its bottom,
++                // so short (landscape) cards hug the bottom of the screen like tall (portrait) ones.
++                Box(
++                    modifier = Modifier.fillMaxWidth().heightIn(min = rowsViewportHeight - 8.dp),
++                    contentAlignment = Alignment.BottomStart
++                ) {
+                 androidx.compose.runtime.CompositionLocalProvider(
+                     com.nuvio.tv.core.image.LocalHomePosterPriority provides
+                         com.nuvio.tv.core.image.HomePosterPriority(imageViewport, rowIndex)
+@@ -701,6 +711,7 @@ internal fun ModernHomeRowsList(
+                     }
+                 )
+                 }
++                }
+             }
+         }
+     }
