@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 647f0e4..bf60bc7 100644
+index 647f0e4..20db722 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 @@ -1030,15 +1030,20 @@ fun ModernHomeContent(
@@ -27,7 +27,17 @@ index 647f0e4..bf60bc7 100644
                          if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
                          return distance
                      }
-@@ -1119,9 +1124,26 @@ fun ModernHomeContent(
+@@ -1110,7 +1115,8 @@ fun ModernHomeContent(
+             // Fade content rows when ANY hero media (catalog trailer or collection
+             // hero video) is playing in fullscreen — not just catalog trailers.
+             val trailerContentAlphaState = animateFloatAsState(
+-                targetValue = if (trailerPlaybackTarget != FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW && fullScreenBackdropUpdated && (shouldPlayCatalogHeroTrailerUpdated || shouldPlayCollectionHeroVideoUpdated) && heroTrailerFirstFrameRenderedUpdated) 0f else 1f,
++                // Nuvio Mod: trailers play in the background; the row stays visible.
++                targetValue = 1f,
+                 animationSpec = tween(durationMillis = 480),
+                 label = "trailerContentFade"
+             )
+@@ -1119,9 +1125,26 @@ fun ModernHomeContent(
              val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
  
              val foregroundModifier = Modifier.sidebarPageContent()
@@ -55,7 +65,7 @@ index 647f0e4..bf60bc7 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1135,9 +1157,10 @@ fun ModernHomeContent(
+@@ -1135,9 +1158,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -69,6 +79,22 @@ index 647f0e4..bf60bc7 100644
              }
              HeroTitleBlock(
                  previewProvider = { heroSceneStateLambda().preview },
+@@ -1147,13 +1171,8 @@ fun ModernHomeContent(
+                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                 mdbListShowOnHero = uiState.mdbListShowOnHero,
+                 mdbListRatingOrder = uiState.mdbListRatingOrder,
+-                trailerPlaying = {
+-                    if (isRapidHorizontalNav.value) false
+-                    else {
+-                        val state = heroSceneStateLambda()
+-                        !state.featheredTrailer && state.fullScreenBackdrop && shouldPlayTrailerLambda() && heroTrailerRenderedLambda()
+-                    }
+-                },
++                // Nuvio Mod: trailers play in the background; title and description stay visible.
++                trailerPlaying = { false },
+                 descriptionMaxLines = heroDescriptionMaxLines,
+                 descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
+                 modifier = heroMetadataModifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 index 1d0abdc..f408d9c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt

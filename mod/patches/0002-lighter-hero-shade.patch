@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index b23ef0d..79783d5 100644
+index b23ef0d..c7bc1e8 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -285,7 +285,8 @@ internal fun ModernHeroMediaLayer(
@@ -12,7 +12,13 @@ index b23ef0d..79783d5 100644
  
  @Composable
  internal fun ModernHeroGradientLayer(
-@@ -308,7 +309,7 @@ internal fun ModernHeroGradientLayer(
+@@ -304,11 +305,12 @@ internal fun ModernHeroGradientLayer(
+         modifier = modifier
+             .graphicsLayer {
+                 compositingStrategy = CompositingStrategy.Auto
+-                alpha = if (isTrailerPlayingFullScreen()) 0f else 1f
++                // Nuvio Mod: trailers play in the background, so the shade behind the text stays.
++                alpha = 1f
              }
              .drawWithCache {
                  val fullScreen = isFullScreen()
@@ -21,7 +27,7 @@ index b23ef0d..79783d5 100644
                  val menuProgress = if (fullScreen) menuLayout?.let { it.expansion() } ?: 0f else 0f
                  val colorStops = if (fullScreen && menuProgress > 0f) {
                      com.nuvio.tv.ui.v2.components.openMenuScrimStops(
-@@ -340,15 +341,15 @@ internal fun ModernHeroGradientLayer(
+@@ -340,15 +342,15 @@ internal fun ModernHeroGradientLayer(
                  }
  
                  val bottomStripStartY = size.height * if (fullScreen) {
@@ -41,7 +47,7 @@ index b23ef0d..79783d5 100644
                          )
                      } else {
                          arrayOf(
-@@ -372,8 +373,8 @@ internal fun ModernHeroGradientLayer(
+@@ -372,8 +374,8 @@ internal fun ModernHeroGradientLayer(
                          size = Size(horizontalFadeEndX, size.height)
                      )
                      
