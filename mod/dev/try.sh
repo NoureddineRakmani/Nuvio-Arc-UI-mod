@@ -101,6 +101,14 @@ aapt2=$(ls "$SDK"/build-tools/*/aapt2 | sort -V | tail -1)
 pkg=$("$aapt2" dump packagename "$apk")
 [ "$pkg" = "$EXPECTED" ] || fail "Built package is $pkg, expected $EXPECTED. Not installing."
 adb -s "$BOX" install -r "$apk"
+
+# 9. Quick builds skip the slow "optimize" step of real releases, so let the TV box
+#    pre-compile the app instead. Without this it runs noticeably slower than Nuvio Mod.
+if [ "${NUVIO_NO_OPTIMIZE:-}" != 1 ]; then
+  step "Optimizing the app on the TV box (1-3 min)"
+  adb -s "$BOX" shell cmd package compile -m speed -f "$EXPECTED" || echo "Optimizing failed - the app still works, just slower."
+  adb -s "$BOX" shell am force-stop "$EXPECTED" || true
+fi
 adb -s "$BOX" shell monkey -p "$EXPECTED" -c android.intent.category.LEANBACK_LAUNCHER 1 >/dev/null 2>&1 || true
 END=$(date +%s)
 printf '\n\033[1;32mDone in %dm %02ds. "%s" is open on the TV.\033[0m\n' $(( (END-START)/60 )) $(( (END-START)%60 )) "$LABEL"
