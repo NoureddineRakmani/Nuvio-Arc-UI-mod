@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+# Quick local build of Nuvio Mod for trying changes on the TV ("Nuvio Mod Test").
+# This small starter fetches the latest changes, then runs the real script.
+set -euo pipefail
+ROOT="$HOME/nuvio-mod-dev"
+FORK_URL="https://github.com/NoureddineRakmani/Nuvio-Arc-UI-mod.git"
+mkdir -p "$ROOT"
+if [ ! -d "$ROOT/mine/.git" ]; then
+  echo "== Getting my changes (first time)"
+  git clone -q --depth 1 --branch dev --filter=blob:none --sparse "$FORK_URL" "$ROOT/mine"
+  git -C "$ROOT/mine" sparse-checkout set mod
+else
+  git -C "$ROOT/mine" fetch -q --depth 1 origin dev
+  git -C "$ROOT/mine" reset -q --hard FETCH_HEAD
+fi
+cp "$ROOT/mine/mod/dev/nuvio-try" "$HOME/nuvio-try" 2>/dev/null || true
+exec bash "$ROOT/mine/mod/dev/try.sh" "$@"
