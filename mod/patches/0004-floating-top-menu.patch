@@ -1,0 +1,36 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+index b771237..85c9802 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+@@ -91,7 +91,8 @@ fun V2TopNavigation(
+         }
+     }
+     Box(Modifier.fillMaxSize()) {
+-        Box(Modifier.fillMaxSize().padding(top = if (visible) 54.dp else 0.dp)
++        // Nuvio Mod: pages fill the whole screen and the bar floats over them (no band at the top).
++        Box(Modifier.fillMaxSize()
+             .focusRequester(contentFocus).focusRestorer()
+             .focusProperties {
+                 this.onExit = {
+@@ -106,15 +107,15 @@ fun V2TopNavigation(
+         }
+         if (visible) {
+             NuvioGlassSurface(GlassRole.NAVIGATION,
+-                Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 10.dp).fillMaxWidth(),
++                // Nuvio Mod: a centered pill that is only as wide as its content.
++                Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 10.dp),
+                 shape = RoundedCornerShape(12.dp)) {
+-                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp)
++                Row(Modifier.padding(horizontal = 12.dp, vertical = 3.dp)
+                     .onFocusChanged { navFocused = it.hasFocus }.focusGroup(),
+                     verticalAlignment = Alignment.CenterVertically) {
+-                    com.nuvio.tv.ui.v2.components.V2Wordmark(modifier = Modifier.width(116.dp).height(30.dp))
+-                    LazyRow(Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
+-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
+-                        items(items, key = { it.route }) { item ->
++                    Row(Modifier.padding(4.dp),
++                        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                        items.forEach { item ->
+                             val isSelected = item.route == selectedRoute
+                             var itemFocused by remember { mutableStateOf(false) }
+                             Button(onClick = {
