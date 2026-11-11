@@ -1,13 +1,16 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 647f0e4..aaf1221 100644
+index 647f0e4..bf60bc7 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-@@ -1031,14 +1031,14 @@ fun ModernHomeContent(
+@@ -1030,15 +1030,20 @@ fun ModernHomeContent(
+                 (normalHeight * if (trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW) 1.12f else 1f)
                      .coerceAtMost(screenHeight)
              }
++            val heroFocusedCardHeightPx = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
              val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
 -                val topInsetPx = with(localDensity) { MODERN_ROW_HEADER_FOCUS_INSET.toPx() }
 +                // Nuvio Mod: bring the focused card's bottom edge to the bottom of the rows area.
++                // The focused card's real height is remembered so the title block can sit right above any row.
 +                val bottomRoomPx = with(localDensity) { MODERN_ROW_CARD_BOTTOM_ROOM.toPx() }
                  @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
                  object : BringIntoViewSpec {
@@ -16,12 +19,15 @@ index 647f0e4..aaf1221 100644
 -                        val currentLeadingEdge = offset
 -                        if (abs(currentLeadingEdge - topInsetPx) < 1f) return 0f
 -                        val distance = currentLeadingEdge - topInsetPx
++                        if (size > 0f && abs(heroFocusedCardHeightPx.floatValue - size) > 1f) {
++                            heroFocusedCardHeightPx.floatValue = size
++                        }
 +                        val distance = (offset + size) - (containerSize - bottomRoomPx)
 +                        if (abs(distance) < 1f) return 0f
                          if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
                          return distance
                      }
-@@ -1119,9 +1119,24 @@ fun ModernHomeContent(
+@@ -1119,9 +1124,26 @@ fun ModernHomeContent(
              val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
  
              val foregroundModifier = Modifier.sidebarPageContent()
@@ -34,7 +40,9 @@ index 647f0e4..aaf1221 100644
 +                    key == MODERN_CONTINUE_WATCHING_ROW_KEY || key == MODERN_UPCOMING_ROW_KEY
 +                }
 +            }
++            val heroMeasuredCardHeightPx = heroFocusedCardHeightPx.floatValue
 +            val heroTextDropTarget = (tallestRowCardHeight - when {
++                heroMeasuredCardHeightPx > 0f -> with(localDensity) { heroMeasuredCardHeightPx.toDp() }
 +                heroRowIsWide -> continueWatchingCardHeight
 +                useLandscapePosters -> landscapeCatalogCardHeight
 +                else -> portraitCatalogCardHeight
@@ -47,7 +55,7 @@ index 647f0e4..aaf1221 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1135,9 +1150,10 @@ fun ModernHomeContent(
+@@ -1135,9 +1157,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
