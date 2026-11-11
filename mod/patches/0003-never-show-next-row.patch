@@ -1,0 +1,15 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+index 1d0abdc..ed6b590 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+@@ -582,7 +582,9 @@ internal fun ModernHomeRowsList(
+                     },
+                 ),
+             contentPadding = PaddingValues(bottom = rowsViewportHeight),
+-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
++            // Nuvio Mod: rows are a full viewport apart, so the row above or below never peeks in,
++            // whatever the card shape.
++            verticalArrangement = Arrangement.spacedBy(rowsViewportHeight)
+         ) {
+             itemsIndexed(
+                 items = carouselRows.list,
