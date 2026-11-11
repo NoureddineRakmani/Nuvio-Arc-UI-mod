@@ -1,0 +1,15 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+index b771237..f5a7311 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+@@ -91,7 +91,9 @@ fun V2TopNavigation(
+         }
+     }
+     Box(Modifier.fillMaxSize()) {
+-        Box(Modifier.fillMaxSize().padding(top = if (visible) 54.dp else 0.dp)
++        // Nuvio Mod: on Home the picture fills the whole screen and the bar floats over it;
++        // other pages still start below the bar.
++        Box(Modifier.fillMaxSize().padding(top = if (visible && currentRoute != "home") 54.dp else 0.dp)
+             .focusRequester(contentFocus).focusRestorer()
+             .focusProperties {
+                 this.onExit = {
