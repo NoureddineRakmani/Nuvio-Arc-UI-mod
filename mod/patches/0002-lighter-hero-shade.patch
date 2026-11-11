@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index b23ef0d..377972c 100644
+index b23ef0d..79783d5 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -285,7 +285,8 @@ internal fun ModernHeroMediaLayer(
@@ -41,3 +41,14 @@ index b23ef0d..377972c 100644
                          )
                      } else {
                          arrayOf(
+@@ -372,8 +373,8 @@ internal fun ModernHeroGradientLayer(
+                         size = Size(horizontalFadeEndX, size.height)
+                     )
+                     
+-                    // 2. Bottom vertical strip
+-                    drawRect(
++                    // 2. Bottom vertical strip (Nuvio Mod: none over a full-screen picture)
++                    if (!fullScreen) drawRect(
+                         brush = verticalGradient,
+                         topLeft = Offset(0f, bottomStripStartY),
+                         size = Size(size.width, size.height - bottomStripStartY)
