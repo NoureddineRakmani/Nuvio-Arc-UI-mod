@@ -1,0 +1,18 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
+index 2342509..a5c4549 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
+@@ -39,11 +39,10 @@ internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
+ private val MODERN_ROW_CARD_BOTTOM_ROOM = 8.dp
+ private const val MODERN_ROWS_VIEWPORT_MAX_FRACTION = 0.6f
+ 
+-/** Rows keep their share of the screen, but grow into the hero when the tallest card would not fit below the header. */
++/** Nuvio Mod: the rows area is only as tall as one row, so a single row sits at the bottom and the hero gets the rest. */
+ internal fun modernRowsViewportHeight(screenHeight: Dp, fraction: Float, tallestCardHeight: Dp): Dp {
+-    val base = screenHeight * fraction
+     val needed = MODERN_ROW_HEADER_FOCUS_INSET + tallestCardHeight + MODERN_ROW_CARD_BOTTOM_ROOM
+-    return maxOf(base, minOf(needed, screenHeight * MODERN_ROWS_VIEWPORT_MAX_FRACTION))
++    return minOf(needed, screenHeight * minOf(fraction, MODERN_ROWS_VIEWPORT_MAX_FRACTION))
+ }
+ /** Height the hero text block may take: the space above the rows, less a thin margin at the screen edge. */
+ internal fun modernHeroTextMaxHeight(screenHeight: Dp, rowsViewportHeight: Dp): Dp =
