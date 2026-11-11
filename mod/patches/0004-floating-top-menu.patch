@@ -13,7 +13,7 @@ index 1fd64c8..8c29b38 100644
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..99011b7 100644
+index b771237..acdea67 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 @@ -1,6 +1,12 @@
@@ -59,7 +59,7 @@ index b771237..99011b7 100644
 -                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp)
 +            // Nuvio Mod: a centered pill that is only as wide as its content.
 +            Box(Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 12.dp)
-+                .clip(RoundedCornerShape(22.dp))
++                .clip(RoundedCornerShape(50))
 +                .hazeEffect(state = navHazeState) {
 +                    blurRadius = NuvioTheme.effects.blurPanel
 +                    noiseFactor = 0.04f
@@ -79,3 +79,37 @@ index b771237..99011b7 100644
                              val isSelected = item.route == selectedRoute
                              var itemFocused by remember { mutableStateOf(false) }
                              Button(onClick = {
+@@ -123,14 +138,13 @@ fun V2TopNavigation(
+                             }, modifier = Modifier.focusRequester(routeFocus.getValue(item.route))
+                                 .focusProperties { down = contentFocus }
+                                 .onFocusChanged { itemFocused = it.isFocused; if (it.isFocused) lastRoute = item.route }
+-                                .nuvioV2Focus(itemFocused, RoundedCornerShape(7.dp))
+                                 .semantics { selected = isSelected },
+-                                shape = ButtonDefaults.shape(RoundedCornerShape(7.dp)),
++                                shape = ButtonDefaults.shape(RoundedCornerShape(50)),
+                                 scale = ButtonDefaults.scale(focusedScale = 1f),
+                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                 colors = ButtonDefaults.colors(
+                                     containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = .20f) else Color.Transparent,
+-                                    focusedContainerColor = NuvioTheme.colors.Secondary.copy(alpha = .38f),
++                                    focusedContainerColor = Color.White.copy(alpha = .24f),
+                                     contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
+                                     focusedContentColor = Color.White)) {
+                                 when {
+@@ -146,13 +160,12 @@ fun V2TopNavigation(
+                         Spacer(Modifier.width(12.dp))
+                         var profileFocused by remember { mutableStateOf(false) }
+                         Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus }
+-                            .onFocusChanged { profileFocused = it.isFocused }
+-                            .nuvioV2Focus(profileFocused, RoundedCornerShape(7.dp)),
+-                            shape = ButtonDefaults.shape(RoundedCornerShape(7.dp)),
++                            .onFocusChanged { profileFocused = it.isFocused },
++                            shape = ButtonDefaults.shape(RoundedCornerShape(50)),
+                             contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                             scale = ButtonDefaults.scale(focusedScale = 1f),
+                             colors = ButtonDefaults.colors(containerColor = Color.Transparent,
+-                                focusedContainerColor = NuvioTheme.colors.Secondary.copy(alpha = .3f),
++                                focusedContainerColor = Color.White.copy(alpha = .24f),
+                                 contentColor = Color.White, focusedContentColor = Color.White)) {
+                             NuvioAvatar(profile, 26.dp, description = null)
+                             Spacer(Modifier.width(8.dp))
