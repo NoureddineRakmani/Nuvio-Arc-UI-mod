@@ -104,10 +104,12 @@ adb -s "$BOX" install -r "$apk"
 
 # 9. Quick builds skip the slow "optimize" step of real releases, so let the TV box
 #    pre-compile the app instead. Without this it runs noticeably slower than Nuvio Mod.
-if [ "${NUVIO_NO_OPTIMIZE:-}" != 1 ]; then
+if [ "${1:-}" = "smooth" ]; then
   step "Optimizing the app on the TV box (1-3 min)"
   adb -s "$BOX" shell cmd package compile -m speed -f "$EXPECTED" || echo "Optimizing failed - the app still works, just slower."
   adb -s "$BOX" shell am force-stop "$EXPECTED" || true
+else
+  echo "(Fast mode: the app may feel laggy. For a smooth one, run:  bash ~/nuvio-try smooth)"
 fi
 adb -s "$BOX" shell monkey -p "$EXPECTED" -c android.intent.category.LEANBACK_LAUNCHER 1 >/dev/null 2>&1 || true
 END=$(date +%s)
