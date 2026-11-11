@@ -1,26 +1,71 @@
+diff --git a/app/src/main/java/com/nuvio/tv/MainActivity.kt b/app/src/main/java/com/nuvio/tv/MainActivity.kt
+index 1fd64c8..8c29b38 100644
+--- a/app/src/main/java/com/nuvio/tv/MainActivity.kt
++++ b/app/src/main/java/com/nuvio/tv/MainActivity.kt
+@@ -1338,7 +1338,8 @@ open class MainActivity : ComponentActivity() {
+                             Box(Modifier.fillMaxSize().graphicsLayer {
+                                 alpha = if (profileEntry.pending && !profileEntry.revealing) 0f else 1f
+                             }) {
+-                            if (v2Appearance?.navigationStyle == com.nuvio.tv.domain.model.NavigationStyle.TOP_NAVIGATION) {
++                            // Nuvio Mod: the top menu is also used with the original Nuvio interface.
++                            if (v2Appearance == null || v2Appearance.navigationStyle == com.nuvio.tv.domain.model.NavigationStyle.TOP_NAVIGATION) {
+                                 com.nuvio.tv.ui.v2.navigation.V2TopNavigation(
+                                     navigationContent = navigationContent,
+                                     currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..85c9802 100644
+index b771237..99011b7 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-@@ -91,7 +91,8 @@ fun V2TopNavigation(
+@@ -1,6 +1,12 @@
+ package com.nuvio.tv.ui.v2.navigation
+ 
+ import androidx.activity.compose.BackHandler
++import androidx.compose.foundation.background
++import androidx.compose.ui.draw.clip
++import dev.chrisbanes.haze.HazeInputScale
++import dev.chrisbanes.haze.HazeState
++import dev.chrisbanes.haze.hazeEffect
++import dev.chrisbanes.haze.hazeSource
+ import com.nuvio.tv.ui.v2.components.nuvioV2Focus
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.focusGroup
+@@ -72,6 +78,8 @@ fun V2TopNavigation(
+ ) {
+     val visible = currentRoute in rootRoutes
+     val contentFocus = remember { FocusRequester() }
++    // Nuvio Mod: the bar uses the original Nuvio frosted glass (blurred page behind a dark tint).
++    val navHazeState = remember { HazeState() }
+     val routes = items.map { it.route }
+     val routeFocus = remember(routes) { routes.associateWith { FocusRequester() } }
+     var lastRoute by remember { mutableStateOf(selectedRoute) }
+@@ -91,7 +99,9 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
 -        Box(Modifier.fillMaxSize().padding(top = if (visible) 54.dp else 0.dp)
 +        // Nuvio Mod: pages fill the whole screen and the bar floats over them (no band at the top).
 +        Box(Modifier.fillMaxSize()
++            .then(if (visible) Modifier.hazeSource(state = navHazeState) else Modifier)
              .focusRequester(contentFocus).focusRestorer()
              .focusProperties {
                  this.onExit = {
-@@ -106,15 +107,15 @@ fun V2TopNavigation(
+@@ -105,16 +115,21 @@ fun V2TopNavigation(
+             }
          }
          if (visible) {
-             NuvioGlassSurface(GlassRole.NAVIGATION,
+-            NuvioGlassSurface(GlassRole.NAVIGATION,
 -                Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 10.dp).fillMaxWidth(),
-+                // Nuvio Mod: a centered pill that is only as wide as its content.
-+                Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 10.dp),
-                 shape = RoundedCornerShape(12.dp)) {
+-                shape = RoundedCornerShape(12.dp)) {
 -                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp)
++            // Nuvio Mod: a centered pill that is only as wide as its content.
++            Box(Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 12.dp)
++                .clip(RoundedCornerShape(22.dp))
++                .hazeEffect(state = navHazeState) {
++                    blurRadius = NuvioTheme.effects.blurPanel
++                    noiseFactor = 0.04f
++                    inputScale = HazeInputScale.Fixed(0.66f)
++                }
++                .background(Color(0xFF161618).copy(alpha = 0.65f))) {
 +                Row(Modifier.padding(horizontal = 12.dp, vertical = 3.dp)
                      .onFocusChanged { navFocused = it.hasFocus }.focusGroup(),
                      verticalAlignment = Alignment.CenterVertically) {
