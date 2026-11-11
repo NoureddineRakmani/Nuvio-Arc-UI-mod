@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 647f0e4..fdb323c 100644
+index 647f0e4..aaf1221 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 @@ -1031,14 +1031,14 @@ fun ModernHomeContent(
@@ -47,6 +47,20 @@ index 647f0e4..fdb323c 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
+@@ -1135,9 +1150,10 @@ fun ModernHomeContent(
+             val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
+             val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
+             val heroDescriptionMaxLines = when {
+-                heroDescriptionScalePercent <= 95 -> 4
+-                heroDescriptionScalePercent <= 100 -> 4
+-                else -> 2
++                // Nuvio Mod: the one-row home leaves room, so show the whole description.
++                heroDescriptionScalePercent <= 95 -> 8
++                heroDescriptionScalePercent <= 100 -> 8
++                else -> 6
+             }
+             HeroTitleBlock(
+                 previewProvider = { heroSceneStateLambda().preview },
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 index 1d0abdc..f408d9c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
