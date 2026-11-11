@@ -1,0 +1,68 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt b/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
+index 6a9f831..dc943b9 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
+@@ -12,6 +12,8 @@ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.focus.onFocusChanged
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.Shape
++import androidx.compose.ui.graphics.graphicsLayer
++import androidx.compose.ui.unit.dp
+ import androidx.compose.ui.input.key.onKeyEvent
+ import androidx.compose.ui.semantics.onClick
+ import androidx.compose.ui.semantics.semantics
+@@ -33,14 +35,34 @@ fun NuvioCard(
+     focusedGlow: Glow = Glow.None,
+     content: @Composable ColumnScope.() -> Unit
+ ) {
++    // Nuvio Mod: Apple TV style focus. The focused card grows a little and casts a soft shadow;
++    // no border, ring or glow.
++    val modFocused = remember { androidx.compose.runtime.mutableStateOf(false) }
++    val modScale = androidx.compose.animation.core.animateFloatAsState(
++        targetValue = if (modFocused.value) MOD_FOCUSED_CARD_SCALE else 1f,
++        animationSpec = androidx.compose.animation.core.spring(dampingRatio = 0.8f, stiffness = 500f),
++        label = "modCardFocusScale"
++    )
++    val modFocusModifier = Modifier
++        .onFocusChanged { modFocused.value = it.isFocused }
++        .graphicsLayer {
++            val scale = modScale.value
++            scaleX = scale
++            scaleY = scale
++            shadowElevation = ((scale - 1f) / (MOD_FOCUSED_CARD_SCALE - 1f)).coerceIn(0f, 1f) * 28.dp.toPx()
++            this.shape = shape
++            clip = false
++            ambientShadowColor = Color.Black
++            spotShadowColor = Color.Black
++        }
+     if (!light) {
+         LightweightCard(
+             onClick = onClick,
+             shape = shape,
+             containerColor = containerColor,
+-            modifier = modifier,
+-            focusedBorder = focusedBorder,
+-            focusedGlow = focusedGlow,
++            modifier = modifier.then(modFocusModifier),
++            focusedBorder = Border.None,
++            focusedGlow = Glow.None,
+             content = content
+         )
+         return
+@@ -48,6 +70,7 @@ fun NuvioCard(
+     val press = remember { SelectKeyPress() }
+     Column(
+         modifier = modifier
++            .then(modFocusModifier)
+             .semantics { onClick { onClick(); true } }
+             .onFocusChanged { if (!it.isFocused) press.keyCode = null }
+             .onKeyEvent { press.handle(it.nativeKeyEvent, onClick) }
+@@ -58,6 +81,8 @@ fun NuvioCard(
+     )
+ }
+ 
++private const val MOD_FOCUSED_CARD_SCALE = 1.07f
++
+ /** Clicks when a select key goes up after going down on this card. */
+ private class SelectKeyPress {
+     var keyCode: Int? = null
