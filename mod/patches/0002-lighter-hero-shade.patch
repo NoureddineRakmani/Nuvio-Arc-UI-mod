@@ -1,0 +1,43 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
+index b23ef0d..377972c 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
+@@ -285,7 +285,8 @@ internal fun ModernHeroMediaLayer(
+     }
+ }
+ 
+-private val FULL_SCREEN_HERO_SCRIM = listOf(0.0f to 1f, 0.22f to 0.90f, 0.46f to 0.80f, 0.76f to 0.42f, 1.0f to 0f)
++// Nuvio Mod: lighter shade so the picture stays visible; just enough behind the text.
++private val FULL_SCREEN_HERO_SCRIM = listOf(0.0f to 0.62f, 0.22f to 0.50f, 0.46f to 0.34f, 0.76f to 0.14f, 1.0f to 0f)
+ 
+ @Composable
+ internal fun ModernHeroGradientLayer(
+@@ -308,7 +309,7 @@ internal fun ModernHeroGradientLayer(
+             }
+             .drawWithCache {
+                 val fullScreen = isFullScreen()
+-                val horizontalFadeEndX = size.width * if (fullScreen) 0.65f else 0.45f
++                val horizontalFadeEndX = size.width * if (fullScreen) 0.50f else 0.45f
+                 val menuProgress = if (fullScreen) menuLayout?.let { it.expansion() } ?: 0f else 0f
+                 val colorStops = if (fullScreen && menuProgress > 0f) {
+                     com.nuvio.tv.ui.v2.components.openMenuScrimStops(
+@@ -340,15 +341,15 @@ internal fun ModernHeroGradientLayer(
+                 }
+ 
+                 val bottomStripStartY = size.height * if (fullScreen) {
+-                    if (cinematic) 0.32f else 0.64f
++                    if (cinematic) 0.62f else 0.64f
+                 } else 0.82f
+                 val verticalGradient = Brush.verticalGradient(
+                     colorStops = if (fullScreen) {
+                         arrayOf(
+                             0.0f to Color.Transparent,
+-                            0.30f to bgColor.copy(alpha = 0.35f),
+-                            0.60f to bgColor.copy(alpha = 0.75f),
+-                            1.0f to bgColor
++                            0.30f to bgColor.copy(alpha = 0.18f),
++                            0.60f to bgColor.copy(alpha = 0.50f),
++                            1.0f to bgColor.copy(alpha = 0.88f)
+                         )
+                     } else {
+                         arrayOf(
