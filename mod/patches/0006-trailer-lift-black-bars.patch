@@ -1,0 +1,54 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt b/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
+index f805e92..40b4ed3 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
+@@ -74,6 +74,9 @@ fun TrailerPlayer(
+     onVideoAspectRatioChanged: (Float) -> Unit = {},
+     overscanZoom: Float = TRAILER_OVERSCAN_ZOOM,
+     autoCropLetterbox: Boolean = false,
++    // Nuvio Mod: when the video has black bars baked in, slide it up so the picture starts at the
++    // top of the screen instead of zooming in (all the black ends up at the bottom).
++    liftLetterbox: Boolean = false,
+     modifier: Modifier = Modifier,
+     enter: EnterTransition = fadeIn(animationSpec = tween(800)),
+     exit: ExitTransition = fadeOut(animationSpec = tween(500)),
+@@ -106,7 +109,7 @@ fun TrailerPlayer(
+     val playerViewRef = remember { mutableStateOf<PlayerView?>(null) }
+     var letterboxZoom by remember(trailerUrl) { mutableFloatStateOf(1f) }
+     val letterboxZoomState = animateFloatAsState(
+-        targetValue = if (autoCropLetterbox) letterboxZoom else 1f,
++        targetValue = if (autoCropLetterbox || liftLetterbox) letterboxZoom else 1f,
+         animationSpec = tween(durationMillis = 400),
+         label = "trailerLetterboxZoom"
+     )
+@@ -182,9 +185,9 @@ fun TrailerPlayer(
+         player.playWhenReady = !isPaused
+     }
+ 
+-    LaunchedEffect(autoCropLetterbox, hasRenderedFirstFrame, trailerPlayer) {
++    LaunchedEffect(autoCropLetterbox, liftLetterbox, hasRenderedFirstFrame, trailerPlayer) {
+         letterboxZoom = 1f
+-        if (!autoCropLetterbox || !hasRenderedFirstFrame) return@LaunchedEffect
++        if (!(autoCropLetterbox || liftLetterbox) || !hasRenderedFirstFrame) return@LaunchedEffect
+         val player = trailerPlayer ?: return@LaunchedEffect
+         val tracker = LetterboxTracker()
+         val sampler = LetterboxSampler()
+@@ -324,8 +327,16 @@ fun TrailerPlayer(
+                     .clipToBounds()
+                     .graphicsLayer {
+                         alpha = playerAlphaState.value
+-                        scaleX = overscanZoom * letterboxZoomState.value
+-                        scaleY = overscanZoom * letterboxZoomState.value
++                        val letterbox = letterboxZoomState.value
++                        if (liftLetterbox) {
++                            scaleX = overscanZoom
++                            scaleY = overscanZoom
++                            // zoom = 1 / (1 - 2 * bar)  =>  bar = (1 - 1 / zoom) / 2
++                            translationY = -size.height * (1f - 1f / letterbox) / 2f
++                        } else {
++                            scaleX = overscanZoom * letterbox
++                            scaleY = overscanZoom * letterbox
++                        }
+                     }
+             )
+         }

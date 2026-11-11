@@ -13,15 +13,16 @@ index 1fd64c8..8c29b38 100644
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..4f5ba9a 100644
+index b771237..4a9e66d 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-@@ -1,6 +1,12 @@
+@@ -1,6 +1,13 @@
  package com.nuvio.tv.ui.v2.navigation
  
  import androidx.activity.compose.BackHandler
 +import androidx.compose.foundation.background
 +import androidx.compose.ui.draw.clip
++import androidx.compose.ui.graphics.graphicsLayer
 +import dev.chrisbanes.haze.HazeInputScale
 +import dev.chrisbanes.haze.HazeState
 +import dev.chrisbanes.haze.hazeEffect
@@ -29,7 +30,7 @@ index b771237..4f5ba9a 100644
  import com.nuvio.tv.ui.v2.components.nuvioV2Focus
  import androidx.compose.foundation.layout.size
  import androidx.compose.foundation.focusGroup
-@@ -72,6 +78,8 @@ fun V2TopNavigation(
+@@ -72,11 +79,19 @@ fun V2TopNavigation(
  ) {
      val visible = currentRoute in rootRoutes
      val contentFocus = remember { FocusRequester() }
@@ -38,7 +39,18 @@ index b771237..4f5ba9a 100644
      val routes = items.map { it.route }
      val routeFocus = remember(routes) { routes.associateWith { FocusRequester() } }
      var lastRoute by remember { mutableStateOf(selectedRoute) }
-@@ -91,7 +99,9 @@ fun V2TopNavigation(
+     var navFocused by remember { mutableStateOf(false) }
+     var returnToContent by remember { mutableStateOf(false) }
++    // Nuvio Mod: the bar only shows while the remote is in it (press Up to bring it in).
++    val navBarAlpha = androidx.compose.animation.core.animateFloatAsState(
++        targetValue = if (navFocused) 1f else 0f,
++        animationSpec = androidx.compose.animation.core.tween(durationMillis = 140),
++        label = "modTopBarAlpha"
++    )
+     val entryFocus = routeFocus[lastRoute] ?: routeFocus[selectedRoute] ?: routeFocus.values.first()
+ 
+     // Destination BackHandlers are composed later and retain priority for sheets/settings.
+@@ -91,7 +106,9 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
@@ -49,7 +61,7 @@ index b771237..4f5ba9a 100644
              .focusRequester(contentFocus).focusRestorer()
              .focusProperties {
                  this.onExit = {
-@@ -105,16 +115,21 @@ fun V2TopNavigation(
+@@ -105,16 +122,22 @@ fun V2TopNavigation(
              }
          }
          if (visible) {
@@ -59,6 +71,7 @@ index b771237..4f5ba9a 100644
 -                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp)
 +            // Nuvio Mod: a centered pill that is only as wide as its content.
 +            Box(Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 12.dp)
++                .graphicsLayer { alpha = navBarAlpha.value }
 +                .clip(RoundedCornerShape(50))
 +                .hazeEffect(state = navHazeState) {
 +                    blurRadius = NuvioTheme.effects.blurPanel
@@ -79,7 +92,7 @@ index b771237..4f5ba9a 100644
                              val isSelected = item.route == selectedRoute
                              var itemFocused by remember { mutableStateOf(false) }
                              Button(onClick = {
-@@ -123,14 +138,13 @@ fun V2TopNavigation(
+@@ -123,14 +146,13 @@ fun V2TopNavigation(
                              }, modifier = Modifier.focusRequester(routeFocus.getValue(item.route))
                                  .focusProperties { down = contentFocus }
                                  .onFocusChanged { itemFocused = it.isFocused; if (it.isFocused) lastRoute = item.route }
@@ -97,7 +110,7 @@ index b771237..4f5ba9a 100644
                                      contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
                                      focusedContentColor = Color.White)) {
                                  when {
-@@ -146,15 +160,14 @@ fun V2TopNavigation(
+@@ -146,15 +168,14 @@ fun V2TopNavigation(
                          Spacer(Modifier.width(12.dp))
                          var profileFocused by remember { mutableStateOf(false) }
                          Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus }
