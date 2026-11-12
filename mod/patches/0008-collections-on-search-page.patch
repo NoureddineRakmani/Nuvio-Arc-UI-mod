@@ -1,0 +1,194 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
+index c97c2b1..8c9efe0 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
+@@ -1310,7 +1310,11 @@ private fun PlaybackNavHost(
+                         Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
+                     )
+                 },
+-                onOpenDiscover = { navController.navigate(Screen.Discover.route) }
++                onOpenDiscover = { navController.navigate(Screen.Discover.route) },
++                // Nuvio Mod: collections live on the search page.
++                onNavigateToFolderDetail = { collectionId, folderId ->
++                    navController.navigate(Screen.FolderDetail.createRoute(collectionId, folderId))
++                }
+             )
+         }
+ 
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
+index a5e46cc..f9d2478 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
+@@ -382,7 +382,8 @@ private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<Hom
+                     latest.takeIf { it.items.isNotEmpty() }?.let(HomeRow::Catalog)
+                 }
+                 is HomeRow.CollectionRow -> {
+-                    homeRow.collection.takeIf(Collection::hasVisibleFolders)?.let(HomeRow::CollectionRow)
++                    // Nuvio Mod: collections live on the search page, not on the home screen.
++                    null
+                 }
+                 is HomeRow.PlaceholderCatalog -> {
+                     // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
+index b564497..3feca0b 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
+@@ -159,6 +159,7 @@ fun SearchScreen(
+     onNavigateToSeeAll: (catalogId: String, addonId: String, type: String) -> Unit = { _, _, _ -> },
+     onOpenDiscover: () -> Unit = {},
+     onAskScout: (String) -> Unit = {},
++    onNavigateToFolderDetail: (collectionId: String, folderId: String) -> Unit = { _, _ -> },
+     askAccess: com.nuvio.tv.ui.screens.scout.ask.AskAccessViewModel = hiltViewModel()
+ ) {
+     val askHasKey by askAccess.hasKey.collectAsState()
+@@ -168,6 +169,7 @@ fun SearchScreen(
+     val artworkAccent = com.nuvio.tv.ui.v2.appearance.LocalArtworkAccent.current
+     var focusedResultsRow by remember { mutableStateOf<String?>(null) }
+     val uiState by viewModel.uiState.collectAsState()
++    val modCollections by viewModel.modCollections.collectAsState()
+     val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
+     val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
+     val context = LocalContext.current
+@@ -751,34 +753,43 @@ fun SearchScreen(
+ 
+                 when {
+                     trimmedSubmittedQuery.length < MIN_SEARCH_QUERY_LENGTH && !hasPendingUnsubmittedQuery -> {
+-                        item {
+-                            if (showRecentSearches) {
+-                                RecentSearchesSection(
++                        // Nuvio Mod: recent searches as one slim line of pills, then the collections.
++                        if (showRecentSearches) {
++                            item(key = "mod_recent_searches") {
++                                ModRecentSearchPills(
+                                     recentSearches = uiState.recentSearches,
+                                     onSearchSelected = submitRecentSearch,
+                                     onClearHistory = {
+                                         viewModel.onEvent(SearchEvent.ClearRecentSearches)
+                                     },
+-                                    onRemoveSearch = { query ->
+-                                        viewModel.onEvent(SearchEvent.RemoveRecentSearch(query))
+-                                    },
+                                     onSectionFocusChanged = { focused ->
+                                         isRecentSearchSectionFocused = focused
+                                     },
+                                     clearHistoryFocusRequester = recentClearHistoryFocusRequester,
+-                                    emptyHistoryFocusRequester = searchFocusRequester,
+                                     modifier = Modifier.padding(horizontal = 52.dp)
+                                 )
+-                            } else {
+-                                EmptyScreenState(
+-                                    title = stringResource(R.string.search_start_title),
+-                                    subtitle = if (uiState.discoverLocation == DiscoverLocation.OFF) {
+-                                        stringResource(R.string.search_start_subtitle_no_discover)
+-                                    } else {
+-                                        stringResource(R.string.search_start_subtitle)
+-                                    },
+-                                    icon = Icons.Default.Search
+-                                )
++                            }
++                        }
++                        if (modCollections.isNotEmpty()) {
++                            modCollections.forEach { collection ->
++                                item(key = "mod_collection_${collection.id}") {
++                                    com.nuvio.tv.ui.components.CollectionRowSection(
++                                        collection = collection,
++                                        onFolderClick = onNavigateToFolderDetail
++                                    )
++                                }
++                            }
++                        } else if (!showRecentSearches) {
++                            item {
++                                    EmptyScreenState(
++                                        title = stringResource(R.string.search_start_title),
++                                        subtitle = if (uiState.discoverLocation == DiscoverLocation.OFF) {
++                                            stringResource(R.string.search_start_subtitle_no_discover)
++                                        } else {
++                                            stringResource(R.string.search_start_subtitle)
++                                        },
++                                        icon = Icons.Default.Search
++                                    )
+                             }
+                         }
+                     }
+@@ -1508,3 +1519,50 @@ private fun SearchInputField(
+         }
+     }
+ }
++
++/** Nuvio Mod: recent searches as a single line of pills under the search field. */
++@Composable
++private fun ModRecentSearchPills(
++    recentSearches: List<String>,
++    onSearchSelected: (String) -> Unit,
++    onClearHistory: () -> Unit,
++    onSectionFocusChanged: (Boolean) -> Unit,
++    clearHistoryFocusRequester: FocusRequester,
++    modifier: Modifier = Modifier
++) {
++    val pillShape = RoundedCornerShape(50)
++    val pillColors = ButtonDefaults.colors(
++        containerColor = Color.White.copy(alpha = 0.08f),
++        contentColor = NuvioTheme.colors.TextSecondary,
++        focusedContainerColor = Color.White.copy(alpha = 0.9f),
++        focusedContentColor = Color.Black
++    )
++    Row(
++        modifier = modifier
++            .fillMaxWidth()
++            .focusGroup()
++            .onFocusChanged { state -> onSectionFocusChanged(state.hasFocus || state.isFocused) },
++        horizontalArrangement = Arrangement.spacedBy(12.dp),
++        verticalAlignment = Alignment.CenterVertically
++    ) {
++        recentSearches.take(6).forEach { recentQuery ->
++            key(recentQuery) {
++                Button(
++                    onClick = { onSearchSelected(recentQuery) },
++                    shape = ButtonDefaults.shape(pillShape),
++                    colors = pillColors
++                ) {
++                    Text(text = recentQuery, maxLines = 1)
++                }
++            }
++        }
++        Button(
++            onClick = onClearHistory,
++            modifier = Modifier.focusRequester(clearHistoryFocusRequester),
++            shape = ButtonDefaults.shape(pillShape),
++            colors = pillColors
++        ) {
++            Text(text = stringResource(R.string.search_recent_clear), maxLines = 1)
++        }
++    }
++}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
+index ba7dc2a..19f791c 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
+@@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.combine
+ import kotlinx.coroutines.flow.distinctUntilChanged
+ import kotlinx.coroutines.flow.first
+ import kotlinx.coroutines.flow.update
++import kotlinx.coroutines.flow.map
++import kotlinx.coroutines.flow.stateIn
++import kotlinx.coroutines.flow.SharingStarted
+ import kotlinx.coroutines.joinAll
+ import kotlinx.coroutines.launch
+ import kotlinx.coroutines.withTimeoutOrNull
+@@ -62,9 +65,16 @@ class SearchViewModel @Inject constructor(
+     val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
+     private val serverCatalog: ServerCatalog,
+     private val catalogSpeed: SearchCatalogSpeed,
++    private val modCollectionsDataStore: com.nuvio.tv.data.local.CollectionsDataStore,
+     @ApplicationContext private val context: Context
+ ) : ViewModel() {
+ 
++    // Nuvio Mod: the user's collections are shown on the search page instead of the home screen.
++    val modCollections: StateFlow<List<com.nuvio.tv.domain.model.Collection>> =
++        modCollectionsDataStore.collections
++            .map { list -> list.filter { it.folders.isNotEmpty() } }
++            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
++
+     private val _uiState = MutableStateFlow(SearchUiState())
+     val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
+ 
