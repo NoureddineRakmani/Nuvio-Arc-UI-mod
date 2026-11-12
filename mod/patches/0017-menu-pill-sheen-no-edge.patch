@@ -1,0 +1,43 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+index be2404b..428389f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+@@ -5,10 +5,7 @@ import androidx.compose.foundation.background
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.draw.drawBehind
+ import androidx.compose.ui.geometry.CornerRadius
+-import androidx.compose.ui.geometry.Offset
+-import androidx.compose.ui.geometry.Size
+ import androidx.compose.ui.graphics.Brush
+-import androidx.compose.ui.graphics.drawscope.Stroke
+ import androidx.compose.ui.graphics.graphicsLayer
+ import dev.chrisbanes.haze.HazeInputScale
+ import dev.chrisbanes.haze.HazeState
+@@ -71,8 +68,8 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
+ val LocalV2TopChrome = staticCompositionLocalOf { false }
+ 
+ /**
+- * Nuvio Mod: the pill under the remote. Mostly clear glass: a faint fill, a soft sheen falling
+- * from the top, and a fine light edge. Drawn behind the label, so the text stays crisp.
++ * Nuvio Mod: the pill under the remote. Mostly clear glass: a faint fill and a soft sheen falling
++ * from the top. No edge line. Drawn behind the label, so the text stays crisp.
+  */
+ private fun Modifier.modNavFocusGlass(focused: Boolean): Modifier = if (!focused) this else drawBehind {
+     val radius = CornerRadius(size.height / 2f)
+@@ -84,16 +81,6 @@ private fun Modifier.modNavFocusGlass(focused: Boolean): Modifier = if (!focused
+         ),
+         cornerRadius = radius
+     )
+-    val line = 1.dp.toPx()
+-    drawRoundRect(
+-        Brush.verticalGradient(
+-            listOf(Color.White.copy(alpha = 0.30f), Color.White.copy(alpha = 0.05f), Color.White.copy(alpha = 0.12f))
+-        ),
+-        topLeft = Offset(line / 2f, line / 2f),
+-        size = Size(size.width - line, size.height - line),
+-        cornerRadius = CornerRadius((size.height - line) / 2f),
+-        style = Stroke(line)
+-    )
+ }
+ 
+ /** Alternative chrome around the same navigation controller and destination graph. */
