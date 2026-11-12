@@ -1,0 +1,234 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt b/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt
+index c941772..f9fbf94 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt
+@@ -338,7 +338,6 @@ fun ContentCard(
+             },
+             modifier = Modifier
+                 .fillMaxWidth()
+-                .nuvioV2Focus(isFocused, cardShape, stationary = true)
+                 .onFocusChanged { state ->
+                     val focusedNow = state.isFocused
+                     if (needsFocusState) {
+@@ -414,7 +413,7 @@ fun ContentCard(
+                     shape = cardShape
+                 )
+             ),
+-            scale = CardDefaults.scale(focusedScale = if (isV2) 1f else posterCardStyle.focusedScale)
++            scale = CardDefaults.scale(focusedScale = if (isV2) 1.06f else posterCardStyle.focusedScale) // Nuvio Mod: grows like the home cards, no ring
+         ) {
+             Box(
+                 modifier = Modifier
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt b/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt
+index a96c4ef..5f42c22 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt
+@@ -134,7 +134,6 @@ fun GridContentCard(
+                     if (globalLandscape) Modifier.fillMaxWidth().aspectRatio(PosterShape.LANDSCAPE.aspectRatio())
+                     else Modifier.width(posterCardStyle.width).height(cardHeight)
+                 )
+-                .nuvioV2Focus(isFocused, cardShape, stationary = true)
+                 .then(
+                     if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                     else Modifier
+@@ -197,7 +196,7 @@ fun GridContentCard(
+                     shape = cardShape
+                 )
+             ),
+-            scale = CardDefaults.scale(focusedScale = if (isV2) 1f else posterCardStyle.focusedScale)
++            scale = CardDefaults.scale(focusedScale = if (isV2) 1.06f else posterCardStyle.focusedScale) // Nuvio Mod: grows like the home cards, no ring
+         ) {
+             Box(
+                 modifier = Modifier
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
+index 1c4be0f..4d1dfd7 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
+@@ -906,7 +906,7 @@ private fun EpisodeCard(
+     if (isV2) {
+         Column(Modifier.width(cardMetrics.cardWidth)) {
+             Card(onClick = cardClick,
+-                modifier = interactiveModifier.nuvioV2Focus(isFocused, shape),
++                modifier = interactiveModifier.nuvioV2Focus(isFocused, shape, wash = false), // Nuvio Mod: no highlight over the thumbnail
+                 shape = cardShape, colors = cardColors, border = cardBorder, scale = cardScale, glow = cardGlow) {
+                 Box(Modifier.fillMaxWidth().height(cardMetrics.cardHeight).clip(shape).background(cardBgColor)) {
+                     AsyncImage(thumbnailRequest, episode.title.localizeEpisodeTitle(context),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
+index b0043f1..a44e94c 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
+@@ -47,7 +47,7 @@ fun NuvioActionPill(
+         scale = ButtonDefaults.scale(focusedScale = 1f),
+         colors = ButtonDefaults.colors(
+             containerColor = Color.Transparent,
+-            focusedContainerColor = NuvioTheme.colors.Secondary.copy(alpha = if (cinematic) .16f else .24f),
++            focusedContainerColor = Color.Transparent, // Nuvio Mod: the shared white highlight replaces the accent colour
+             contentColor = NuvioTheme.colors.TextPrimary,
+             focusedContentColor = NuvioTheme.colors.TextPrimary
+         ),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioAvatar.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioAvatar.kt
+index 48acec7..16373e8 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioAvatar.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioAvatar.kt
+@@ -68,7 +68,7 @@ fun NuvioAvatar(
+     }
+     var imageLoaded by remember(request) { mutableStateOf(false) }
+     Box(
+-        modifier.size(size).nuvioV2Focus(focused, CircleShape, if (portraitPlaceholder) NuvioTheme.colors.Secondary else null).clip(CircleShape)
++        modifier.size(size).nuvioV2Focus(focused, CircleShape, if (portraitPlaceholder) NuvioTheme.colors.Secondary else null, wash = false).clip(CircleShape)
+             .background(if (portraitPlaceholder) Color(0xFF0C1A29) else color, CircleShape)
+             .border(if (selected) 2.dp else 1.dp,
+                 if (selected) NuvioTheme.colors.Secondary else Color.White.copy(alpha = 0.18f), CircleShape)
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
+index d55c84d..f666454 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
+@@ -21,7 +21,51 @@ import com.nuvio.tv.ui.v2.quality.LocalGlassTokens
+ /** Decorates an existing focus target without adding another focus node or measuring again. */
+ @Composable
+ /** [hardwareShadow] false for see-through glass: a hardware shadow shows through it as a polygon. */
+-fun Modifier.nuvioV2Focus(focused: Boolean, shape: Shape, accentOverride: Color? = null, hardwareShadow: Boolean = true, stationary: Boolean = false): Modifier {
++fun Modifier.nuvioV2Focus(focused: Boolean, shape: Shape, accentOverride: Color? = null, hardwareShadow: Boolean = true, stationary: Boolean = false, wash: Boolean = true): Modifier {
++    if (stationary && !focused) return this
++    val appearance = LocalV2Appearance.current ?: return this
++    // Nuvio Mod: the player keeps Arc's own focus look.
++    if (com.nuvio.tv.ui.v2.appearance.LocalResolvedAppearance.current?.playbackActive == true) {
++        return nuvioV2FocusArc(focused, shape, accentOverride, hardwareShadow, stationary)
++    }
++    // Nuvio Mod: same idea as the top menu bar. The focused item gets a neutral white highlight;
++    // no coloured ring, no glow, no moving glints, no lift. Items that move still grow slightly.
++    val transform = FocusTransform.forStyle(appearance.focusStyle)
++    val shadowDp = LocalGlassTokens.current.shadowDp
++    val density = LocalDensity.current
++    val progress = animateFloatAsState(
++        targetValue = if (focused) 1f else 0f,
++        animationSpec = if (stationary) androidx.compose.animation.core.snap()
++            else tween(if (focused) V2Motion.FocusResponseMs else V2Motion.FocusSettleMs),
++        label = "modV2Focus"
++    )
++    val transformLayer = if (stationary) Modifier else Modifier.graphicsLayer {
++        val p = progress.value
++        scaleX = 1f + (transform.scale - 1f) * p
++        scaleY = scaleX
++        shadowElevation = if (hardwareShadow) shadowDp * density.density * p else 0f
++        this.shape = shape
++        clip = false
++        ambientShadowColor = Color.Black
++        spotShadowColor = Color.Black
++    }
++    if (!wash) return then(transformLayer)
++    return then(transformLayer).drawWithCache {
++        val outline = shape.createOutline(size, layoutDirection, this)
++        onDrawWithContent {
++            drawContent()
++            val p = progress.value
++            if (p > 0f) drawOutline(outline, Color.White, alpha = p * MOD_FOCUS_WASH)
++        }
++    }
++}
++
++// Nuvio Mod: strength of the white highlight on the focused item.
++private const val MOD_FOCUS_WASH = 0.20f
++
++/** Arc's original focus ring, kept unchanged for the player. */
++@Composable
++private fun Modifier.nuvioV2FocusArc(focused: Boolean, shape: Shape, accentOverride: Color? = null, hardwareShadow: Boolean = true, stationary: Boolean = false): Modifier {
+     // Stationary focus snaps off: idle posters have no outgoing animation or decoration.
+     // Do not create per-card animation jobs, draw caches and glint state for an invisible edge.
+     // This also keeps idle cards out of the artwork/theme observation path.
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
+index d8fd359..65ff6e3 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
+@@ -81,6 +81,12 @@ fun NuvioGlassSurface(
+     Box(modifier.nuvioGlass(role, focused, shape, hazeState), content = content)
+ }
+ 
++// Nuvio Mod: one glass for the whole app, the same as the top menu bar.
++private val MOD_GLASS_TINT = Color(0xFF161618)
++private const val MOD_GLASS_FROSTED_ALPHA = 0.65f   // over a blurred background (same as the menu bar)
++private const val MOD_GLASS_PLAIN_ALPHA = 0.94f     // when there is nothing to blur
++private const val MOD_GLASS_ACTIVE_FILL = 0.14f     // selected / focused surface: faint white fill
++
+ @Composable
+ fun Modifier.nuvioGlass(
+     role: GlassRole,
+@@ -89,6 +95,78 @@ fun Modifier.nuvioGlass(
+     hazeState: HazeState? = null,
+     trailingEdgeOnly: Boolean = false,
+     neutralBackdrop: Boolean = false
++): Modifier {
++    // Nuvio Mod: the player keeps Arc's own glass (nothing is blurred over a playing video).
++    val playbackActive = com.nuvio.tv.ui.v2.appearance.LocalResolvedAppearance.current?.playbackActive == true
++    return if (playbackActive) nuvioGlassArc(role, focused, shape, hazeState, trailingEdgeOnly, neutralBackdrop)
++    else nuvioGlassMod(role, focused, shape, hazeState, neutralBackdrop)
++}
++
++/**
++ * Nuvio Mod: flat dark frosted glass. No rim lines, no reflections, no colour tint.
++ * Blur is on or off following Arc's glass blur setting and quality level; its look is the menu bar's.
++ */
++@Composable
++private fun Modifier.nuvioGlassMod(
++    role: GlassRole,
++    focused: Boolean,
++    shape: Shape,
++    hazeState: HazeState?,
++    neutralBackdrop: Boolean
++): Modifier {
++    val appearance = LocalV2Appearance.current
++    val tokens = LocalGlassTokens.current
++    val dark = appearance?.visualStyle == VisualStyle.PURE_LIQUID_DARK
++    val popupBackdrop = LocalPopupGlassBackdrop.current
++    val capturePopup = role == GlassRole.MODAL && !dark && tokens.liveBlur
++    DisposableEffect(popupBackdrop, capturePopup) {
++        if (capturePopup) popupBackdrop?.attach()
++        onDispose { if (capturePopup) popupBackdrop?.detach() }
++    }
++    val backdrop = if (role == GlassRole.MODAL) popupBackdrop?.state else LocalGlassBackdrop.current
++    val cinematic = appearance?.visualStyle == VisualStyle.CINEMATIC_GLASS
++    // A trailer playing behind a surface cannot be blurred: the surface turns plain instead.
++    val smoke = LocalGlassVideoSmoke.current.takeIf { cinematic && role != GlassRole.MODAL }
++    val smoked = if (smoke != null) remember(smoke) { derivedStateOf { smoke.value >= 1f } }.value else false
++    val source = (hazeState ?: backdrop).takeIf {
++        !smoked && !neutralBackdrop && !dark && tokens.liveBlur && role != GlassRole.CARD_FOCUS &&
++            (it === popupBackdrop?.state || it?.areas?.isNotEmpty() == true)
++    }
++    val panelBlur = NuvioTheme.effects.blurPanel
++    val refreshVideo = tokens.edgeLayers >= 3 && (popupBackdrop?.liveTrailers ?: 0) > 0
++    val blur = if (source != null) Modifier.hazeEffect(state = source) {
++        backgroundColor = Color(0xFF080A0C)
++        blurRadius = panelBlur
++        noiseFactor = 0.04f
++        inputScale = HazeInputScale.Fixed(0.66f)
++        forceInvalidateOnPreDraw = refreshVideo
++    } else Modifier
++    val bodyAlpha = if (source != null) MOD_GLASS_FROSTED_ALPHA else MOD_GLASS_PLAIN_ALPHA
++    return clip(shape)
++        .then(blur)
++        .background(MOD_GLASS_TINT.copy(alpha = bodyAlpha), shape)
++        .drawWithCache {
++            val outline = shape.createOutline(size, layoutDirection, this)
++            onDrawWithContent {
++                val smokeAmount = smoke?.value ?: 0f
++                if (smokeAmount > 0f && bodyAlpha < MOD_GLASS_PLAIN_ALPHA) {
++                    drawOutline(outline, MOD_GLASS_TINT, alpha = 0.8f * smokeAmount)
++                }
++                if (focused) drawOutline(outline, Color.White, alpha = MOD_GLASS_ACTIVE_FILL)
++                drawContent()
++            }
++        }
++}
++
++/** Arc's original glass, kept unchanged for the player. */
++@Composable
++private fun Modifier.nuvioGlassArc(
++    role: GlassRole,
++    focused: Boolean = false,
++    shape: Shape = RoundedCornerShape(20.dp),
++    hazeState: HazeState? = null,
++    trailingEdgeOnly: Boolean = false,
++    neutralBackdrop: Boolean = false
+ ): Modifier {
+     val appearance = LocalV2Appearance.current
+     val clearGlass = usesClearGlassTheme()
