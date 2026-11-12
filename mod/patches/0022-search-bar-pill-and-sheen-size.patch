@@ -1,0 +1,60 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
+index 3b8663e..ec71e79 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
+@@ -1385,18 +1385,18 @@ private fun SearchInputField(
+                         )
+                         .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+                         .then(if (isV2) Modifier
+-                            .nuvioGlass(com.nuvio.tv.ui.v2.components.GlassRole.CONTROL, false, RoundedCornerShape(NuvioTheme.radii.md))
+-                            .modMenuPillHighlight(isVoiceButtonFocused, RoundedCornerShape(NuvioTheme.radii.md))
++                            .nuvioGlass(com.nuvio.tv.ui.v2.components.GlassRole.CONTROL, false, RoundedCornerShape(50) /* Nuvio Mod: pill */)
++                            .modMenuPillHighlight(isVoiceButtonFocused, RoundedCornerShape(50) /* Nuvio Mod: pill */)
+                             else Modifier)
+                         .size(NuvioTheme.spacing.huge)
+                         .border(
+                             width = if (isVoiceButtonFocused || isVoiceListening) NuvioTheme.spacing.xxs else NuvioTheme.spacing.hairline,
+                             color = if (isVoiceListening) themeAccent else if (isV2) Color.Transparent else if (isVoiceButtonFocused) NuvioTheme.colors.FocusRing else NuvioTheme.colors.Border,
+-                            shape = RoundedCornerShape(NuvioTheme.radii.md)
++                            shape = RoundedCornerShape(50) /* Nuvio Mod: pill */
+                         )
+                         .background(
+                             color = if (isVoiceListening) themeAccent.copy(alpha = 0.15f) else if (isV2) Color.Transparent else NuvioTheme.colors.BackgroundCard,
+-                            shape = RoundedCornerShape(NuvioTheme.radii.md)
++                            shape = RoundedCornerShape(50) /* Nuvio Mod: pill */
+                         )
+                         .clickable(
+                             interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+@@ -1422,8 +1422,8 @@ private fun SearchInputField(
+                 .weight(1f)
+                 // Nuvio Mod: same glass highlight as the top menu pills (was a flat white wash + fill).
+                 .then(if (isV2) Modifier.nuvioGlass(com.nuvio.tv.ui.v2.components.GlassRole.CONTROL,
+-                    focused = false, shape = RoundedCornerShape(NuvioTheme.radii.md))
+-                    .modMenuPillHighlight(fieldFocused, RoundedCornerShape(NuvioTheme.radii.md)) else Modifier)
++                    focused = false, shape = RoundedCornerShape(50) /* Nuvio Mod: pill */)
++                    .modMenuPillHighlight(fieldFocused, RoundedCornerShape(50) /* Nuvio Mod: pill */) else Modifier)
+                 .focusRequester(searchFocusRequester)
+                 .focusProperties {
+                     canFocus = isScreenActive
+@@ -1478,7 +1478,7 @@ private fun SearchInputField(
+                 }
+             ),
+             singleLine = true,
+-            shape = RoundedCornerShape(NuvioTheme.radii.md),
++            shape = RoundedCornerShape(50) /* Nuvio Mod: pill */,
+             placeholder = {
+                 Text(
+                     text = stringResource(R.string.search_placeholder),
+@@ -1595,8 +1595,10 @@ private fun Modifier.modMenuPillHighlight(focused: Boolean, shape: androidx.comp
+                 androidx.compose.ui.graphics.Brush.radialGradient(
+                     0f to Color.White.copy(alpha = 0.11f),
+                     1f to Color.Transparent,
+-                    center = androidx.compose.ui.geometry.Offset(size.width * 0.28f, 0f),
+-                    radius = size.width.coerceAtLeast(1f) * 0.75f
++                    // Sized from the height, so the sheen looks the same on a wide bar as on a menu pill
++                    // (on a menu pill, about 4x as wide as tall, these equal 28% and 75% of the width).
++                    center = androidx.compose.ui.geometry.Offset(minOf(size.width * 0.28f, size.height * 1.12f), 0f),
++                    radius = minOf(size.width * 0.75f, size.height * 3f).coerceAtLeast(1f)
+                 )
+             )
+         }
