@@ -12,14 +12,10 @@ index 3130e61..41f3e58 100644
                                  border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                  shape = cwClipShape
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt b/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
-index 6a9f831..e2f1150 100644
+index 6a9f831..dd6b64c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
-@@ -9,9 +9,12 @@ import androidx.compose.runtime.Composable
- import androidx.compose.runtime.remember
- import androidx.compose.ui.Modifier
- import androidx.compose.ui.draw.clip
-+import androidx.compose.ui.draw.drawWithContent
+@@ -12,6 +12,8 @@ import androidx.compose.ui.draw.clip
  import androidx.compose.ui.focus.onFocusChanged
  import androidx.compose.ui.graphics.Color
  import androidx.compose.ui.graphics.Shape
@@ -28,12 +24,12 @@ index 6a9f831..e2f1150 100644
  import androidx.compose.ui.input.key.onKeyEvent
  import androidx.compose.ui.semantics.onClick
  import androidx.compose.ui.semantics.semantics
-@@ -33,14 +36,50 @@ fun NuvioCard(
+@@ -33,14 +35,34 @@ fun NuvioCard(
      focusedGlow: Glow = Glow.None,
      content: @Composable ColumnScope.() -> Unit
  ) {
 +    // Nuvio Mod: Apple TV style focus. The focused card grows a little and casts a soft shadow;
-+    // no border, ring or glow.
++    // no border, ring or glow. For a sheen, use Arc's "Card depth effect" setting.
 +    val modFocused = remember { androidx.compose.runtime.mutableStateOf(false) }
 +    val modScale = androidx.compose.animation.core.animateFloatAsState(
 +        targetValue = if (modFocused.value) MOD_FOCUSED_CARD_SCALE else 1f,
@@ -52,22 +48,6 @@ index 6a9f831..e2f1150 100644
 +            ambientShadowColor = Color.Black
 +            spotShadowColor = Color.Black
 +        }
-+        .drawWithContent {
-+            drawContent()
-+            // A soft light sheen across the top of the focused card, like Apple TV's.
-+            val p = ((modScale.value - 1f) / (MOD_FOCUSED_CARD_SCALE - 1f)).coerceIn(0f, 1f)
-+            if (p > 0.01f) {
-+                drawRect(
-+                    androidx.compose.ui.graphics.Brush.linearGradient(
-+                        0f to Color.White.copy(alpha = 0.16f * p),
-+                        0.45f to Color.White.copy(alpha = 0.04f * p),
-+                        0.7f to Color.Transparent,
-+                        start = androidx.compose.ui.geometry.Offset(0f, 0f),
-+                        end = androidx.compose.ui.geometry.Offset(size.width * 0.6f, size.height)
-+                    )
-+                )
-+            }
-+        }
      if (!light) {
          LightweightCard(
              onClick = onClick,
@@ -82,7 +62,7 @@ index 6a9f831..e2f1150 100644
              content = content
          )
          return
-@@ -48,6 +87,7 @@ fun NuvioCard(
+@@ -48,6 +70,7 @@ fun NuvioCard(
      val press = remember { SelectKeyPress() }
      Column(
          modifier = modifier
@@ -90,7 +70,7 @@ index 6a9f831..e2f1150 100644
              .semantics { onClick { onClick(); true } }
              .onFocusChanged { if (!it.isFocused) press.keyCode = null }
              .onKeyEvent { press.handle(it.nativeKeyEvent, onClick) }
-@@ -58,6 +98,8 @@ fun NuvioCard(
+@@ -58,6 +81,8 @@ fun NuvioCard(
      )
  }
  
