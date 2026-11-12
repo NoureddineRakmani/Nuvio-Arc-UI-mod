@@ -13,19 +13,17 @@ index 1fd64c8..8c29b38 100644
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..dd72435 100644
+index b771237..55f6d15 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-@@ -1,6 +1,17 @@
+@@ -1,6 +1,15 @@
  package com.nuvio.tv.ui.v2.navigation
  
++import com.nuvio.tv.ui.v2.components.ModLook
++import com.nuvio.tv.ui.v2.components.modPillHighlight
  import androidx.activity.compose.BackHandler
 +import androidx.compose.foundation.background
 +import androidx.compose.ui.draw.clip
-+import androidx.compose.ui.draw.drawBehind
-+import androidx.compose.ui.geometry.CornerRadius
-+import androidx.compose.ui.geometry.Offset
-+import androidx.compose.ui.graphics.Brush
 +import androidx.compose.ui.graphics.graphicsLayer
 +import dev.chrisbanes.haze.HazeInputScale
 +import dev.chrisbanes.haze.HazeState
@@ -34,7 +32,7 @@ index b771237..dd72435 100644
  import com.nuvio.tv.ui.v2.components.nuvioV2Focus
  import androidx.compose.foundation.layout.size
  import androidx.compose.foundation.focusGroup
-@@ -13,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxSize
+@@ -13,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
  import androidx.compose.foundation.layout.fillMaxWidth
  import androidx.compose.foundation.layout.padding
  import androidx.compose.foundation.layout.width
@@ -42,7 +40,7 @@ index b771237..dd72435 100644
  import androidx.compose.foundation.layout.height
  import androidx.compose.foundation.shape.RoundedCornerShape
  import androidx.compose.runtime.staticCompositionLocalOf
-@@ -56,6 +68,31 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
+@@ -56,6 +66,13 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
  
  val LocalV2TopChrome = staticCompositionLocalOf { false }
  
@@ -52,29 +50,11 @@ index b771237..dd72435 100644
 +// Nuvio Mod: avatar size in the profile pill; the pill has the same side padding as the other items.
 +private val MOD_NAV_AVATAR_SIZE = 20.dp
 +
-+/**
-+ * Nuvio Mod: the pill under the remote. Mostly clear glass: a faint fill and a soft off-centre
-+ * sheen from the upper left. No edge line. Drawn behind the label, so the text stays crisp.
-+ */
-+private fun Modifier.modNavFocusGlass(focused: Boolean): Modifier = if (!focused) this else drawBehind {
-+    val radius = CornerRadius(size.height / 2f)
-+    drawRoundRect(Color.White.copy(alpha = 0.07f), cornerRadius = radius)
-+    // Light catching the upper left and fading across the pill, not a band along the top.
-+    drawRoundRect(
-+        Brush.radialGradient(
-+            0f to Color.White.copy(alpha = 0.08f),
-+            1f to Color.Transparent,
-+            center = Offset(size.width * 0.28f, 0f),
-+            radius = size.width * 0.75f
-+        ),
-+        cornerRadius = radius
-+    )
-+}
 +
  /** Alternative chrome around the same navigation controller and destination graph. */
  @Composable
  @OptIn(ExperimentalTvMaterial3Api::class)
-@@ -72,11 +109,19 @@ fun V2TopNavigation(
+@@ -72,11 +89,19 @@ fun V2TopNavigation(
  ) {
      val visible = currentRoute in rootRoutes
      val contentFocus = remember { FocusRequester() }
@@ -94,7 +74,7 @@ index b771237..dd72435 100644
      val entryFocus = routeFocus[lastRoute] ?: routeFocus[selectedRoute] ?: routeFocus.values.first()
  
      // Destination BackHandlers are composed later and retain priority for sheets/settings.
-@@ -91,7 +136,9 @@ fun V2TopNavigation(
+@@ -91,7 +116,9 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
@@ -105,7 +85,7 @@ index b771237..dd72435 100644
              .focusRequester(contentFocus).focusRestorer()
              .focusProperties {
                  this.onExit = {
-@@ -105,16 +152,22 @@ fun V2TopNavigation(
+@@ -105,16 +132,22 @@ fun V2TopNavigation(
              }
          }
          if (visible) {
@@ -136,7 +116,7 @@ index b771237..dd72435 100644
                              val isSelected = item.route == selectedRoute
                              var itemFocused by remember { mutableStateOf(false) }
                              Button(onClick = {
-@@ -123,14 +176,17 @@ fun V2TopNavigation(
+@@ -123,14 +156,17 @@ fun V2TopNavigation(
                              }, modifier = Modifier.focusRequester(routeFocus.getValue(item.route))
                                  .focusProperties { down = contentFocus }
                                  .onFocusChanged { itemFocused = it.isFocused; if (it.isFocused) lastRoute = item.route }
@@ -145,22 +125,22 @@ index b771237..dd72435 100644
 -                                shape = ButtonDefaults.shape(RoundedCornerShape(7.dp)),
 +                                .semantics { selected = isSelected }
 +                                .height(MOD_NAV_ITEM_HEIGHT)
-+                                .modNavFocusGlass(itemFocused),
++                                .modPillHighlight(itemFocused, ModLook.Pill),
 +                                shape = ButtonDefaults.shape(RoundedCornerShape(50)),
                                  scale = ButtonDefaults.scale(focusedScale = 1f),
 -                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
 +                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
-+                                // Nuvio Mod: where the remote is = clear glass with a soft sheen (modNavFocusGlass);
++                                // Nuvio Mod: where the remote is = clear glass with a soft sheen (ModLook);
 +                                // the current page = a faint flat pane; the rest = no pill. Text stays white.
                                  colors = ButtonDefaults.colors(
 -                                    containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = .20f) else Color.Transparent,
 -                                    focusedContainerColor = NuvioTheme.colors.Secondary.copy(alpha = .38f),
-+                                    containerColor = if (isSelected) Color.White.copy(alpha = .04f) else Color.Transparent,
++                                    containerColor = if (isSelected) ModLook.Selected else Color.Transparent,
 +                                    focusedContainerColor = Color.Transparent,
                                      contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
                                      focusedContentColor = Color.White)) {
                                  when {
-@@ -143,21 +199,24 @@ fun V2TopNavigation(
+@@ -143,21 +179,24 @@ fun V2TopNavigation(
                          }
                      }
                      if (profile != null) {
@@ -173,7 +153,7 @@ index b771237..dd72435 100644
 -                            shape = ButtonDefaults.shape(RoundedCornerShape(7.dp)),
 -                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
 +                                .height(MOD_NAV_ITEM_HEIGHT)
-+                                .modNavFocusGlass(profileFocused),
++                                .modPillHighlight(profileFocused, ModLook.Pill),
 +                            shape = ButtonDefaults.shape(RoundedCornerShape(50)),
 +                            contentPadding = PaddingValues(horizontal = 14.dp), // Nuvio Mod: same left/right padding as the other items
                              scale = ButtonDefaults.scale(focusedScale = 1f),

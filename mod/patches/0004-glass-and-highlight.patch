@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt b/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt
-index 044b67a..0f9ed67 100644
+index 044b67a..c364b4d 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt
 @@ -23,11 +23,18 @@ fun v2Palette(accent: ThemeColorPalette, appearance: V2AppearancePreferences, th
@@ -19,9 +19,130 @@ index 044b67a..0f9ed67 100644
 +    return styled.copy(
 +        focusRing = Color.White,
 +        focusRingGradient = listOf(Color.White.copy(alpha = 0.18f)),
-+        focusBackground = Color.White.copy(alpha = 0.07f)
++        focusBackground = com.nuvio.tv.ui.v2.components.ModLook.FocusFill
 +    )
  }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
+new file mode 100644
+index 0000000..856fe8d
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
+@@ -0,0 +1,115 @@
++package com.nuvio.tv.ui.v2.components
++
++import androidx.compose.foundation.BorderStroke
++import androidx.compose.foundation.layout.RowScope
++import androidx.compose.foundation.shape.RoundedCornerShape
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.drawBehind
++import androidx.compose.ui.draw.drawWithContent
++import androidx.compose.ui.focus.onFocusChanged
++import androidx.compose.ui.geometry.Offset
++import androidx.compose.ui.graphics.Brush
++import androidx.compose.ui.graphics.Color
++import androidx.compose.ui.graphics.Outline
++import androidx.compose.ui.graphics.Shape
++import androidx.compose.ui.graphics.drawOutline
++import androidx.compose.ui.graphics.drawscope.DrawScope
++import androidx.compose.ui.unit.dp
++import androidx.tv.material3.Button
++import androidx.tv.material3.ButtonColors
++import androidx.tv.material3.ButtonDefaults
++import androidx.tv.material3.ExperimentalTvMaterial3Api
++import com.nuvio.tv.ui.v2.appearance.LocalV2Appearance
++
++/**
++ * Nuvio Mod: the one place that defines the mod's look. Every screen reads these values, so a
++ * change here changes the whole app (the player keeps Arc's own look).
++ */
++object ModLook {
++    /** Focus highlight: flat white fill. */
++    const val FILL = 0.07f
++    /** Focus highlight: soft sheen from the upper left, on top of the fill. */
++    const val SHEEN = 0.08f
++    /** Selected but not focused (current page, chosen option): flat white pane. */
++    const val SELECTED = 0.04f
++    /** How much posters, photos and other picture cards grow on focus. */
++    const val GROW = 1.06f
++
++    val Selected: Color = Color.White.copy(alpha = SELECTED)
++    val FocusFill: Color = Color.White.copy(alpha = FILL)
++
++    /** Corner used by buttons, rows, tabs and option cards. */
++    val Corner = RoundedCornerShape(12.dp)
++    val Pill = RoundedCornerShape(50)
++}
++
++/**
++ * The highlight itself: fill + sheen, no edge line. The sheen is sized from the height, so it looks
++ * the same on a wide row as on a small pill. [amount] fades it in and out; [fill] = false draws the
++ * sheen only (for items whose own background already turns into [ModLook.FocusFill] on focus).
++ */
++internal fun DrawScope.drawModSoftHighlight(outline: Outline, amount: Float = 1f, fill: Boolean = true) {
++    if (amount <= 0f) return
++    if (fill) drawOutline(outline, Color.White, alpha = ModLook.FILL * amount)
++    drawOutline(
++        outline,
++        Brush.radialGradient(
++            0f to Color.White.copy(alpha = ModLook.SHEEN * amount),
++            1f to Color.Transparent,
++            center = Offset(minOf(size.width * 0.28f, size.height * 1.12f), 0f),
++            radius = minOf(size.width * 0.75f, size.height * 3f).coerceAtLeast(1f)
++        )
++    )
++}
++
++/** Highlight behind the content, for items that already know whether they are focused. */
++fun Modifier.modPillHighlight(focused: Boolean, shape: Shape, fill: Boolean = true): Modifier =
++    if (!focused) this else drawBehind {
++        drawModSoftHighlight(shape.createOutline(size, layoutDirection, this), fill = fill)
++    }
++
++/**
++ * Highlight for an existing card or button that draws its own background: it tracks focus by itself
++ * and draws the highlight over the item. Does nothing outside the Nuvio v2 interface.
++ */
++@Composable
++fun Modifier.modFocusHighlight(shape: Shape = ModLook.Corner, fill: Boolean = true): Modifier {
++    if (LocalV2Appearance.current == null) return this
++    var focused by remember { mutableStateOf(false) }
++    return onFocusChanged { focused = it.isFocused }.drawWithContent {
++        drawContent()
++        if (focused) drawModSoftHighlight(shape.createOutline(size, layoutDirection, this), fill = fill)
++    }
++}
++
++/** Arc's coloured focus ring, switched off in the Nuvio v2 interface (the highlight replaces it). */
++@Composable
++fun modNoRingInV2(stroke: BorderStroke): BorderStroke =
++    if (LocalV2Appearance.current != null) BorderStroke(stroke.width, Color.Transparent) else stroke
++
++/**
++ * A plain text button. In Nuvio v2 it is the same glass button as on the details page; otherwise it
++ * is Arc's original button, with [colors] if the screen set any.
++ */
++@OptIn(ExperimentalTvMaterial3Api::class)
++@Composable
++fun ModPlainButton(
++    onClick: () -> Unit,
++    modifier: Modifier = Modifier,
++    enabled: Boolean = true,
++    colors: ButtonColors? = null,
++    content: @Composable RowScope.() -> Unit
++) {
++    if (LocalV2Appearance.current != null) {
++        NuvioActionPill(onClick = onClick, modifier = modifier, enabled = enabled, stationary = true, content = content)
++    } else if (colors != null) {
++        Button(onClick = onClick, modifier = modifier, enabled = enabled, colors = colors, content = content)
++    } else {
++        Button(onClick = onClick, modifier = modifier, enabled = enabled, content = content)
++    }
++}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
 index b0043f1..63e022c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
@@ -83,7 +204,7 @@ index 308ed1a..a65907e 100644
 +        .nuvioGlass(GlassRole.CONTROL, false, shape) // Nuvio Mod: highlight comes from nuvioV2Focus only
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFilterPill.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFilterPill.kt
-index b935344..d0ff268 100644
+index b935344..653304e 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFilterPill.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFilterPill.kt
 @@ -1,5 +1,6 @@
@@ -108,23 +229,15 @@ index b935344..d0ff268 100644
 -            .nuvioGlass(GlassRole.CONTROL, selected, shape)
 +            .nuvioGlass(GlassRole.CONTROL, false, shape)
 +            // Nuvio Mod: selected = faint white pane (like the menu's current page), focus = soft highlight
-+            .background(if (selected) Color.White.copy(alpha = 0.04f) else Color.Transparent, shape)
++            .background(if (selected) ModLook.Selected else Color.Transparent, shape)
              .nuvioRemoteClick(onClick)
              .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClick)
              .semantics { this.selected = selected }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
-index d55c84d..6b443c7 100644
+index d55c84d..264089a 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
-@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.drawWithCache
- import androidx.compose.ui.graphics.Color
- import androidx.compose.ui.graphics.Shape
- import androidx.compose.ui.graphics.drawOutline
-+import androidx.compose.ui.draw.drawBehind
- import androidx.compose.ui.graphics.drawscope.Stroke
- import androidx.compose.ui.graphics.graphicsLayer
- import androidx.compose.ui.platform.LocalDensity
-@@ -21,7 +22,48 @@ import com.nuvio.tv.ui.v2.quality.LocalGlassTokens
+@@ -21,7 +21,48 @@ import com.nuvio.tv.ui.v2.quality.LocalGlassTokens
  /** Decorates an existing focus target without adding another focus node or measuring again. */
  @Composable
  /** [hardwareShadow] false for see-through glass: a hardware shadow shows through it as a polygon. */
@@ -174,42 +287,6 @@ index d55c84d..6b443c7 100644
      // Stationary focus snaps off: idle posters have no outgoing animation or decoration.
      // Do not create per-card animation jobs, draw caches and glint state for an invisible edge.
      // This also keeps idle cards out of the artwork/theme observation path.
-@@ -119,3 +161,35 @@ fun v2FocusDrawsOwnEdge(): Boolean {
-     val clearGlass = usesClearGlassTheme() || (NuvioTheme.currentTheme == com.nuvio.tv.domain.model.AppTheme.GLASS && cinematic)
-     return clearGlass && cinematic
- }
-+
-+/**
-+ * Nuvio Mod: the top menu pill's highlight (faint white fill + soft sheen from the upper left,
-+ * no edge line), drawn behind the content when [focused]. The sheen is sized from the height, so it
-+ * looks the same on a wide row as on a menu pill.
-+ */
-+fun Modifier.modPillHighlight(focused: Boolean, shape: androidx.compose.ui.graphics.Shape): Modifier =
-+    if (!focused) this else drawBehind {
-+        drawModSoftHighlight(shape.createOutline(size, layoutDirection, this))
-+    }
-+
-+/**
-+ * Nuvio Mod: the soft highlight used across the app (settings-page strength): white fill 7% and a
-+ * sheen from the upper left at 8%, sized from the height so it looks the same on any width.
-+ * [amount] fades it in and out.
-+ */
-+internal fun androidx.compose.ui.graphics.drawscope.DrawScope.drawModSoftHighlight(
-+    outline: androidx.compose.ui.graphics.Outline,
-+    amount: Float = 1f
-+) {
-+    if (amount <= 0f) return
-+    drawOutline(outline, Color.White, alpha = 0.07f * amount)
-+    drawOutline(
-+        outline,
-+        androidx.compose.ui.graphics.Brush.radialGradient(
-+            0f to Color.White.copy(alpha = 0.08f * amount),
-+            1f to Color.Transparent,
-+            center = androidx.compose.ui.geometry.Offset(minOf(size.width * 0.28f, size.height * 1.12f), 0f),
-+            radius = minOf(size.width * 0.75f, size.height * 3f).coerceAtLeast(1f)
-+        )
-+    )
-+}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
 index d8fd359..e35ca40 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
@@ -306,7 +383,7 @@ index d8fd359..e35ca40 100644
      val appearance = LocalV2Appearance.current
      val clearGlass = usesClearGlassTheme()
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/V2Motion.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/V2Motion.kt
-index 56e22c5..44182bd 100644
+index 56e22c5..6bda977 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/V2Motion.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/V2Motion.kt
 @@ -16,8 +16,8 @@ object V2Motion {
@@ -315,8 +392,8 @@ index 56e22c5..44182bd 100644
          fun forStyle(style: FocusStyle) = when (style) {
 -            FocusStyle.GLASS_LIFT -> FocusTransform(1.035f, 2f)
 -            FocusStyle.CINEMATIC_FOCUS -> FocusTransform(1.05f, 3f)
-+            FocusStyle.GLASS_LIFT -> FocusTransform(1.06f, 2f) // Nuvio Mod: same growth as posters
-+            FocusStyle.CINEMATIC_FOCUS -> FocusTransform(1.06f, 3f) // Nuvio Mod: same growth as posters
++            FocusStyle.GLASS_LIFT -> FocusTransform(ModLook.GROW, 2f) // Nuvio Mod: same growth as posters
++            FocusStyle.CINEMATIC_FOCUS -> FocusTransform(ModLook.GROW, 3f) // Nuvio Mod: same growth as posters
          }
      }
  }

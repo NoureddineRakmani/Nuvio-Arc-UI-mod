@@ -30,20 +30,25 @@ index a5e46cc..f9d2478 100644
                  is HomeRow.PlaceholderCatalog -> {
                      // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
-index b564497..f53d13f 100644
+index b564497..2d2e006 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
-@@ -34,6 +34,9 @@ import androidx.compose.foundation.background
+@@ -1,5 +1,6 @@
+ package com.nuvio.tv.ui.screens.search
+ 
++import com.nuvio.tv.ui.v2.components.modPillHighlight
+ import com.nuvio.tv.ui.v2.components.sidebarPageContent
+ 
+ import com.nuvio.tv.ui.v2.appearance.LocalV2Appearance
+@@ -34,6 +35,7 @@ import androidx.compose.foundation.background
  import androidx.compose.foundation.border
  import androidx.compose.foundation.layout.Arrangement
  import androidx.compose.foundation.layout.Box
 +import androidx.compose.foundation.clickable
-+import androidx.compose.ui.draw.drawBehind
-+import androidx.compose.ui.graphics.drawOutline
  import androidx.compose.foundation.layout.Column
  import androidx.compose.foundation.layout.PaddingValues
  import androidx.compose.foundation.layout.Row
-@@ -159,6 +162,7 @@ fun SearchScreen(
+@@ -159,6 +161,7 @@ fun SearchScreen(
      onNavigateToSeeAll: (catalogId: String, addonId: String, type: String) -> Unit = { _, _, _ -> },
      onOpenDiscover: () -> Unit = {},
      onAskScout: (String) -> Unit = {},
@@ -51,7 +56,7 @@ index b564497..f53d13f 100644
      askAccess: com.nuvio.tv.ui.screens.scout.ask.AskAccessViewModel = hiltViewModel()
  ) {
      val askHasKey by askAccess.hasKey.collectAsState()
-@@ -168,6 +172,7 @@ fun SearchScreen(
+@@ -168,6 +171,7 @@ fun SearchScreen(
      val artworkAccent = com.nuvio.tv.ui.v2.appearance.LocalArtworkAccent.current
      var focusedResultsRow by remember { mutableStateOf<String?>(null) }
      val uiState by viewModel.uiState.collectAsState()
@@ -59,7 +64,7 @@ index b564497..f53d13f 100644
      val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
      val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
      val context = LocalContext.current
-@@ -404,8 +409,8 @@ fun SearchScreen(
+@@ -404,8 +408,8 @@ fun SearchScreen(
          searchRowFocusedItemIndex.keys.retainAll(visibleRowKeys)
      }
  
@@ -70,7 +75,7 @@ index b564497..f53d13f 100644
              discoverLocation = uiState.discoverLocation,
              query = trimmedQuery,
              submittedQuery = trimmedSubmittedQuery
-@@ -700,7 +705,7 @@ fun SearchScreen(
+@@ -700,7 +704,7 @@ fun SearchScreen(
                          onOpenDiscover()
                      },
                      discoverFocusRequester = discoverButtonFocusRequester,
@@ -79,7 +84,7 @@ index b564497..f53d13f 100644
                      keyboardController = keyboardController,
                      clearHistoryFocusRequester = if (showRecentSearches) recentClearHistoryFocusRequester else null,
                      isScreenActive = isScreenActive
-@@ -751,34 +756,43 @@ fun SearchScreen(
+@@ -751,34 +755,43 @@ fun SearchScreen(
  
                  when {
                      trimmedSubmittedQuery.length < MIN_SEARCH_QUERY_LENGTH && !hasPendingUnsubmittedQuery -> {
@@ -140,7 +145,7 @@ index b564497..f53d13f 100644
                              }
                          }
                      }
-@@ -1357,8 +1371,10 @@ private fun SearchInputField(
+@@ -1357,8 +1370,10 @@ private fun SearchInputField(
                  }
  
                  // Layer 3: Actual button
@@ -153,14 +158,14 @@ index b564497..f53d13f 100644
                      modifier = Modifier
                          .then(
                              if (voiceFocusRequester != null) {
-@@ -1368,16 +1384,24 @@ private fun SearchInputField(
+@@ -1368,16 +1383,24 @@ private fun SearchInputField(
                              }
                          )
                          .onFocusChanged { isVoiceButtonFocused = it.isFocused }
 -                        .nuvioControlSurface(RoundedCornerShape(NuvioTheme.radii.md))
 +                        .then(if (isV2) Modifier
 +                            .nuvioGlass(com.nuvio.tv.ui.v2.components.GlassRole.CONTROL, false, RoundedCornerShape(50) /* Nuvio Mod: pill */)
-+                            .modMenuPillHighlight(isVoiceButtonFocused, RoundedCornerShape(50) /* Nuvio Mod: pill */)
++                            .modPillHighlight(isVoiceButtonFocused, RoundedCornerShape(50) /* Nuvio Mod: pill */)
 +                            else Modifier)
                          .size(NuvioTheme.spacing.huge)
                          .border(
@@ -181,7 +186,7 @@ index b564497..f53d13f 100644
                          )
                  ) {
                      Icon(
-@@ -1396,9 +1420,10 @@ private fun SearchInputField(
+@@ -1396,9 +1419,10 @@ private fun SearchInputField(
              onValueChange = onQueryChanged,
              modifier = Modifier
                  .weight(1f)
@@ -190,11 +195,11 @@ index b564497..f53d13f 100644
                  .then(if (isV2) Modifier.nuvioGlass(com.nuvio.tv.ui.v2.components.GlassRole.CONTROL,
 -                    focused = fieldFocused, shape = RoundedCornerShape(NuvioTheme.radii.md)) else Modifier)
 +                    focused = false, shape = RoundedCornerShape(50) /* Nuvio Mod: pill */)
-+                    .modMenuPillHighlight(fieldFocused, RoundedCornerShape(50) /* Nuvio Mod: pill */) else Modifier)
++                    .modPillHighlight(fieldFocused, RoundedCornerShape(50) /* Nuvio Mod: pill */) else Modifier)
                  .focusRequester(searchFocusRequester)
                  .focusProperties {
                      canFocus = isScreenActive
-@@ -1453,7 +1478,7 @@ private fun SearchInputField(
+@@ -1453,7 +1477,7 @@ private fun SearchInputField(
                  }
              ),
              singleLine = true,
@@ -203,7 +208,7 @@ index b564497..f53d13f 100644
              placeholder = {
                  Text(
                      text = stringResource(R.string.search_placeholder),
-@@ -1508,3 +1533,79 @@ private fun SearchInputField(
+@@ -1508,3 +1532,56 @@ private fun SearchInputField(
          }
      }
  }
@@ -239,7 +244,7 @@ index b564497..f53d13f 100644
 +                Button(
 +                    onClick = { onSearchSelected(recentQuery) },
 +                    modifier = Modifier.onFocusChanged { pillFocused = it.isFocused }
-+                        .modMenuPillHighlight(pillFocused, pillShape),
++                        .modPillHighlight(pillFocused, pillShape),
 +                    shape = ButtonDefaults.shape(pillShape),
 +                    colors = pillColors
 +                ) {
@@ -252,7 +257,7 @@ index b564497..f53d13f 100644
 +            onClick = onClearHistory,
 +            modifier = Modifier.focusRequester(clearHistoryFocusRequester)
 +                .onFocusChanged { clearFocused = it.isFocused }
-+                .modMenuPillHighlight(clearFocused, pillShape),
++                .modPillHighlight(clearFocused, pillShape),
 +            shape = ButtonDefaults.shape(pillShape),
 +            colors = pillColors
 +        ) {
@@ -260,29 +265,6 @@ index b564497..f53d13f 100644
 +        }
 +    }
 +}
-+
-+/**
-+ * Nuvio Mod: the top menu pill's highlight (faint white fill + soft sheen from the upper left,
-+ * no edge line), drawn behind the content when [focused].
-+ */
-+private fun Modifier.modMenuPillHighlight(focused: Boolean, shape: androidx.compose.ui.graphics.Shape): Modifier =
-+    if (!focused) this else this.then(
-+        Modifier.drawBehind {
-+            val outline = shape.createOutline(size, layoutDirection, this)
-+            drawOutline(outline, Color.White, alpha = 0.07f)
-+            drawOutline(
-+                outline,
-+                androidx.compose.ui.graphics.Brush.radialGradient(
-+                    0f to Color.White.copy(alpha = 0.08f),
-+                    1f to Color.Transparent,
-+                    // Sized from the height, so the sheen looks the same on a wide bar as on a menu pill
-+                    // (on a menu pill, about 4x as wide as tall, these equal 28% and 75% of the width).
-+                    center = androidx.compose.ui.geometry.Offset(minOf(size.width * 0.28f, size.height * 1.12f), 0f),
-+                    radius = minOf(size.width * 0.75f, size.height * 3f).coerceAtLeast(1f)
-+                )
-+            )
-+        }
-+    )
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchUiState.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchUiState.kt
 index b80f048..f07f580 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchUiState.kt

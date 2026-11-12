@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/CastSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/CastSection.kt
-index 5927085..eab310e 100644
+index 5927085..231b248 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/CastSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/CastSection.kt
 @@ -509,12 +509,13 @@ private fun CastMemberItem(
@@ -14,12 +14,12 @@ index 5927085..eab310e 100644
                  )
 -            )
 +            ),
-+            scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) 1.06f else 1.1f) // Nuvio Mod: same growth as posters
++            scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) com.nuvio.tv.ui.v2.components.ModLook.GROW else 1.1f) // Nuvio Mod: same growth as posters
          ) {
              Box(
                  modifier = Modifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/CommentsSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/CommentsSection.kt
-index 0bdf924..2ce81a3 100644
+index 0bdf924..fba35ec 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/CommentsSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/CommentsSection.kt
 @@ -546,14 +546,14 @@ private fun CommentCard(
@@ -35,12 +35,12 @@ index 0bdf924..2ce81a3 100644
          ),
          shape = CardDefaults.shape(shape),
 -        scale = CardDefaults.scale(focusedScale = 1.02f)
-+        scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) 1.06f else 1.02f)
++        scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) com.nuvio.tv.ui.v2.components.ModLook.GROW else 1.02f)
      ) {
          Column(
              modifier = Modifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/CompanyLogosSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/CompanyLogosSection.kt
-index f7e366c..3a7d432 100644
+index f7e366c..aafc8b9 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/CompanyLogosSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/CompanyLogosSection.kt
 @@ -309,13 +309,13 @@ private fun CompanyLogoCard(
@@ -55,15 +55,27 @@ index f7e366c..3a7d432 100644
              )
          ),
 -        scale = CardDefaults.scale(focusedScale = 1.03f)
-+        scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) 1.06f else 1.03f)
++        scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) com.nuvio.tv.ui.v2.components.ModLook.GROW else 1.03f)
      ) {
          Box(
              modifier = Modifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeOptionsOverlay.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeOptionsOverlay.kt
-index 6486532..540e5b8 100644
+index 6486532..4a754b9 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeOptionsOverlay.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeOptionsOverlay.kt
-@@ -542,8 +542,8 @@ private fun EpisodeOverlayActionButton(
+@@ -1,5 +1,6 @@
+ package com.nuvio.tv.ui.screens.detail
+ 
++import com.nuvio.tv.ui.v2.components.modFocusHighlight
+ import android.content.Context
+ import android.view.KeyEvent as AndroidKeyEvent
+ import androidx.compose.foundation.background
+@@ -538,19 +539,19 @@ private fun EpisodeOverlayActionButton(
+     Button(
+         onClick = action.onClick,
+         enabled = action.enabled,
+-        modifier = modifier,
++        modifier = (modifier).modFocusHighlight(CircleShape, fill = false),
          colors = ButtonDefaults.colors(
              containerColor = NuvioTheme.colors.BackgroundCard,
              contentColor = NuvioTheme.colors.TextPrimary,
@@ -74,8 +86,17 @@ index 6486532..540e5b8 100644
          ),
          border = ButtonDefaults.border(
              focusedBorder = Border(
+-                border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
++                border = com.nuvio.tv.ui.v2.components.modNoRingInV2(NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)),
+                 shape = CircleShape
+             )
+-        )
++        ), scale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) androidx.tv.material3.ButtonDefaults.scale(focusedScale = 1f) else androidx.tv.material3.ButtonDefaults.scale()
+     ) {
+         Text(action.label)
+     }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeRatingsSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeRatingsSection.kt
-index c9b4b13..dd538bd 100644
+index c9b4b13..907dda7 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeRatingsSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeRatingsSection.kt
 @@ -1,5 +1,6 @@
@@ -97,18 +118,22 @@ index c9b4b13..dd538bd 100644
                                      if (upRequester != null) up = upRequester
                                      down = effectiveRatingsGridFocusRequester
                                  }
-+                                .modPillHighlight(chipFocused, RoundedCornerShape(14.dp)) // Nuvio Mod
++                                .modPillHighlight(chipFocused, RoundedCornerShape(12.dp)) // Nuvio Mod
                                  .onFocusChanged { state ->
 +                                    chipFocused = state.isFocused
                                      if (state.isFocused && selectedSeason != season) {
                                          selectedSeason = season
                                      }
-@@ -197,13 +201,13 @@ fun EpisodeRatingsSection(
-                             shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
+@@ -194,19 +198,19 @@ fun EpisodeRatingsSection(
+                                     role = Role.Tab
+                                     selected = isSelected
+                                 },
+-                            shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
++                            shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
                              colors = CardDefaults.colors(
                                  containerColor = if (isSelected) {
 -                                    NuvioTheme.colors.FocusBackground
-+                                    if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) androidx.compose.ui.graphics.Color.White.copy(alpha = 0.04f) else NuvioTheme.colors.FocusBackground
++                                    if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) com.nuvio.tv.ui.v2.components.ModLook.Selected else NuvioTheme.colors.FocusBackground
                                  } else {
                                      NuvioTheme.colors.BackgroundCard
                                  },
@@ -119,8 +144,18 @@ index c9b4b13..dd538bd 100644
 +                            border = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) CardDefaults.border(border = Border.None, focusedBorder = Border.None) else CardDefaults.border( // Nuvio Mod: soft highlight instead
                                  focusedBorder = Border(
                                      border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                     shape = RoundedCornerShape(14.dp)
-@@ -267,13 +271,13 @@ fun EpisodeRatingsSection(
+-                                    shape = RoundedCornerShape(14.dp)
++                                    shape = RoundedCornerShape(12.dp)
+                                 )
+                             ),
+                             scale = CardDefaults.scale(focusedScale = 1f)
+@@ -262,18 +266,18 @@ fun EpisodeRatingsSection(
+                                 // empty onClick stays; clearAndSetSemantics replaces the chip's two
+                                 // Texts with one name that carries both the episode and its rating.)
+                                 .clearAndSetSemantics { contentDescription = ratingDescription },
+-                            shape = CardDefaults.shape(shape = RoundedCornerShape(14.dp)),
++                            shape = CardDefaults.shape(shape = RoundedCornerShape(12.dp)),
+                             colors = CardDefaults.colors(
                                  containerColor = episodeRating.chipColor,
                                  focusedContainerColor = episodeRating.chipColor
                              ),
@@ -128,16 +163,59 @@ index c9b4b13..dd538bd 100644
 +                            border = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) CardDefaults.border(border = Border.None, focusedBorder = Border.None) else CardDefaults.border( // Nuvio Mod: no coloured ring
                                  focusedBorder = Border(
                                      border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
-                                     shape = RoundedCornerShape(14.dp)
+-                                    shape = RoundedCornerShape(14.dp)
++                                    shape = RoundedCornerShape(12.dp)
                                  )
                              ),
 -                            scale = CardDefaults.scale(focusedScale = 1.03f)
-+                            scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) 1.06f else 1.03f)
++                            scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) com.nuvio.tv.ui.v2.components.ModLook.GROW else 1.03f)
                          ) {
                              Column(
                                  modifier = Modifier
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShuffleDialog.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShuffleDialog.kt
+index 2937cc9..b436fc0 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShuffleDialog.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShuffleDialog.kt
+@@ -106,13 +106,13 @@ internal fun EpisodeShuffleDialog(
+             readyPicker == null -> Text(stringResource(R.string.random_episode_loading))
+             allCount == 0 -> {
+                 Text(stringResource(R.string.random_episode_empty_subtitle))
+-                Button(onClick = onDismiss, modifier = Modifier.focusRequester(focusRequester)) {
++                com.nuvio.tv.ui.v2.components.ModPlainButton(onClick = onDismiss, modifier = Modifier.focusRequester(focusRequester)) {
+                     Text(stringResource(R.string.action_close))
+                 }
+             }
+             else -> {
+                 for (include in listOf(false, true)) {
+-                    Button(
++                    com.nuvio.tv.ui.v2.components.ModPlainButton(
+                         onClick = {
+                             includeWatched = include
+                             selectedEpisode = readyPicker.pick(include)
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShufflePreview.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShufflePreview.kt
+index adae93e..7a78c13 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShufflePreview.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodeShufflePreview.kt
+@@ -111,7 +111,7 @@ internal fun EpisodeShufflePreview(
+             verticalArrangement = Arrangement.spacedBy(24.dp)
+         ) {
+             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
+-                Button(
++                com.nuvio.tv.ui.v2.components.ModPlainButton(
+                     onClick = { if (!starting) onBack() },
+                     modifier = Modifier.focusRequester(backFocus).focusProperties { down = playFocus }
+                 ) {
+@@ -161,7 +161,7 @@ internal fun EpisodeShufflePreview(
+                             modifier = Modifier.focusProperties { up = backFocus; down = FocusRequester.Cancel }
+                         )
+                         if (canShuffleAgain) {
+-                            Button(
++                            com.nuvio.tv.ui.v2.components.ModPlainButton(
+                                 onClick = { if (!starting) onShuffleAgain() },
+                                 modifier = Modifier.focusProperties { up = backFocus; down = FocusRequester.Cancel }
+                             ) {
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
-index 1c4be0f..0d69be9 100644
+index 1c4be0f..dfb395e 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
 @@ -142,7 +142,7 @@ fun SeasonTabs(
@@ -179,7 +257,7 @@ index 1c4be0f..0d69be9 100644
                  colors = CardDefaults.colors(
                      containerColor = when {
 -                        compact && isSelected -> Color.Transparent
-+                        compact && isSelected -> Color.White.copy(alpha = 0.04f) // Nuvio Mod
++                        compact && isSelected -> com.nuvio.tv.ui.v2.components.ModLook.Selected // Nuvio Mod
                          isSelected -> accent
                          else -> Color.White.copy(alpha = 0.08f)
                      },
@@ -207,7 +285,7 @@ index 1c4be0f..0d69be9 100644
                  Box(Modifier.fillMaxWidth().height(cardMetrics.cardHeight).clip(shape).background(cardBgColor)) {
                      AsyncImage(thumbnailRequest, episode.title.localizeEpisodeTitle(context),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
-index e634514..79bcfa5 100644
+index e634514..e4f8b4e 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
 @@ -327,9 +327,14 @@ fun HeroContentSection(
@@ -268,7 +346,17 @@ index e634514..79bcfa5 100644
                              )
                          }
  
-@@ -631,7 +641,7 @@ internal fun PlayButton(
+@@ -509,7 +519,8 @@ fun HeroContentSection(
+                                 ),
+                                 onClick = { if (!shuffleActionPending) onRandomEpisodeClick() },
+                                 focusRequester = randomEpisodeFocusRequester,
+-                                onFocused = onHeroActionFocused
++                                onFocused = onHeroActionFocused,
++                                iconOnly = true // Nuvio Mod
+                             )
+                         }
+ 
+@@ -631,7 +642,7 @@ internal fun PlayButton(
              }
          },
          modifier = modifier
@@ -277,7 +365,7 @@ index e634514..79bcfa5 100644
              .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
              .onFocusChanged {
                  if (it.hasFocus) com.nuvio.tv.core.performance.DetailEntryTrace.mark("controls_focus", once = true)
-@@ -683,7 +693,7 @@ internal fun PlayButton(
+@@ -683,7 +694,7 @@ internal fun PlayButton(
          colors = ButtonDefaults.colors(
              containerColor = if (isV2) Color.Transparent else NuvioTheme.colors.Secondary,
              focusedContainerColor = if (isV2) {
@@ -286,7 +374,7 @@ index e634514..79bcfa5 100644
              } else {
                  NuvioTheme.colors.Secondary
              },
-@@ -691,12 +701,12 @@ internal fun PlayButton(
+@@ -691,12 +702,12 @@ internal fun PlayButton(
              focusedContentColor = if (isV2) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.OnSecondary
          ),
          shape = ButtonDefaults.shape(
@@ -301,7 +389,16 @@ index e634514..79bcfa5 100644
              )
          ),
          contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xl, vertical = 14.dp)
-@@ -789,11 +799,12 @@ private fun ActionIconButtonPainter(
+@@ -772,7 +783,7 @@ private fun ScoutRateButton(
+             focusedContentColor = NuvioTheme.colors.OnSecondary
+         ),
+         border = IconButtonDefaults.border(
+-            focusedBorder = Border(border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs), shape = CircleShape)
++            focusedBorder = Border(border = com.nuvio.tv.ui.v2.components.modNoRingInV2(NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs)), shape = CircleShape)
+         ),
+         shape = IconButtonDefaults.shape(shape = CircleShape)
+     ) {
+@@ -789,11 +800,12 @@ private fun ActionIconButtonPainter(
      contentDescription: String,
      onClick: () -> Unit,
      onFocused: () -> Unit = {},
@@ -316,7 +413,7 @@ index e634514..79bcfa5 100644
              Icon(painter, null, Modifier.size(17.dp))
          }
          return
-@@ -850,11 +861,12 @@ private fun ActionIconButton(
+@@ -850,11 +862,12 @@ private fun ActionIconButton(
      selectedContentColor: Color = Color.Black,
      busy: Boolean = false,
      onFocused: () -> Unit = {},
@@ -331,7 +428,7 @@ index e634514..79bcfa5 100644
              when {
                  busy -> LoadingIndicator(Modifier.size(17.dp), color = androidx.tv.material3.LocalContentColor.current)
                  icon != null -> Icon(icon, null, Modifier.size(17.dp))
-@@ -1289,12 +1301,14 @@ private fun MetaInfoDivider() {
+@@ -1289,12 +1302,14 @@ private fun MetaInfoDivider() {
  @OptIn(ExperimentalTvMaterial3Api::class)
  @Composable
  private fun V2DetailGlassAction(label: String, onClick: () -> Unit, onFocused: () -> Unit,
@@ -347,7 +444,7 @@ index e634514..79bcfa5 100644
          .onPreviewKeyEvent { event ->
              val native = event.nativeKeyEvent
              if (onLongPress != null && native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
-@@ -1304,8 +1318,12 @@ private fun V2DetailGlassAction(label: String, onClick: () -> Unit, onFocused: (
+@@ -1304,8 +1319,12 @@ private fun V2DetailGlassAction(label: String, onClick: () -> Unit, onFocused: (
                  if (native.action == AndroidKeyEvent.ACTION_UP) consumed = false
                  true
              } else false
@@ -364,7 +461,7 @@ index e634514..79bcfa5 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
-index aae1ea2..9a0215f 100644
+index aae1ea2..249e616 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 @@ -1,5 +1,6 @@
@@ -385,8 +482,8 @@ index aae1ea2..9a0215f 100644
          colors = CardDefaults.colors(
 -            containerColor = Color.Transparent,
 -            focusedContainerColor = Color.Transparent
-+            containerColor = if ((com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) && selected) Color.White.copy(alpha = 0.04f) else Color.Transparent,
-+            focusedContainerColor = if ((com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) && selected) Color.White.copy(alpha = 0.04f) else Color.Transparent
++            containerColor = if ((com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) && selected) com.nuvio.tv.ui.v2.components.ModLook.Selected else Color.Transparent,
++            focusedContainerColor = if ((com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) && selected) com.nuvio.tv.ui.v2.components.ModLook.Selected else Color.Transparent
          ),
 +        shape = CardDefaults.shape(RoundedCornerShape(12.dp)),
          border = CardDefaults.border(

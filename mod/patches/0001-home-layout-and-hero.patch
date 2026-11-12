@@ -52,6 +52,39 @@ index f805e92..40b4ed3 100644
                      }
              )
          }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/GridHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/GridHomeContent.kt
+index 340162e..b14ea5f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/GridHomeContent.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/GridHomeContent.kt
+@@ -1037,12 +1037,12 @@ private fun SeeAllGridCard(
+             ),
+             border = CardDefaults.border(
+                 focusedBorder = Border(
+-                    border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
++                    border = com.nuvio.tv.ui.v2.components.modNoRingInV2(NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth)),
+                     shape = seeAllCardShape
+                 )
+             ),
+             scale = CardDefaults.scale(
+-                focusedScale = posterCardStyle.focusedScale
++                focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) com.nuvio.tv.ui.v2.components.ModLook.GROW else posterCardStyle.focusedScale
+             )
+         ) {
+             Box(
+@@ -1128,11 +1128,11 @@ private fun GridCollectionFolderCard(
+         ),
+         border = CardDefaults.border(
+             focusedBorder = Border(
+-                border = NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth),
++                border = com.nuvio.tv.ui.v2.components.modNoRingInV2(NuvioTheme.focusRing.border(posterCardStyle.focusedBorderWidth)),
+                 shape = cardShape
+             )
+         ),
+-        scale = CardDefaults.scale(focusedScale = posterCardStyle.focusedScale),
++        scale = CardDefaults.scale(focusedScale = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) com.nuvio.tv.ui.v2.components.ModLook.GROW else posterCardStyle.focusedScale),
+         glow = cardGlow
+     ) {
+         Box(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 index 647f0e4..20db722 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
