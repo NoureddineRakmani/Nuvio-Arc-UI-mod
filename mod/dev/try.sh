@@ -88,14 +88,25 @@ fi
 export JAVA_HOME ANDROID_HOME="$SDK"
 
 # 7. Build.
-step "Building (first time: 15-30 min, after that much faster)"
-( cd "$ARC" && ./gradlew :app:assembleFullDebug "-PnuvioAppIdSuffix=$SUFFIX" --console=plain -q ) || fail "The build failed. Copy the red lines above to Claude."
+#   bash ~/nuvio-try          quick build (fast to make, the app is a bit laggy)
+#   bash ~/nuvio-try smooth   quick build + pre-compiled on the TV
+#   bash ~/nuvio-try fast     fully optimized build, like the real releases (takes longer to make)
+MODE="${1:-}"
+if [ "$MODE" = "fast" ]; then
+  step "Building the fully optimized version (several minutes)"
+  ( cd "$ARC" && CI_USE_DEBUG_SIGNING=true ./gradlew :app:assembleFullRelease "-PnuvioAppIdSuffix=$SUFFIX" --console=plain -q ) || fail "The build failed. Copy the red lines above to Claude."
+  APK_DIR="$ARC/app/build/outputs/apk/full/release"; APK_KIND="release"
+else
+  step "Building (first time: 15-30 min, after that much faster)"
+  ( cd "$ARC" && ./gradlew :app:assembleFullDebug "-PnuvioAppIdSuffix=$SUFFIX" --console=plain -q ) || fail "The build failed. Copy the red lines above to Claude."
+  APK_DIR="$ARC/app/build/outputs/apk/full/debug"; APK_KIND="debug"
+fi
 
 # 8. Install on the TV box.
 step "Installing on the TV box"
 adb connect "$BOX" >/dev/null || true
 abi=$(adb -s "$BOX" shell getprop ro.product.cpu.abi | tr -d '\r')
-apk="$ARC/app/build/outputs/apk/full/debug/app-full-$abi-debug.apk"
+apk="$APK_DIR/app-full-$abi-$APK_KIND.apk"
 [ -f "$apk" ] || fail "No APK for $abi at $apk."
 aapt2=$(ls "$SDK"/build-tools/*/aapt2 | sort -V | tail -1)
 pkg=$("$aapt2" dump packagename "$apk")
@@ -104,12 +115,12 @@ adb -s "$BOX" install -r "$apk"
 
 # 9. Quick builds skip the slow "optimize" step of real releases, so let the TV box
 #    pre-compile the app instead. Without this it runs noticeably slower than Nuvio Mod.
-if [ "${1:-}" = "smooth" ]; then
+if [ "$MODE" = "smooth" ] || [ "$MODE" = "fast" ]; then
   step "Optimizing the app on the TV box (1-3 min)"
   adb -s "$BOX" shell cmd package compile -m speed -f "$EXPECTED" || echo "Optimizing failed - the app still works, just slower."
   adb -s "$BOX" shell am force-stop "$EXPECTED" || true
 else
-  echo "(Fast mode: the app may feel laggy. For a smooth one, run:  bash ~/nuvio-try smooth)"
+  echo "(Quick build: the app may feel laggy. Smoother: bash ~/nuvio-try smooth  -  fully optimized: bash ~/nuvio-try fast)"
 fi
 adb -s "$BOX" shell monkey -p "$EXPECTED" -c android.intent.category.LEANBACK_LAUNCHER 1 >/dev/null 2>&1 || true
 END=$(date +%s)
