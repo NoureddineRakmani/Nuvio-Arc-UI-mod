@@ -1,0 +1,157 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt b/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
+index cf5e3b5..c33425f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
+@@ -111,7 +111,7 @@ internal fun PanelActionRow(
+             .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+             .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused?.invoke() }
+             .then(if (v2) Modifier.nuvioV2Focus(focused, actionShape)
+-                .nuvioGlass(GlassRole.CONTROL, focused, actionShape) else Modifier),
++                .nuvioGlass(GlassRole.CONTROL, false, actionShape) else Modifier),
+         colors = CardDefaults.colors(
+             containerColor = if (v2) Color.Transparent else Color.White.copy(alpha = 0.08f),
+             focusedContainerColor = if (v2) Color.Transparent else Color.White.copy(alpha = 0.08f)
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/PinPad.kt b/app/src/main/java/com/nuvio/tv/ui/components/PinPad.kt
+index 35c59a7..2a34141 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/PinPad.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/PinPad.kt
+@@ -121,7 +121,7 @@ private fun PinPadKey(key: Char, onClick: () -> Unit, modifier: Modifier) {
+         modifier = modifier
+             .size(width = if (v2) 62.dp else 68.dp, height = if (v2) 50.dp else 56.dp)
+             .onFocusChanged { focused = it.isFocused }
+-            .then(if (v2) Modifier.nuvioV2Focus(focused, shape).nuvioGlass(GlassRole.CONTROL, focused, shape) else Modifier),
++            .then(if (v2) Modifier.nuvioV2Focus(focused, shape).nuvioGlass(GlassRole.CONTROL, false, shape) else Modifier),
+         shape = ButtonDefaults.shape(shape),
+         scale = ButtonDefaults.scale(focusedScale = 1f),
+         colors = ButtonDefaults.colors(
+@@ -168,7 +168,7 @@ private fun PinPadWideKey(label: String, onClick: () -> Unit, enabled: Boolean,
+             .size(width = keyWidth * 3 + NuvioTheme.spacing.sm * 2, height = if (v2) 50.dp else 56.dp)
+             .alpha(if (enabled) 1f else .45f)
+             .onFocusChanged { focused = it.isFocused }
+-            .then(if (v2) Modifier.nuvioV2Focus(focused, shape).nuvioGlass(GlassRole.CONTROL, focused, shape) else Modifier),
++            .then(if (v2) Modifier.nuvioV2Focus(focused, shape).nuvioGlass(GlassRole.CONTROL, false, shape) else Modifier),
+         shape = ButtonDefaults.shape(shape),
+         scale = ButtonDefaults.scale(focusedScale = 1f),
+         colors = ButtonDefaults.colors(
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt
+index 951f87a..26c9598 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt
+@@ -238,7 +238,7 @@ private fun CalendarMonthCell(
+                 .nuvioV2Focus(focused, shape, stationary = true)
+                 .then(
+                     when {
+-                        v2 && focused -> Modifier.nuvioGlass(GlassRole.CONTROL, focused = true, shape = shape)
++                        v2 && focused -> Modifier.nuvioGlass(GlassRole.CONTROL, focused = false, shape = shape)
+                         focused -> Modifier.border(NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs), shape)
+                         else -> Modifier
+                     }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarReminderUi.kt b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarReminderUi.kt
+index 4445834..fdda6e2 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarReminderUi.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarReminderUi.kt
+@@ -356,7 +356,7 @@ private fun CalendarReminderRow(
+                 .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
+                 .onFocusChanged { focused = it.isFocused }
+                 .nuvioV2Focus(focused, shape, stationary = true)
+-                .then(if (v2 && focused) Modifier.nuvioGlass(GlassRole.CONTROL, focused = true, shape = shape) else Modifier),
++                .then(if (v2 && focused) Modifier.nuvioGlass(GlassRole.CONTROL, focused = false, shape = shape) else Modifier),
+             shape = CardDefaults.shape(shape),
+             colors = CardDefaults.colors(
+                 containerColor = Color.Transparent,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
+index d700a88..7992fc9 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
+@@ -645,7 +645,7 @@ internal fun CalendarRowItem(
+                 }
+                 .calendarOptionsKeys(press) { onOptions(row) }
+                 .nuvioV2Focus(focused, shape, stationary = true)
+-                .then(if (v2 && focused) Modifier.nuvioGlass(GlassRole.CONTROL, focused = true, shape = shape) else Modifier),
++                .then(if (v2 && focused) Modifier.nuvioGlass(GlassRole.CONTROL, focused = false, shape = shape) else Modifier),
+             shape = CardDefaults.shape(shape),
+             colors = CardDefaults.colors(
+                 containerColor = Color.Transparent,
+@@ -793,7 +793,7 @@ private fun CalendarStatus(row: CalendarRow, size: Dp, showBellOff: Boolean, onB
+                     .size(size)
+                     .onFocusChanged { focused = it.isFocused }
+                     .nuvioV2Focus(focused, CircleShape, stationary = true)
+-                    .then(if (v2 && focused) Modifier.nuvioGlass(GlassRole.CONTROL, focused = true, shape = CircleShape) else Modifier),
++                    .then(if (v2 && focused) Modifier.nuvioGlass(GlassRole.CONTROL, focused = false, shape = CircleShape) else Modifier),
+                 shape = CardDefaults.shape(CircleShape),
+                 colors = CardDefaults.colors(
+                     containerColor = Color.Transparent,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/party/PartyFriendsUi.kt b/app/src/main/java/com/nuvio/tv/ui/screens/party/PartyFriendsUi.kt
+index 2bf7f12..49c82cb 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/party/PartyFriendsUi.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/party/PartyFriendsUi.kt
+@@ -146,7 +146,7 @@ internal fun PartyActionLabel(text: String, done: Boolean = false, quiet: Boolea
+     val v2 = LocalV2Appearance.current != null
+     val surface = when {
+         quiet && !focused -> Modifier
+-        v2 -> Modifier.nuvioV2Focus(focused, shape, stationary = true).nuvioGlass(GlassRole.CONTROL, focused, shape)
++        v2 -> Modifier.nuvioV2Focus(focused, shape, stationary = true).nuvioGlass(GlassRole.CONTROL, false, shape)
+         focused -> Modifier.clip(shape).background(NuvioTheme.colors.FocusBackground)
+             .border(NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs), shape)
+         else -> Modifier.clip(shape).background(NuvioTheme.colors.BackgroundCard)
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
+index c9338a7..ae6043e 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
+@@ -205,7 +205,7 @@ private fun ScoutTab(item: ScoutTabItem, modifier: Modifier, onFocused: () -> Un
+                 if (it.isFocused) onFocused()
+             }
+             .nuvioV2Focus(focused, shape, stationary = true)
+-            .then(if (v2 && (focused || item.selected)) Modifier.nuvioGlass(GlassRole.CONTROL, focused, shape) else Modifier)
++            .then(if (v2 && (focused || item.selected)) Modifier.nuvioGlass(GlassRole.CONTROL, false, shape) else Modifier)
+             .then(
+                 if (v2 && item.selected && !focused) {
+                     Modifier.drawWithContent {
+@@ -347,7 +347,7 @@ internal fun ScoutOptionRow(
+         modifier = modifier
+             .fillMaxWidth()
+             .onFocusChanged { focused = it.isFocused }
+-            .then(if (v2) Modifier.nuvioV2Focus(focused, shape).nuvioGlass(GlassRole.CONTROL, focused, shape) else Modifier),
++            .then(if (v2) Modifier.nuvioV2Focus(focused, shape).nuvioGlass(GlassRole.CONTROL, false, shape) else Modifier),
+         shape = CardDefaults.shape(shape),
+         scale = CardDefaults.scale(focusedScale = 1f),
+         colors = CardDefaults.colors(
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ask/AskScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ask/AskScreen.kt
+index 7b92442..3d4559c 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ask/AskScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ask/AskScreen.kt
+@@ -660,7 +660,7 @@ internal fun QuestionField(value: String, onValueChange: (String) -> Unit, onSub
+         modifier = modifier
+             .fillMaxWidth()
+             .nuvioV2Focus(focused, shape, stationary = true)
+-            .then(if (v2) Modifier.nuvioGlass(GlassRole.CONTROL, focused = focused, shape = shape) else Modifier)
++            .then(if (v2) Modifier.nuvioGlass(GlassRole.CONTROL, focused = false, shape = shape) else Modifier)
+             .onFocusChanged { focused = it.isFocused }
+             .onPreviewKeyEvent { event ->
+                 val native = event.nativeKeyEvent
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
+index d8093d5..8824434 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
+@@ -1585,7 +1585,7 @@ internal fun StreamResultSurface(
+         val shape = remember { RoundedCornerShape(18.dp) }
+         Box(
+             modifier.nuvioV2Focus(focused, shape, stationary = true)
+-                .nuvioGlass(GlassRole.CONTROL, focused, shape)
++                .nuvioGlass(GlassRole.CONTROL, false, shape)
+                 .nuvioRemoteClick(onClick)
+                 .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClick)
+         ) { content() }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/support/SupportNuvioDialog.kt b/app/src/main/java/com/nuvio/tv/ui/support/SupportNuvioDialog.kt
+index 5417c42..5d4d5d1 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/support/SupportNuvioDialog.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/support/SupportNuvioDialog.kt
+@@ -514,7 +514,7 @@ private fun SupportDialogButton(
+             .then(
+                 if (v2) {
+                     Modifier.nuvioV2Focus(focused, shape)
+-                        .then(if (quiet) Modifier else Modifier.nuvioGlass(GlassRole.CONTROL, focused, shape))
++                        .then(if (quiet) Modifier else Modifier.nuvioGlass(GlassRole.CONTROL, false, shape))
+                 } else {
+                     Modifier
+                 }
