@@ -146,6 +146,46 @@ index 04cebbf..8bf7834 100644
                      border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing.copy(alpha = 0.6f)),
                      shape = RoundedCornerShape(SettingsPillRadius)
                  ) else Border.None,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsPickerDialogs.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsPickerDialogs.kt
+index ae70ffa..b0fc03f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsPickerDialogs.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsPickerDialogs.kt
+@@ -205,7 +205,7 @@ internal fun ColorSelectionDialog(
+                     },
+                     colors = CardDefaults.colors(
+                         containerColor = NuvioTheme.colors.BackgroundElevated,
+-                        focusedContainerColor = NuvioTheme.colors.Primary
++                        focusedContainerColor = NuvioTheme.colors.FocusBackground // Nuvio Mod
+                     ),
+                     border = CardDefaults.border(
+                         focusedBorder = Border(
+@@ -251,7 +251,7 @@ internal fun ColorSelectionDialog(
+                     },
+                     colors = CardDefaults.colors(
+                         containerColor = NuvioTheme.colors.BackgroundElevated,
+-                        focusedContainerColor = NuvioTheme.colors.Primary
++                        focusedContainerColor = NuvioTheme.colors.FocusBackground // Nuvio Mod
+                     ),
+                     border = CardDefaults.border(
+                         focusedBorder = Border(
+@@ -280,7 +280,7 @@ internal fun ColorSelectionDialog(
+                     onClick = onDismiss,
+                     colors = CardDefaults.colors(
+                         containerColor = NuvioTheme.colors.BackgroundElevated,
+-                        focusedContainerColor = NuvioTheme.colors.Primary
++                        focusedContainerColor = NuvioTheme.colors.FocusBackground // Nuvio Mod
+                     ),
+                     border = CardDefaults.border(
+                         focusedBorder = Border(
+@@ -305,7 +305,7 @@ internal fun ColorSelectionDialog(
+                     onClick = { onColorSelected(currentChipColor.copy(alpha = alphaPercent / 100f)) },
+                     colors = CardDefaults.colors(
+                         containerColor = NuvioTheme.colors.BackgroundElevated,
+-                        focusedContainerColor = NuvioTheme.colors.Primary
++                        focusedContainerColor = NuvioTheme.colors.FocusBackground // Nuvio Mod
+                     ),
+                     border = CardDefaults.border(
+                         focusedBorder = Border(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsScreen.kt
 index 4bcb841..0450b8f 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsScreen.kt
@@ -197,7 +237,7 @@ index a626731..7d98c0c 100644
          colors = ButtonDefaults.colors(
              containerColor = NuvioTheme.colors.Background,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
-index c93bf6e..87d45da 100644
+index c93bf6e..66e9509 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
 @@ -15,6 +15,7 @@ import com.nuvio.tv.ui.v2.appearance.V2Atmosphere
@@ -222,7 +262,7 @@ index c93bf6e..87d45da 100644
 +    if (isV2Settings()) modPillHighlight(focused, shape) else this
 +
 +/** Nuvio Mod: selected (not focused) state, like the menu's current page: a flat faint white pane. */
-+internal val ModSettingsSelectedFill = Color.White.copy(alpha = 0.07f)
++internal val ModSettingsSelectedFill = Color.White.copy(alpha = 0.04f) // kept below the focus highlight
  
  /** Standalone settings cards need their own material, unlike rows nested in a group panel. */
  @Composable
@@ -255,39 +295,3 @@ index 93354d2..1cb9146 100644
              .onFocusChanged { state ->
                  val nowFocused = state.isFocused
                  if (isFocused != nowFocused) {
-diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
-index f666454..1b49775 100644
---- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
-+++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
-@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.drawWithCache
- import androidx.compose.ui.graphics.Color
- import androidx.compose.ui.graphics.Shape
- import androidx.compose.ui.graphics.drawOutline
-+import androidx.compose.ui.draw.drawBehind
- import androidx.compose.ui.graphics.drawscope.Stroke
- import androidx.compose.ui.graphics.graphicsLayer
- import androidx.compose.ui.platform.LocalDensity
-@@ -163,3 +164,23 @@ fun v2FocusDrawsOwnEdge(): Boolean {
-     val clearGlass = usesClearGlassTheme() || (NuvioTheme.currentTheme == com.nuvio.tv.domain.model.AppTheme.GLASS && cinematic)
-     return clearGlass && cinematic
- }
-+
-+/**
-+ * Nuvio Mod: the top menu pill's highlight (faint white fill + soft sheen from the upper left,
-+ * no edge line), drawn behind the content when [focused]. The sheen is sized from the height, so it
-+ * looks the same on a wide row as on a menu pill.
-+ */
-+fun Modifier.modPillHighlight(focused: Boolean, shape: androidx.compose.ui.graphics.Shape): Modifier =
-+    if (!focused) this else drawBehind {
-+        val outline = shape.createOutline(size, layoutDirection, this)
-+        drawOutline(outline, Color.White, alpha = 0.11f)
-+        drawOutline(
-+            outline,
-+            androidx.compose.ui.graphics.Brush.radialGradient(
-+                0f to Color.White.copy(alpha = 0.11f),
-+                1f to Color.Transparent,
-+                center = androidx.compose.ui.geometry.Offset(minOf(size.width * 0.28f, size.height * 1.12f), 0f),
-+                radius = minOf(size.width * 0.75f, size.height * 3f).coerceAtLeast(1f)
-+            )
-+        )
-+    }

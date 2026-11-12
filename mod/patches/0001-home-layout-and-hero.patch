@@ -1,0 +1,370 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt b/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
+index f805e92..40b4ed3 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
+@@ -74,6 +74,9 @@ fun TrailerPlayer(
+     onVideoAspectRatioChanged: (Float) -> Unit = {},
+     overscanZoom: Float = TRAILER_OVERSCAN_ZOOM,
+     autoCropLetterbox: Boolean = false,
++    // Nuvio Mod: when the video has black bars baked in, slide it up so the picture starts at the
++    // top of the screen instead of zooming in (all the black ends up at the bottom).
++    liftLetterbox: Boolean = false,
+     modifier: Modifier = Modifier,
+     enter: EnterTransition = fadeIn(animationSpec = tween(800)),
+     exit: ExitTransition = fadeOut(animationSpec = tween(500)),
+@@ -106,7 +109,7 @@ fun TrailerPlayer(
+     val playerViewRef = remember { mutableStateOf<PlayerView?>(null) }
+     var letterboxZoom by remember(trailerUrl) { mutableFloatStateOf(1f) }
+     val letterboxZoomState = animateFloatAsState(
+-        targetValue = if (autoCropLetterbox) letterboxZoom else 1f,
++        targetValue = if (autoCropLetterbox || liftLetterbox) letterboxZoom else 1f,
+         animationSpec = tween(durationMillis = 400),
+         label = "trailerLetterboxZoom"
+     )
+@@ -182,9 +185,9 @@ fun TrailerPlayer(
+         player.playWhenReady = !isPaused
+     }
+ 
+-    LaunchedEffect(autoCropLetterbox, hasRenderedFirstFrame, trailerPlayer) {
++    LaunchedEffect(autoCropLetterbox, liftLetterbox, hasRenderedFirstFrame, trailerPlayer) {
+         letterboxZoom = 1f
+-        if (!autoCropLetterbox || !hasRenderedFirstFrame) return@LaunchedEffect
++        if (!(autoCropLetterbox || liftLetterbox) || !hasRenderedFirstFrame) return@LaunchedEffect
+         val player = trailerPlayer ?: return@LaunchedEffect
+         val tracker = LetterboxTracker()
+         val sampler = LetterboxSampler()
+@@ -324,8 +327,16 @@ fun TrailerPlayer(
+                     .clipToBounds()
+                     .graphicsLayer {
+                         alpha = playerAlphaState.value
+-                        scaleX = overscanZoom * letterboxZoomState.value
+-                        scaleY = overscanZoom * letterboxZoomState.value
++                        val letterbox = letterboxZoomState.value
++                        if (liftLetterbox) {
++                            scaleX = overscanZoom
++                            scaleY = overscanZoom
++                            // zoom = 1 / (1 - 2 * bar)  =>  bar = (1 - 1 / zoom) / 2
++                            translationY = -size.height * (1f - 1f / letterbox) / 2f
++                        } else {
++                            scaleX = overscanZoom * letterbox
++                            scaleY = overscanZoom * letterbox
++                        }
+                     }
+             )
+         }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
+index 647f0e4..20db722 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
+@@ -1030,15 +1030,20 @@ fun ModernHomeContent(
+                 (normalHeight * if (trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW) 1.12f else 1f)
+                     .coerceAtMost(screenHeight)
+             }
++            val heroFocusedCardHeightPx = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+             val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
+-                val topInsetPx = with(localDensity) { MODERN_ROW_HEADER_FOCUS_INSET.toPx() }
++                // Nuvio Mod: bring the focused card's bottom edge to the bottom of the rows area.
++                // The focused card's real height is remembered so the title block can sit right above any row.
++                val bottomRoomPx = with(localDensity) { MODERN_ROW_CARD_BOTTOM_ROOM.toPx() }
+                 @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
+                 object : BringIntoViewSpec {
+                     override val scrollAnimationSpec: AnimationSpec<Float> = defaultBringIntoViewSpec.scrollAnimationSpec
+                     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
+-                        val currentLeadingEdge = offset
+-                        if (abs(currentLeadingEdge - topInsetPx) < 1f) return 0f
+-                        val distance = currentLeadingEdge - topInsetPx
++                        if (size > 0f && abs(heroFocusedCardHeightPx.floatValue - size) > 1f) {
++                            heroFocusedCardHeightPx.floatValue = size
++                        }
++                        val distance = (offset + size) - (containerSize - bottomRoomPx)
++                        if (abs(distance) < 1f) return 0f
+                         if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
+                         return distance
+                     }
+@@ -1110,7 +1115,8 @@ fun ModernHomeContent(
+             // Fade content rows when ANY hero media (catalog trailer or collection
+             // hero video) is playing in fullscreen — not just catalog trailers.
+             val trailerContentAlphaState = animateFloatAsState(
+-                targetValue = if (trailerPlaybackTarget != FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW && fullScreenBackdropUpdated && (shouldPlayCatalogHeroTrailerUpdated || shouldPlayCollectionHeroVideoUpdated) && heroTrailerFirstFrameRenderedUpdated) 0f else 1f,
++                // Nuvio Mod: trailers play in the background; the row stays visible.
++                targetValue = 1f,
+                 animationSpec = tween(durationMillis = 480),
+                 label = "trailerContentFade"
+             )
+@@ -1119,9 +1125,26 @@ fun ModernHomeContent(
+             val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
+ 
+             val foregroundModifier = Modifier.sidebarPageContent()
+-            val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight, screenHeight, foregroundModifier) {
++            // Nuvio Mod: the title/description block sits just above the current row. Rows with
++            // shorter cards (continue watching, landscape) leave room, so the block slides down.
++            val heroRowIsWide by remember {
++                derivedStateOf {
++                    val key = activeRowKey.value
++                    key == MODERN_CONTINUE_WATCHING_ROW_KEY || key == MODERN_UPCOMING_ROW_KEY
++                }
++            }
++            val heroMeasuredCardHeightPx = heroFocusedCardHeightPx.floatValue
++            val heroTextDropTarget = (tallestRowCardHeight - when {
++                heroMeasuredCardHeightPx > 0f -> with(localDensity) { heroMeasuredCardHeightPx.toDp() }
++                heroRowIsWide -> continueWatchingCardHeight
++                useLandscapePosters -> landscapeCatalogCardHeight
++                else -> portraitCatalogCardHeight
++            }).coerceAtLeast(0.dp)
++            val heroTextDrop = androidx.compose.animation.core.animateDpAsState(heroTextDropTarget, label = "modHeroTextDrop")
++            val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight, screenHeight, foregroundModifier, heroTextDrop) {
+                 foregroundModifier
+                     .align(Alignment.BottomStart)
++                    .offset { androidx.compose.ui.unit.IntOffset(0, heroTextDrop.value.roundToPx()) }
+                     .padding(
+                         start = rowHorizontalPadding,
+                         end = NuvioTheme.spacing.xxxl,
+@@ -1135,9 +1158,10 @@ fun ModernHomeContent(
+             val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
+             val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
+             val heroDescriptionMaxLines = when {
+-                heroDescriptionScalePercent <= 95 -> 4
+-                heroDescriptionScalePercent <= 100 -> 4
+-                else -> 2
++                // Nuvio Mod: the one-row home leaves room, so show the whole description.
++                heroDescriptionScalePercent <= 95 -> 8
++                heroDescriptionScalePercent <= 100 -> 8
++                else -> 6
+             }
+             HeroTitleBlock(
+                 previewProvider = { heroSceneStateLambda().preview },
+@@ -1147,13 +1171,8 @@ fun ModernHomeContent(
+                 showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                 mdbListShowOnHero = uiState.mdbListShowOnHero,
+                 mdbListRatingOrder = uiState.mdbListRatingOrder,
+-                trailerPlaying = {
+-                    if (isRapidHorizontalNav.value) false
+-                    else {
+-                        val state = heroSceneStateLambda()
+-                        !state.featheredTrailer && state.fullScreenBackdrop && shouldPlayTrailerLambda() && heroTrailerRenderedLambda()
+-                    }
+-                },
++                // Nuvio Mod: trailers play in the background; title and description stay visible.
++                trailerPlaying = { false },
+                 descriptionMaxLines = heroDescriptionMaxLines,
+                 descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
+                 modifier = heroMetadataModifier
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
+index b23ef0d..4ce22b7 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
+@@ -276,6 +276,7 @@ internal fun ModernHeroMediaLayer(
+                     transparentVideoBackground = featheredTrailer,
+                     onVideoAspectRatioChanged = { videoAspect = it },
+                     overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
++                    liftLetterbox = !featheredTrailer,
+                     modifier = Modifier.fillMaxSize()
+                 )
+               }
+@@ -285,7 +286,8 @@ internal fun ModernHeroMediaLayer(
+     }
+ }
+ 
+-private val FULL_SCREEN_HERO_SCRIM = listOf(0.0f to 1f, 0.22f to 0.90f, 0.46f to 0.80f, 0.76f to 0.42f, 1.0f to 0f)
++// Nuvio Mod: lighter shade so the picture stays visible; just enough behind the text.
++private val FULL_SCREEN_HERO_SCRIM = listOf(0.0f to 0.62f, 0.22f to 0.50f, 0.46f to 0.34f, 0.76f to 0.14f, 1.0f to 0f)
+ 
+ @Composable
+ internal fun ModernHeroGradientLayer(
+@@ -304,11 +306,12 @@ internal fun ModernHeroGradientLayer(
+         modifier = modifier
+             .graphicsLayer {
+                 compositingStrategy = CompositingStrategy.Auto
+-                alpha = if (isTrailerPlayingFullScreen()) 0f else 1f
++                // Nuvio Mod: trailers play in the background, so the shade behind the text stays.
++                alpha = 1f
+             }
+             .drawWithCache {
+                 val fullScreen = isFullScreen()
+-                val horizontalFadeEndX = size.width * if (fullScreen) 0.65f else 0.45f
++                val horizontalFadeEndX = size.width * if (fullScreen) 0.50f else 0.45f
+                 val menuProgress = if (fullScreen) menuLayout?.let { it.expansion() } ?: 0f else 0f
+                 val colorStops = if (fullScreen && menuProgress > 0f) {
+                     com.nuvio.tv.ui.v2.components.openMenuScrimStops(
+@@ -340,15 +343,15 @@ internal fun ModernHeroGradientLayer(
+                 }
+ 
+                 val bottomStripStartY = size.height * if (fullScreen) {
+-                    if (cinematic) 0.32f else 0.64f
++                    if (cinematic) 0.62f else 0.64f
+                 } else 0.82f
+                 val verticalGradient = Brush.verticalGradient(
+                     colorStops = if (fullScreen) {
+                         arrayOf(
+                             0.0f to Color.Transparent,
+-                            0.30f to bgColor.copy(alpha = 0.35f),
+-                            0.60f to bgColor.copy(alpha = 0.75f),
+-                            1.0f to bgColor
++                            0.30f to bgColor.copy(alpha = 0.18f),
++                            0.60f to bgColor.copy(alpha = 0.50f),
++                            1.0f to bgColor.copy(alpha = 0.88f)
+                         )
+                     } else {
+                         arrayOf(
+@@ -372,8 +375,8 @@ internal fun ModernHeroGradientLayer(
+                         size = Size(horizontalFadeEndX, size.height)
+                     )
+                     
+-                    // 2. Bottom vertical strip
+-                    drawRect(
++                    // 2. Bottom vertical strip (Nuvio Mod: none over a full-screen picture)
++                    if (!fullScreen) drawRect(
+                         brush = verticalGradient,
+                         topLeft = Offset(0f, bottomStripStartY),
+                         size = Size(size.width, size.height - bottomStripStartY)
+@@ -920,7 +923,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+             outgoing = current
+             current = image
+             alpha.snapTo(0f)
+-            alpha.animateTo(1f, tween(350))
++            alpha.animateTo(1f, tween(220)) // Nuvio Mod: quicker dissolve (was 350)
+             outgoing = null
+         }
+     }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
+index 2342509..0562ca6 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
+@@ -34,16 +34,16 @@ internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+ internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
+ internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
+ internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.0f
+-internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 300L
+-internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
+-private val MODERN_ROW_CARD_BOTTOM_ROOM = 8.dp
++internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 120L // Nuvio Mod: snappier background (was 300)
++internal val MODERN_ROW_HEADER_FOCUS_INSET = 48.dp // Nuvio Mod: room for the bigger title gap
++// Nuvio Mod: margin between the cards and the bottom edge of the screen.
++internal val MODERN_ROW_CARD_BOTTOM_ROOM = 28.dp
+ private const val MODERN_ROWS_VIEWPORT_MAX_FRACTION = 0.6f
+ 
+-/** Rows keep their share of the screen, but grow into the hero when the tallest card would not fit below the header. */
++/** Nuvio Mod: the rows area is only as tall as one row, so a single row sits at the bottom and the hero gets the rest. */
+ internal fun modernRowsViewportHeight(screenHeight: Dp, fraction: Float, tallestCardHeight: Dp): Dp {
+-    val base = screenHeight * fraction
+     val needed = MODERN_ROW_HEADER_FOCUS_INSET + tallestCardHeight + MODERN_ROW_CARD_BOTTOM_ROOM
+-    return maxOf(base, minOf(needed, screenHeight * MODERN_ROWS_VIEWPORT_MAX_FRACTION))
++    return minOf(needed, screenHeight * minOf(fraction, MODERN_ROWS_VIEWPORT_MAX_FRACTION))
+ }
+ /** Height the hero text block may take: the space above the rows, less a thin margin at the screen edge. */
+ internal fun modernHeroTextMaxHeight(screenHeight: Dp, rowsViewportHeight: Dp): Dp =
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+index 1d0abdc..edbf08e 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+@@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.PaddingValues
+ import androidx.compose.foundation.layout.fillMaxWidth
++import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.height
++import androidx.compose.foundation.layout.heightIn
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.lazy.LazyColumn
+ import androidx.compose.foundation.lazy.LazyListItemInfo
+@@ -81,6 +83,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
+ private const val VERTICAL_POSTER_PREFETCH_AHEAD_ROWS = 2
+ private const val VERTICAL_POSTER_PREFETCH_ITEMS_PER_ROW = 8
+ private const val VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT = 32
++// Nuvio Mod: presses closer together than this count as a held D-pad.
++private const val MOD_HELD_DPAD_WINDOW_MS = 300L
++// Nuvio Mod: while the D-pad is held, the hero waits this long after the last move.
++private const val MOD_HELD_DPAD_SETTLE_MS = 250L
+ 
+ @OptIn(
+     ExperimentalFoundationApi::class,
+@@ -88,6 +94,7 @@ private const val VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT = 32
+     ExperimentalComposeUiApi::class,
+     kotlinx.coroutines.FlowPreview::class
+ )
++
+ @Composable
+ internal fun ModernHomeRowsList(
+     isVerticalRowsScrollingState: State<Boolean>,
+@@ -582,7 +589,9 @@ internal fun ModernHomeRowsList(
+                     },
+                 ),
+             contentPadding = PaddingValues(bottom = rowsViewportHeight),
+-            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
++            // Nuvio Mod: rows are a full viewport apart, so the row above or below never peeks in,
++            // whatever the card shape.
++            verticalArrangement = Arrangement.spacedBy(rowsViewportHeight)
+         ) {
+             itemsIndexed(
+                 items = carouselRows.list,
+@@ -599,7 +608,11 @@ internal fun ModernHomeRowsList(
+                         
+                         if (rowBecameActive || itemChanged) {
+                             val now = System.currentTimeMillis()
+-                            onHeroFocusSettleDelayChange(MODERN_HERO_FOCUS_DEBOUNCE_MS)
++                            // Nuvio Mod: a single press updates the hero straight away, together with
++                            // the card animation (like official NuvioTV). Only a held D-pad waits, so
++                            // titles skipped past are not loaded one by one.
++                            val dpadHeld = now - lastHeroNavigationAtMs.value in 0..MOD_HELD_DPAD_WINDOW_MS
++                            onHeroFocusSettleDelayChange(if (dpadHeld) MOD_HELD_DPAD_SETTLE_MS else 0L)
+                             onLastHeroNavigationAtMsChange(now)
+                             onActiveRowKeyChange(rowKey)
+                             onActiveItemIndexChange(index)
+@@ -638,6 +651,12 @@ internal fun ModernHomeRowsList(
+                         }
+                     }
+                 }
++                // Nuvio Mod: every row takes the full height of the rows area and sits at its bottom,
++                // so short (landscape) cards hug the bottom of the screen like tall (portrait) ones.
++                Box(
++                    modifier = Modifier.fillMaxWidth().heightIn(min = rowsViewportHeight - MODERN_ROW_CARD_BOTTOM_ROOM),
++                    contentAlignment = Alignment.BottomStart
++                ) {
+                 androidx.compose.runtime.CompositionLocalProvider(
+                     com.nuvio.tv.core.image.LocalHomePosterPriority provides
+                         com.nuvio.tv.core.image.HomePosterPriority(imageViewport, rowIndex)
+@@ -646,7 +665,7 @@ internal fun ModernHomeRowsList(
+                     row = row,
+                     isActiveRow = isActiveRowLambda,
+                     rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
+-                    rowTitleBottom = 14.dp, // rowTitleBottom
++                    rowTitleBottom = 22.dp, // Nuvio Mod: room for the focused card to grow under the title
+                     defaultBringIntoViewSpec = defaultBringIntoViewSpec,
+                     focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
+                     focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
+@@ -701,6 +720,7 @@ internal fun ModernHomeRowsList(
+                     }
+                 )
+                 }
++                }
+             }
+         }
+     }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
+index c8fb715..a67a95f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
+@@ -47,11 +47,9 @@ internal fun rememberPreparedHeroScene(
+                 // Fetch immediately after focus settles, overlapping core metadata resolution.
+                 val initialBackdrop = async { decodeHeroBackdrop(context, initial, width, height) }
+                 // Allow core metadata to settle, but an unavailable provider cannot block the UI.
+-                val target = if (initial.enrichmentActive) {
+-                    withTimeoutOrNull(350) {
+-                        snapshotFlow { latest }.first { !it.enrichmentActive }
+-                    } ?: latest
+-                } else initial
++                // Nuvio Mod: show the picture we already have right away (like official NuvioTV);
++                // late TMDB text still fills in afterwards.
++                val target = initial
+                     HeroSceneTrace.event("core-selected", owner, "enriching=${target.enrichmentActive}")
+                     val logo = async {
+                         target.preview?.logo?.takeIf(String::isNotBlank)?.let { url ->
+@@ -67,7 +65,7 @@ internal fun rememberPreparedHeroScene(
+                         }
+                     val decoded = first.image
+                     val displayedUrl = first.url
+-                    val logoImage = withTimeoutOrNull(250) { logo.await() }
++                    val logoImage = if (logo.isCompleted) logo.await() else null // Nuvio Mod: no wait (was 250 ms); a late logo is filled in below
+                     logo.cancel()
+                     coroutineContext.ensureActive()
+                     val prepared = target.copy(

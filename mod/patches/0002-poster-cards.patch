@@ -1,3 +1,24 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt b/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt
+index c941772..f9fbf94 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/ContentCard.kt
+@@ -338,7 +338,6 @@ fun ContentCard(
+             },
+             modifier = Modifier
+                 .fillMaxWidth()
+-                .nuvioV2Focus(isFocused, cardShape, stationary = true)
+                 .onFocusChanged { state ->
+                     val focusedNow = state.isFocused
+                     if (needsFocusState) {
+@@ -414,7 +413,7 @@ fun ContentCard(
+                     shape = cardShape
+                 )
+             ),
+-            scale = CardDefaults.scale(focusedScale = if (isV2) 1f else posterCardStyle.focusedScale)
++            scale = CardDefaults.scale(focusedScale = if (isV2) 1.06f else posterCardStyle.focusedScale) // Nuvio Mod: grows like the home cards, no ring
+         ) {
+             Box(
+                 modifier = Modifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt b/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
 index 3130e61..41f3e58 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
@@ -11,6 +32,27 @@ index 3130e61..41f3e58 100644
                              Modifier.border(
                                  border = NuvioTheme.focusRing.border(NuvioTheme.spacing.xxs),
                                  shape = cwClipShape
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt b/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt
+index a96c4ef..5f42c22 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/GridContentCard.kt
+@@ -134,7 +134,6 @@ fun GridContentCard(
+                     if (globalLandscape) Modifier.fillMaxWidth().aspectRatio(PosterShape.LANDSCAPE.aspectRatio())
+                     else Modifier.width(posterCardStyle.width).height(cardHeight)
+                 )
+-                .nuvioV2Focus(isFocused, cardShape, stationary = true)
+                 .then(
+                     if (focusRequester != null) Modifier.focusRequester(focusRequester)
+                     else Modifier
+@@ -197,7 +196,7 @@ fun GridContentCard(
+                     shape = cardShape
+                 )
+             ),
+-            scale = CardDefaults.scale(focusedScale = if (isV2) 1f else posterCardStyle.focusedScale)
++            scale = CardDefaults.scale(focusedScale = if (isV2) 1.06f else posterCardStyle.focusedScale) // Nuvio Mod: grows like the home cards, no ring
+         ) {
+             Box(
+                 modifier = Modifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt b/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
 index 6a9f831..dd6b64c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/NuvioCard.kt
