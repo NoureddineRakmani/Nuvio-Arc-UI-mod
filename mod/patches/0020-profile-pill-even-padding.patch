@@ -1,0 +1,30 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+index f757059..a64d222 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+@@ -71,8 +71,8 @@ val LocalV2TopChrome = staticCompositionLocalOf { false }
+ // Nuvio Mod: every item has this exact height. Android TV buttons are otherwise at least 40dp tall,
+ // which made the bar thick and left the small avatar floating in a tall pill.
+ private val MOD_NAV_ITEM_HEIGHT = 32.dp
+-// Nuvio Mod: gap between the avatar and its pill, same on top, bottom and left, so they stay concentric.
+-private val MOD_NAV_AVATAR_INSET = 4.dp
++// Nuvio Mod: avatar size in the profile pill; the pill has the same side padding as the other items.
++private val MOD_NAV_AVATAR_SIZE = 20.dp
+ 
+ /**
+  * Nuvio Mod: the pill under the remote. Mostly clear glass: a faint fill and a soft off-centre
+@@ -206,12 +206,12 @@ fun V2TopNavigation(
+                                 .height(MOD_NAV_ITEM_HEIGHT)
+                                 .modNavFocusGlass(profileFocused),
+                             shape = ButtonDefaults.shape(RoundedCornerShape(50)),
+-                            contentPadding = PaddingValues(start = MOD_NAV_AVATAR_INSET, end = 12.dp),
++                            contentPadding = PaddingValues(horizontal = 14.dp), // Nuvio Mod: same left/right padding as the other items
+                             scale = ButtonDefaults.scale(focusedScale = 1f),
+                             colors = ButtonDefaults.colors(containerColor = Color.Transparent,
+                                 focusedContainerColor = Color.Transparent,
+                                 contentColor = NuvioTheme.colors.TextSecondary, focusedContentColor = Color.White)) {
+-                            NuvioAvatar(profile, MOD_NAV_ITEM_HEIGHT - MOD_NAV_AVATAR_INSET * 2, description = null)
++                            NuvioAvatar(profile, MOD_NAV_AVATAR_SIZE, description = null)
+                             Spacer(Modifier.width(7.dp))
+                             // Nuvio Mod: the pill is as wide as the name (was a fixed width with empty space).
+                             Text(profile.name, style = androidx.tv.material3.MaterialTheme.typography.labelMedium,
