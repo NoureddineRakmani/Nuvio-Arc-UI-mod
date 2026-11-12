@@ -96,7 +96,7 @@ index 647f0e4..20db722 100644
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                  modifier = heroMetadataModifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
-index 1d0abdc..f408d9c 100644
+index 1d0abdc..07be001 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 @@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -133,6 +133,15 @@ index 1d0abdc..f408d9c 100644
                  androidx.compose.runtime.CompositionLocalProvider(
                      com.nuvio.tv.core.image.LocalHomePosterPriority provides
                          com.nuvio.tv.core.image.HomePosterPriority(imageViewport, rowIndex)
+@@ -646,7 +656,7 @@ internal fun ModernHomeRowsList(
+                     row = row,
+                     isActiveRow = isActiveRowLambda,
+                     rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
+-                    rowTitleBottom = 14.dp, // rowTitleBottom
++                    rowTitleBottom = 22.dp, // Nuvio Mod: room for the focused card to grow under the title
+                     defaultBringIntoViewSpec = defaultBringIntoViewSpec,
+                     focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
+                     focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
 @@ -701,6 +711,7 @@ internal fun ModernHomeRowsList(
                      }
                  )

@@ -1,14 +1,16 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-index 2342509..84dceff 100644
+index 2342509..08715b9 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-@@ -36,14 +36,14 @@ internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
+@@ -35,15 +35,15 @@ internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
+ internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
  internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.0f
  internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 300L
- internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
+-internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
 -private val MODERN_ROW_CARD_BOTTOM_ROOM = 8.dp
++internal val MODERN_ROW_HEADER_FOCUS_INSET = 48.dp // Nuvio Mod: room for the bigger title gap
 +// Nuvio Mod: margin between the cards and the bottom edge of the screen.
-+internal val MODERN_ROW_CARD_BOTTOM_ROOM = 20.dp
++internal val MODERN_ROW_CARD_BOTTOM_ROOM = 28.dp
  private const val MODERN_ROWS_VIEWPORT_MAX_FRACTION = 0.6f
  
 -/** Rows keep their share of the screen, but grow into the hero when the tallest card would not fit below the header. */
