@@ -1,0 +1,293 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/DeviceAssessmentScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/DeviceAssessmentScreen.kt
+index 9ac5543..8712e31 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/DeviceAssessmentScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/DeviceAssessmentScreen.kt
+@@ -667,6 +667,7 @@ private fun AssessmentItemRow(item: AssessmentItem) {
+         onClick = {},
+         modifier = Modifier
+             .fillMaxWidth()
++            .settingsItemFocus(isFocused) // Nuvio Mod
+             .onFocusChanged { isFocused = it.isFocused },
+         colors = CardDefaults.colors(
+             containerColor = if (zen) androidx.compose.ui.graphics.Color.Transparent
+@@ -775,9 +776,12 @@ internal fun suggestedValueText(formatted: String, value: String, labelColor: Co
+ @Composable
+ private fun AssessmentFocusCard(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+     val zen = isFlatSettingsStyle()
++    var modFocused by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+     Card(
+         onClick = {},
+-        modifier = Modifier.fillMaxWidth(),
++        modifier = Modifier.fillMaxWidth()
++            .settingsItemFocus(modFocused) // Nuvio Mod
++            .onFocusChanged { modFocused = it.isFocused },
+         colors = CardDefaults.colors(
+             containerColor = if (zen) androidx.compose.ui.graphics.Color.Transparent
+             else NuvioTheme.colors.Background,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt
+index 04cebbf..8bf7834 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt
+@@ -143,7 +143,8 @@ internal fun isFlatSettingsStyle(): Boolean = isV2Settings() || NuvioTheme.setti
+ 
+ @Composable
+ @androidx.compose.runtime.ReadOnlyComposable
+-internal fun settingsFocusFillColor(): Color = if (com.nuvio.tv.ui.v2.components.usesClearGlassTheme()) Color.Black.copy(alpha = .04f)
++internal fun settingsFocusFillColor(): Color = if (isV2Settings()) Color.Transparent // Nuvio Mod: highlight drawn instead
++else if (com.nuvio.tv.ui.v2.components.usesClearGlassTheme()) Color.Black.copy(alpha = .04f)
+ else if (isV2Settings()) NuvioTheme.colors.Secondary.copy(alpha = .20f) else NuvioTheme.colors.TextPrimary.copy(alpha = 0.1f)
+ 
+ @Composable
+@@ -393,7 +394,7 @@ internal fun SettingsRailButton(
+             .padding(top = NuvioTheme.spacing.xxs, bottom = NuvioTheme.spacing.xxs)
+             .fillMaxWidth()
+             .heightIn(min = if (LocalV2Appearance.current != null) 54.dp else SettingsRailItemHeight)
+-            .settingsItemFocus(isFocused)
++            .settingsItemFocus(isFocused, railShape)
+             .onFocusChanged { state ->
+                 val nowFocused = state.isFocused
+                 if (isFocused != nowFocused) {
+@@ -564,7 +565,7 @@ internal fun SettingsTopBarTab(
+             },
+         colors = CardDefaults.colors(
+             containerColor = if (isSelected) {
+-                NuvioTheme.colors.Secondary.copy(alpha = 0.18f)
++                if (isV2Settings()) ModSettingsSelectedFill else NuvioTheme.colors.Secondary.copy(alpha = 0.18f)
+             } else {
+                 Color.Transparent
+             },
+@@ -1048,22 +1049,25 @@ internal fun <T> SettingsSingleChoiceDialog(
+                     key = { index, option -> "$index-${option.value}" }
+                 ) { index, option ->
+                     val isSelected = option.value == selectedValue
++                    var optionFocused by remember { mutableStateOf(false) }
+                     Card(
+                         onClick = { onOptionSelected(option.value) },
+                         modifier = Modifier
+                             .fillMaxWidth()
+                             .then(if (index == focusedIndex) Modifier.focusRequester(focusRequester) else Modifier)
++                            .settingsItemFocus(optionFocused, RoundedCornerShape(10.dp)) // Nuvio Mod
++                            .onFocusChanged { optionFocused = it.isFocused }
+                             .semantics {
+                                 role = Role.RadioButton
+                                 this.selected = isSelected
+                             },
+                         colors = CardDefaults.colors(
+-                            containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.5f),
+-                            focusedContainerColor = NuvioTheme.colors.FocusBackground
++                            containerColor = if (isSelected) (if (isV2Settings()) ModSettingsSelectedFill else NuvioTheme.colors.Secondary.copy(alpha = 0.14f)) else Color.Black.copy(alpha = 0.5f),
++                            focusedContainerColor = if (isV2Settings()) (if (isSelected) ModSettingsSelectedFill else Color.Black.copy(alpha = 0.5f)) else NuvioTheme.colors.FocusBackground
+                         ),
+                         border = CardDefaults.border(
+                             focusedBorder = Border(
+-                                border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
++                                border = BorderStroke(NuvioTheme.spacing.xxs, if (isV2Settings()) Color.Transparent else NuvioTheme.colors.FocusRing),
+                                 shape = RoundedCornerShape(10.dp)
+                             )
+                         ),
+@@ -1183,6 +1187,7 @@ internal fun <T> SettingsMultiChoiceDialog(
+                         key = { index, option -> "$index-${option.value}" }
+                     ) { index, option ->
+                         val isSelected = selected.contains(option.value)
++                        var optionFocused by remember { mutableStateOf(false) }
+                         Card(
+                             onClick = {
+                                 if (isSelected) {
+@@ -1194,17 +1199,19 @@ internal fun <T> SettingsMultiChoiceDialog(
+                             modifier = Modifier
+                                 .fillMaxWidth()
+                                 .then(if (index == firstSelectedIndex) Modifier.focusRequester(focusRequester) else Modifier)
++                                .settingsItemFocus(optionFocused, RoundedCornerShape(10.dp)) // Nuvio Mod
++                                .onFocusChanged { optionFocused = it.isFocused }
+                                 .semantics {
+                                     role = Role.Checkbox
+                                     toggleableState = if (isSelected) ToggleableState.On else ToggleableState.Off
+                                 },
+                             colors = CardDefaults.colors(
+-                                containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.14f) else Color.Black.copy(alpha = 0.5f),
+-                                focusedContainerColor = NuvioTheme.colors.FocusBackground
++                                containerColor = if (isSelected) (if (isV2Settings()) ModSettingsSelectedFill else NuvioTheme.colors.Secondary.copy(alpha = 0.14f)) else Color.Black.copy(alpha = 0.5f),
++                                focusedContainerColor = if (isV2Settings()) (if (isSelected) ModSettingsSelectedFill else Color.Black.copy(alpha = 0.5f)) else NuvioTheme.colors.FocusBackground
+                             ),
+                             border = CardDefaults.border(
+                                 focusedBorder = Border(
+-                                    border = BorderStroke(NuvioTheme.spacing.xxs, NuvioTheme.colors.FocusRing),
++                                    border = BorderStroke(NuvioTheme.spacing.xxs, if (isV2Settings()) Color.Transparent else NuvioTheme.colors.FocusRing),
+                                     shape = RoundedCornerShape(10.dp)
+                                 )
+                             ),
+@@ -1328,9 +1335,8 @@ internal fun SettingsChoiceChip(
+     Card(
+         onClick = onClick,
+         modifier = modifier.then(
+-            if (isV2Settings()) Modifier.nuvioV2Focus(
+-                isFocused, RoundedCornerShape(SettingsPillRadius), stationary = true
+-            ) else Modifier
++            if (isV2Settings()) Modifier.settingsItemFocus(isFocused, RoundedCornerShape(SettingsPillRadius))
++            else Modifier
+         ).semantics { this.selected = selected }.onFocusChanged { state ->
+             val nowFocused = state.isFocused
+             if (isFocused != nowFocused) {
+@@ -1348,7 +1354,7 @@ internal fun SettingsChoiceChip(
+         },
+         colors = CardDefaults.colors(
+             containerColor = when {
+-                zen && selected -> NuvioTheme.colors.Secondary.copy(alpha = 0.18f)
++                zen && selected -> if (isV2Settings()) ModSettingsSelectedFill else NuvioTheme.colors.Secondary.copy(alpha = 0.18f)
+                 zen -> Color.Transparent
+                 selected -> NuvioTheme.colors.Secondary.copy(alpha = 0.12f)
+                 else -> NuvioTheme.colors.Background
+@@ -1361,7 +1367,7 @@ internal fun SettingsChoiceChip(
+         ),
+         border = if (zen) {
+             CardDefaults.border(
+-                border = if (selected) Border(
++                border = if (selected && !isV2Settings()) Border(
+                     border = BorderStroke(NuvioTheme.spacing.hairline, NuvioTheme.colors.FocusRing.copy(alpha = 0.6f)),
+                     shape = RoundedCornerShape(SettingsPillRadius)
+                 ) else Border.None,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsScreen.kt
+index 4bcb841..0450b8f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsScreen.kt
+@@ -2,6 +2,7 @@
+ 
+ package com.nuvio.tv.ui.screens.settings
+ 
++import com.nuvio.tv.ui.v2.components.modPillHighlight
+ import com.nuvio.tv.ui.v2.components.sidebarPageContent
+ 
+ import com.nuvio.tv.domain.model.AuthState
+@@ -1469,6 +1470,10 @@ private fun SettingsHorizonFocusPill(bounds: Rect, focused: Boolean, modifier: M
+             )
+             .graphicsLayer { alpha = pillAlpha }
+             .clip(RoundedCornerShape(SettingsPillRadius))
+-            .background(NuvioTheme.colors.FocusBackground)
++            // Nuvio Mod: the top menu pill's highlight instead of the accent-tinted fill.
++            .then(
++                if (isV2Settings()) Modifier.modPillHighlight(true, RoundedCornerShape(SettingsPillRadius))
++                else Modifier.background(NuvioTheme.colors.FocusBackground)
++            )
+     )
+ }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsSectionComponents.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsSectionComponents.kt
+index a626731..7d98c0c 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsSectionComponents.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsSectionComponents.kt
+@@ -20,6 +20,8 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+ import androidx.compose.material.icons.filled.ExpandMore
+ import androidx.compose.material.icons.filled.RestartAlt
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.setValue
++import androidx.compose.runtime.getValue
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.focus.FocusRequester
+@@ -167,9 +169,11 @@ internal fun SettingsResetButton(
+ ) {
+     val flat = isFlatSettingsStyle()
+     val shape = if (flat) settingsRowShape() else RoundedCornerShape(SettingsPillRadius)
++    var modFocused by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+     Button(
+         onClick = onClick,
+-        modifier = modifier.onFocusChanged { if (it.isFocused) onFocused() },
++        modifier = modifier.settingsItemFocus(modFocused, shape) // Nuvio Mod
++            .onFocusChanged { modFocused = it.isFocused; if (it.isFocused) onFocused() },
+         shape = ButtonDefaults.shape(shape = shape),
+         colors = ButtonDefaults.colors(
+             containerColor = NuvioTheme.colors.Background,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
+index c93bf6e..87d45da 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
+@@ -15,6 +15,7 @@ import com.nuvio.tv.ui.v2.appearance.V2Atmosphere
+ import com.nuvio.tv.ui.v2.components.GlassRole
+ import com.nuvio.tv.ui.v2.components.nuvioGlass
+ import com.nuvio.tv.ui.v2.components.nuvioV2Focus
++import com.nuvio.tv.ui.v2.components.modPillHighlight
+ 
+ @Composable
+ @ReadOnlyComposable
+@@ -37,8 +38,15 @@ internal fun settingsItemColor(original: Color): Color =
+ internal fun settingsItemVerticalPadding(): Dp = if (isV2Settings()) 10.dp else NuvioTheme.spacing.md
+ 
+ @Composable
+-internal fun Modifier.settingsItemFocus(focused: Boolean): Modifier =
+-    if (isV2Settings()) nuvioV2Focus(focused, settingsItemShape(), stationary = true) else this
++internal fun Modifier.settingsItemFocus(
++    focused: Boolean,
++    shape: androidx.compose.ui.graphics.Shape = settingsItemShape()
++): Modifier =
++    // Nuvio Mod: the top menu pill's highlight (was a flat white wash).
++    if (isV2Settings()) modPillHighlight(focused, shape) else this
++
++/** Nuvio Mod: selected (not focused) state, like the menu's current page: a flat faint white pane. */
++internal val ModSettingsSelectedFill = Color.White.copy(alpha = 0.07f)
+ 
+ /** Standalone settings cards need their own material, unlike rows nested in a group panel. */
+ @Composable
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt
+index 93354d2..1cb9146 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt
+@@ -168,6 +168,7 @@ private fun SliderSettingsItemLayout(
+         onClick = { },
+         modifier = modifier
+             .fillMaxWidth()
++            .settingsItemFocus(isFocused, shape) // Nuvio Mod
+             .onFocusChanged { state ->
+                 val nowFocused = state.isFocused
+                 if (isFocused != nowFocused) {
+@@ -297,7 +298,7 @@ private fun SliderStepButton(
+ 
+     Card(
+         onClick = { if (enabled) onClick() },
+-        modifier = Modifier.onFocusChanged { state ->
++        modifier = Modifier.settingsItemFocus(isFocused, CircleShape).onFocusChanged { state -> // Nuvio Mod
+             val nowFocused = state.isFocused
+             if (isFocused != nowFocused) {
+                 isFocused = nowFocused
+@@ -352,6 +353,7 @@ internal fun ColorSettingsItem(
+         onClick = { if (enabled) onClick() },
+         modifier = Modifier
+             .fillMaxWidth()
++            .settingsItemFocus(isFocused, settingsRowShape()) // Nuvio Mod
+             .onFocusChanged { state ->
+                 val nowFocused = state.isFocused
+                 if (isFocused != nowFocused) {
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
+index f666454..1b49775 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
+@@ -10,6 +10,7 @@ import androidx.compose.ui.draw.drawWithCache
+ import androidx.compose.ui.graphics.Color
+ import androidx.compose.ui.graphics.Shape
+ import androidx.compose.ui.graphics.drawOutline
++import androidx.compose.ui.draw.drawBehind
+ import androidx.compose.ui.graphics.drawscope.Stroke
+ import androidx.compose.ui.graphics.graphicsLayer
+ import androidx.compose.ui.platform.LocalDensity
+@@ -163,3 +164,23 @@ fun v2FocusDrawsOwnEdge(): Boolean {
+     val clearGlass = usesClearGlassTheme() || (NuvioTheme.currentTheme == com.nuvio.tv.domain.model.AppTheme.GLASS && cinematic)
+     return clearGlass && cinematic
+ }
++
++/**
++ * Nuvio Mod: the top menu pill's highlight (faint white fill + soft sheen from the upper left,
++ * no edge line), drawn behind the content when [focused]. The sheen is sized from the height, so it
++ * looks the same on a wide row as on a menu pill.
++ */
++fun Modifier.modPillHighlight(focused: Boolean, shape: androidx.compose.ui.graphics.Shape): Modifier =
++    if (!focused) this else drawBehind {
++        val outline = shape.createOutline(size, layoutDirection, this)
++        drawOutline(outline, Color.White, alpha = 0.11f)
++        drawOutline(
++            outline,
++            androidx.compose.ui.graphics.Brush.radialGradient(
++                0f to Color.White.copy(alpha = 0.11f),
++                1f to Color.Transparent,
++                center = androidx.compose.ui.geometry.Offset(minOf(size.width * 0.28f, size.height * 1.12f), 0f),
++                radius = minOf(size.width * 0.75f, size.height * 3f).coerceAtLeast(1f)
++            )
++        )
++    }
