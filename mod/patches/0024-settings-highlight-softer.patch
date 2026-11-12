@@ -1,0 +1,32 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
+index 87d45da..66e9509 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsV2Surfaces.kt
+@@ -46,7 +46,7 @@ internal fun Modifier.settingsItemFocus(
+     if (isV2Settings()) modPillHighlight(focused, shape) else this
+ 
+ /** Nuvio Mod: selected (not focused) state, like the menu's current page: a flat faint white pane. */
+-internal val ModSettingsSelectedFill = Color.White.copy(alpha = 0.07f)
++internal val ModSettingsSelectedFill = Color.White.copy(alpha = 0.04f) // kept below the focus highlight
+ 
+ /** Standalone settings cards need their own material, unlike rows nested in a group panel. */
+ @Composable
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
+index 1b49775..555aa9f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioFocusSurface.kt
+@@ -173,11 +173,12 @@ fun v2FocusDrawsOwnEdge(): Boolean {
+ fun Modifier.modPillHighlight(focused: Boolean, shape: androidx.compose.ui.graphics.Shape): Modifier =
+     if (!focused) this else drawBehind {
+         val outline = shape.createOutline(size, layoutDirection, this)
+-        drawOutline(outline, Color.White, alpha = 0.11f)
++        // Settings page strength: softer than the menu pill (fill 7%, sheen 8%).
++        drawOutline(outline, Color.White, alpha = 0.07f)
+         drawOutline(
+             outline,
+             androidx.compose.ui.graphics.Brush.radialGradient(
+-                0f to Color.White.copy(alpha = 0.11f),
++                0f to Color.White.copy(alpha = 0.08f),
+                 1f to Color.Transparent,
+                 center = androidx.compose.ui.geometry.Offset(minOf(size.width * 0.28f, size.height * 1.12f), 0f),
+                 radius = minOf(size.width * 0.75f, size.height * 3f).coerceAtLeast(1f)
