@@ -1,0 +1,37 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+index 428389f..e242d6a 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
+ import androidx.compose.ui.draw.clip
+ import androidx.compose.ui.draw.drawBehind
+ import androidx.compose.ui.geometry.CornerRadius
++import androidx.compose.ui.geometry.Offset
+ import androidx.compose.ui.graphics.Brush
+ import androidx.compose.ui.graphics.graphicsLayer
+ import dev.chrisbanes.haze.HazeInputScale
+@@ -68,16 +69,19 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
+ val LocalV2TopChrome = staticCompositionLocalOf { false }
+ 
+ /**
+- * Nuvio Mod: the pill under the remote. Mostly clear glass: a faint fill and a soft sheen falling
+- * from the top. No edge line. Drawn behind the label, so the text stays crisp.
++ * Nuvio Mod: the pill under the remote. Mostly clear glass: a faint fill and a soft off-centre
++ * sheen from the upper left. No edge line. Drawn behind the label, so the text stays crisp.
+  */
+ private fun Modifier.modNavFocusGlass(focused: Boolean): Modifier = if (!focused) this else drawBehind {
+     val radius = CornerRadius(size.height / 2f)
+     drawRoundRect(Color.White.copy(alpha = 0.11f), cornerRadius = radius)
++    // Light catching the upper left and fading across the pill, not a band along the top.
+     drawRoundRect(
+-        Brush.verticalGradient(
+-            0f to Color.White.copy(alpha = 0.16f),
+-            0.62f to Color.Transparent
++        Brush.radialGradient(
++            0f to Color.White.copy(alpha = 0.11f),
++            1f to Color.Transparent,
++            center = Offset(size.width * 0.28f, 0f),
++            radius = size.width * 0.75f
+         ),
+         cornerRadius = radius
+     )
