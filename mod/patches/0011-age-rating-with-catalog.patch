@@ -1,0 +1,34 @@
+diff --git a/app/src/main/java/com/nuvio/tv/data/mapper/CatalogMapper.kt b/app/src/main/java/com/nuvio/tv/data/mapper/CatalogMapper.kt
+index f6ac648..d7bc579 100644
+--- a/app/src/main/java/com/nuvio/tv/data/mapper/CatalogMapper.kt
++++ b/app/src/main/java/com/nuvio/tv/data/mapper/CatalogMapper.kt
+@@ -24,6 +24,9 @@ fun MetaPreviewDto.toDomainOrNull(catalogType: String, sourceAddonBaseUrl: Strin
+         genres = genres ?: emptyList(),
+         runtime = runtime,
+         status = status?.trim()?.takeIf { it.isNotBlank() },
++        // Nuvio Mod: keep the catalog's age rating so the hero shows it with the rest (same order as MetaMapper)
++        ageRating = listOf(appExtras?.certificationLocal, appExtras?.certification)
++            .firstNotNullOfOrNull { value -> value?.trim()?.takeIf(String::isNotBlank) },
+         released = released,
+         country = country,
+         imdbId = imdbId,
+diff --git a/app/src/main/java/com/nuvio/tv/data/remote/dto/CatalogResponseDto.kt b/app/src/main/java/com/nuvio/tv/data/remote/dto/CatalogResponseDto.kt
+index dd56595..9c88148 100644
+--- a/app/src/main/java/com/nuvio/tv/data/remote/dto/CatalogResponseDto.kt
++++ b/app/src/main/java/com/nuvio/tv/data/remote/dto/CatalogResponseDto.kt
+@@ -41,5 +41,14 @@ data class MetaPreviewDto(
+     @Json(name = "links") val links: List<MetaLinkDto>? = null,
+     @Json(name = "trailers") val trailers: List<MetaTrailerDto>? = null,
+     @Json(name = "behaviorHints") val behaviorHints: MetaBehaviorHintsDto? = null,
+-    @Json(name = "trailerStreams") val trailerStreams: List<TrailerStreamDto>? = null
++    @Json(name = "trailerStreams") val trailerStreams: List<TrailerStreamDto>? = null,
++    // Nuvio Mod: age rating that addons such as AIOMetadata already send with each catalog title
++    @Json(name = "app_extras") val appExtras: CatalogAppExtrasDto? = null
++)
++
++/** Nuvio Mod: only the age-rating part of `app_extras`; everything else in it is skipped. */
++@JsonClass(generateAdapter = true)
++data class CatalogAppExtrasDto(
++    @Json(name = "certificationLocal") val certificationLocal: String? = null,
++    @Json(name = "certification") val certification: String? = null
+ )
