@@ -1,0 +1,22 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
+index c8fb715..042a3b9 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
+@@ -48,7 +48,7 @@ internal fun rememberPreparedHeroScene(
+                 val initialBackdrop = async { decodeHeroBackdrop(context, initial, width, height) }
+                 // Allow core metadata to settle, but an unavailable provider cannot block the UI.
+                 val target = if (initial.enrichmentActive) {
+-                    withTimeoutOrNull(350) {
++                    withTimeoutOrNull(120) { // Nuvio Mod: was 350
+                         snapshotFlow { latest }.first { !it.enrichmentActive }
+                     } ?: latest
+                 } else initial
+@@ -67,7 +67,7 @@ internal fun rememberPreparedHeroScene(
+                         }
+                     val decoded = first.image
+                     val displayedUrl = first.url
+-                    val logoImage = withTimeoutOrNull(250) { logo.await() }
++                    val logoImage = withTimeoutOrNull(40) { logo.await() } // Nuvio Mod: was 250; a late logo is filled in below
+                     logo.cancel()
+                     coroutineContext.ensureActive()
+                     val prepared = target.copy(

@@ -1,13 +1,15 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-index 2342509..08715b9 100644
+index 2342509..0562ca6 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-@@ -35,15 +35,15 @@ internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
+@@ -34,16 +34,16 @@ internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+ internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
  internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
  internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.0f
- internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 300L
+-internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 300L
 -internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
 -private val MODERN_ROW_CARD_BOTTOM_ROOM = 8.dp
++internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 120L // Nuvio Mod: snappier background (was 300)
 +internal val MODERN_ROW_HEADER_FOCUS_INSET = 48.dp // Nuvio Mod: room for the bigger title gap
 +// Nuvio Mod: margin between the cards and the bottom edge of the screen.
 +internal val MODERN_ROW_CARD_BOTTOM_ROOM = 28.dp

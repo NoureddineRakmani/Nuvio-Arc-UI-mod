@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index b23ef0d..96cd3ae 100644
+index b23ef0d..4ce22b7 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -276,6 +276,7 @@ internal fun ModernHeroMediaLayer(
@@ -66,3 +66,12 @@ index b23ef0d..96cd3ae 100644
                          brush = verticalGradient,
                          topLeft = Offset(0f, bottomStripStartY),
                          size = Size(size.width, size.height - bottomStripStartY)
+@@ -920,7 +923,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+             outgoing = current
+             current = image
+             alpha.snapTo(0f)
+-            alpha.animateTo(1f, tween(350))
++            alpha.animateTo(1f, tween(220)) // Nuvio Mod: quicker dissolve (was 350)
+             outgoing = null
+         }
+     }
