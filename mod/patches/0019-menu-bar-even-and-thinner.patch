@@ -1,0 +1,48 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+index e242d6a..90e22fc 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
+@@ -68,6 +68,12 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
+ 
+ val LocalV2TopChrome = staticCompositionLocalOf { false }
+ 
++// Nuvio Mod: every item has this exact height. Android TV buttons are otherwise at least 40dp tall,
++// which made the bar thick and left the small avatar floating in a tall pill.
++private val MOD_NAV_ITEM_HEIGHT = 28.dp
++// Nuvio Mod: gap between the avatar and its pill, same on top, bottom and left, so they stay concentric.
++private val MOD_NAV_AVATAR_INSET = 3.dp
++
+ /**
+  * Nuvio Mod: the pill under the remote. Mostly clear glass: a faint fill and a soft off-centre
+  * sheen from the upper left. No edge line. Drawn behind the label, so the text stays crisp.
+@@ -171,10 +177,11 @@ fun V2TopNavigation(
+                                 .focusProperties { down = contentFocus }
+                                 .onFocusChanged { itemFocused = it.isFocused; if (it.isFocused) lastRoute = item.route }
+                                 .semantics { selected = isSelected }
++                                .height(MOD_NAV_ITEM_HEIGHT)
+                                 .modNavFocusGlass(itemFocused),
+                                 shape = ButtonDefaults.shape(RoundedCornerShape(50)),
+                                 scale = ButtonDefaults.scale(focusedScale = 1f),
+-                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 3.dp),
++                                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp),
+                                 // Nuvio Mod: where the remote is = clear glass with a soft sheen (modNavFocusGlass);
+                                 // the current page = a faint flat pane; the rest = no pill. Text stays white.
+                                 colors = ButtonDefaults.colors(
+@@ -196,14 +203,15 @@ fun V2TopNavigation(
+                         var profileFocused by remember { mutableStateOf(false) }
+                         Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus }
+                             .onFocusChanged { profileFocused = it.isFocused }
++                                .height(MOD_NAV_ITEM_HEIGHT)
+                                 .modNavFocusGlass(profileFocused),
+                             shape = ButtonDefaults.shape(RoundedCornerShape(50)),
+-                            contentPadding = PaddingValues(start = 2.dp, top = 2.dp, end = 12.dp, bottom = 2.dp),
++                            contentPadding = PaddingValues(start = MOD_NAV_AVATAR_INSET, end = 12.dp),
+                             scale = ButtonDefaults.scale(focusedScale = 1f),
+                             colors = ButtonDefaults.colors(containerColor = Color.Transparent,
+                                 focusedContainerColor = Color.Transparent,
+                                 contentColor = NuvioTheme.colors.TextSecondary, focusedContentColor = Color.White)) {
+-                            NuvioAvatar(profile, 18.dp, description = null)
++                            NuvioAvatar(profile, MOD_NAV_ITEM_HEIGHT - MOD_NAV_AVATAR_INSET * 2, description = null)
+                             Spacer(Modifier.width(7.dp))
+                             // Nuvio Mod: the pill is as wide as the name (was a fixed width with empty space).
+                             Text(profile.name, style = androidx.tv.material3.MaterialTheme.typography.labelMedium,
