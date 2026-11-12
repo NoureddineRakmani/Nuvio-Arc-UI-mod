@@ -30,7 +30,7 @@ index a5e46cc..f9d2478 100644
                  is HomeRow.PlaceholderCatalog -> {
                      // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
-index b564497..3feca0b 100644
+index b564497..17478c8 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 @@ -159,6 +159,7 @@ fun SearchScreen(
@@ -49,6 +49,26 @@ index b564497..3feca0b 100644
      val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
      val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
      val context = LocalContext.current
+@@ -404,8 +406,8 @@ fun SearchScreen(
+         searchRowFocusedItemIndex.keys.retainAll(visibleRowKeys)
+     }
+ 
+-    val isDiscoverMode = remember(uiState.discoverLocation, trimmedQuery, trimmedSubmittedQuery) {
+-        shouldShowDiscoverInSearch(
++    val isDiscoverMode = remember(uiState.discoverLocation, uiState.discoverLocationLoaded, trimmedQuery, trimmedSubmittedQuery) {
++        uiState.discoverLocationLoaded && shouldShowDiscoverInSearch(
+             discoverLocation = uiState.discoverLocation,
+             query = trimmedQuery,
+             submittedQuery = trimmedSubmittedQuery
+@@ -700,7 +702,7 @@ fun SearchScreen(
+                         onOpenDiscover()
+                     },
+                     discoverFocusRequester = discoverButtonFocusRequester,
+-                    showDiscoverButton = uiState.discoverLocation == DiscoverLocation.IN_SEARCH,
++                    showDiscoverButton = uiState.discoverLocationLoaded && uiState.discoverLocation == DiscoverLocation.IN_SEARCH,
+                     keyboardController = keyboardController,
+                     clearHistoryFocusRequester = if (showRecentSearches) recentClearHistoryFocusRequester else null,
+                     isScreenActive = isScreenActive
 @@ -751,34 +753,43 @@ fun SearchScreen(
  
                  when {
@@ -161,8 +181,21 @@ index b564497..3feca0b 100644
 +        }
 +    }
 +}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchUiState.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchUiState.kt
+index b80f048..f07f580 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchUiState.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchUiState.kt
+@@ -35,6 +35,8 @@ data class SearchUiState(
+     val catalogRows: List<CatalogRow> = emptyList(),
+     val installedAddons: List<Addon> = emptyList(),
+     val discoverLocation: DiscoverLocation = DiscoverLocation.IN_SEARCH,
++    /** Nuvio Mod: false until the saved Discover location is read, so Discover never flashes. */
++    val discoverLocationLoaded: Boolean = false,
+     val discoverInitialized: Boolean = false,
+     val discoverLoading: Boolean = false,
+     val discoverLoadingMore: Boolean = false,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
-index ba7dc2a..19f791c 100644
+index ba7dc2a..65bb277 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 @@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.combine
@@ -192,3 +225,12 @@ index ba7dc2a..19f791c 100644
      private val _uiState = MutableStateFlow(SearchUiState())
      val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
  
+@@ -171,7 +181,7 @@ class SearchViewModel @Inject constructor(
+         }
+         viewModelScope.launch {
+             layoutPreferenceDataStore.discoverLocation.distinctUntilChanged().collectLatest { location ->
+-                _uiState.update { it.copy(discoverLocation = location) }
++                _uiState.update { it.copy(discoverLocation = location, discoverLocationLoaded = true) }
+                 if (location == DiscoverLocation.OFF) {
+                     discoverJob?.cancel()
+                     discoverJob = null
