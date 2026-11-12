@@ -1,0 +1,32 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
+index 83b104b..79bcfa5 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
+@@ -327,9 +327,14 @@ fun HeroContentSection(
+     )
+     // During a trailer the hero fills the screen so the logo sits at the bottom
+     // on screens taller than the hero (lower-density TV boxes).
+-    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
++    // Nuvio Mod: the real screen height at the current interface size. LocalConfiguration ignores the
++    // app's interface-size setting, and the old fixed 540 left the rows below peeking in when the
++    // interface is smaller. The block now always fills the screen and sits on its bottom edge.
++    val screenHeight = with(androidx.compose.ui.platform.LocalDensity.current) {
++        androidx.compose.ui.platform.LocalContext.current.resources.displayMetrics.heightPixels.toDp()
++    }
+     val heroHeight by animateDpAsState(
+-        targetValue = if (isTrailerPlaying) maxOf(540.dp, screenHeight) else 540.dp,
++        targetValue = maxOf(540.dp, screenHeight),
+         animationSpec = tween(600),
+         label = "heroHeight"
+     )
+@@ -349,7 +354,9 @@ fun HeroContentSection(
+                 .then(if (v2Hero) Modifier else Modifier.animateContentSize(
+                     animationSpec = tween(600)
+                 ))
+-                .padding(start = detailStartInset, end = NuvioTheme.spacing.xxxl, bottom = NuvioTheme.spacing.lg),
++                .padding(start = detailStartInset, end = NuvioTheme.spacing.xxxl,
++                    // Nuvio Mod: same bottom margin as the home screen rows
++                    bottom = if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) 28.dp else NuvioTheme.spacing.lg),
+             verticalArrangement = Arrangement.Bottom
+         ) {
+             // Logo/Title — always visible during trailer, animates size
