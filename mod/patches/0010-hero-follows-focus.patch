@@ -1,0 +1,36 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+index 07be001..edbf08e 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
+@@ -83,6 +83,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
+ private const val VERTICAL_POSTER_PREFETCH_AHEAD_ROWS = 2
+ private const val VERTICAL_POSTER_PREFETCH_ITEMS_PER_ROW = 8
+ private const val VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT = 32
++// Nuvio Mod: presses closer together than this count as a held D-pad.
++private const val MOD_HELD_DPAD_WINDOW_MS = 300L
++// Nuvio Mod: while the D-pad is held, the hero waits this long after the last move.
++private const val MOD_HELD_DPAD_SETTLE_MS = 250L
+ 
+ @OptIn(
+     ExperimentalFoundationApi::class,
+@@ -90,6 +94,7 @@ private const val VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT = 32
+     ExperimentalComposeUiApi::class,
+     kotlinx.coroutines.FlowPreview::class
+ )
++
+ @Composable
+ internal fun ModernHomeRowsList(
+     isVerticalRowsScrollingState: State<Boolean>,
+@@ -603,7 +608,11 @@ internal fun ModernHomeRowsList(
+                         
+                         if (rowBecameActive || itemChanged) {
+                             val now = System.currentTimeMillis()
+-                            onHeroFocusSettleDelayChange(MODERN_HERO_FOCUS_DEBOUNCE_MS)
++                            // Nuvio Mod: a single press updates the hero straight away, together with
++                            // the card animation (like official NuvioTV). Only a held D-pad waits, so
++                            // titles skipped past are not loaded one by one.
++                            val dpadHeld = now - lastHeroNavigationAtMs.value in 0..MOD_HELD_DPAD_WINDOW_MS
++                            onHeroFocusSettleDelayChange(if (dpadHeld) MOD_HELD_DPAD_SETTLE_MS else 0L)
+                             onLastHeroNavigationAtMsChange(now)
+                             onActiveRowKeyChange(rowKey)
+                             onActiveItemIndexChange(index)
