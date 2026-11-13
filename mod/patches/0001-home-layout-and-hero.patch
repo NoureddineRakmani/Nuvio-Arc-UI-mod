@@ -86,10 +86,10 @@ index 340162e..b14ea5f 100644
      ) {
          Box(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-index 5ecf3c4..3f87610 100644
+index 5ecf3c4..75a7546 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-@@ -48,12 +48,42 @@ internal class ShownHeroMemory<T : Any> {
+@@ -48,12 +48,45 @@ internal class ShownHeroMemory<T : Any> {
          entry = Entry(url, width, height, SoftReference(image))
      }
  
@@ -117,9 +117,12 @@ index 5ecf3c4..3f87610 100644
 +internal object ModDetailSeed {
 +    private class Seed(val id: String, val type: String, val image: coil3.Image)
 +    @Volatile private var seed: Seed? = null
++    /** Why the last offer had (or had no) picture; for the opt-in details trace only. */
++    @Volatile var lastReason: String = "none"
 +
-+    fun offer(id: String, type: String, image: coil3.Image?) {
++    fun offer(id: String, type: String, image: coil3.Image?, reason: String = "") {
 +        seed = image?.let { Seed(id, type, it) }
++        lastReason = reason
 +    }
 +
 +    fun take(id: String?, type: String?): coil3.Image? {

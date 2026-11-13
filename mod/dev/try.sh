@@ -13,6 +13,8 @@ SUFFIX=".dev"
 EXPECTED="com.nuvio.tv.test.dev"
 LABEL="Nuvio Mod Test"
 START=$(date +%s)
+# "bash ~/nuvio-try trace": no build, just record what happens when opening details pages.
+if [ "${1:-}" = "trace" ]; then exec bash "$(dirname "$0")/trace.sh"; fi
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 fail() { printf '\n\033[1;31mSTOPPED: %s\033[0m\n' "$*"; exit 1; }
 
