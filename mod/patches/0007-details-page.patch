@@ -461,7 +461,7 @@ index e634514..e4f8b4e 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
-index aae1ea2..249e616 100644
+index aae1ea2..5b0b5c8 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 @@ -1,5 +1,6 @@
@@ -471,7 +471,51 @@ index aae1ea2..249e616 100644
  import androidx.compose.ui.platform.LocalFocusManager
  import androidx.compose.ui.focus.FocusDirection
  import androidx.compose.ui.draw.drawWithContent
-@@ -3724,18 +3725,21 @@ private fun PeopleSectionTabButton(
+@@ -738,6 +739,8 @@ fun MetaDetailsScreen(
+             uiState.isLoading -> {
+                 if (playOnLoad && !playOnLoadReturnContentRevealed) {
+                     PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl)
++                } else if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null && detailBackdrop.url != null) {
++                    ModDetailLoadingShade() // Nuvio Mod: keep the picture as it is; only the page content arrives
+                 } else {
+                     MetaDetailsSkeleton(backdropAware = detailBackdrop.url != null)
+                 }
+@@ -3518,6 +3521,34 @@ private fun PlayManualOverrideDialog(
+     }
+ }
+ 
++/** Nuvio Mod: the loaded page's own left shade (same stops as its gradient bitmap), shown while it loads. */
++@Composable
++private fun ModDetailLoadingShade() {
++    val bg = NuvioTheme.colors.Background
++    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
++    Box(
++        modifier = Modifier
++            .fillMaxSize()
++            .drawWithCache {
++                val fade = size.width * 0.78f
++                val shade = Brush.horizontalGradient(
++                    0f to bg.copy(alpha = 1f),
++                    0.10f to bg.copy(alpha = 0.95f),
++                    0.22f to bg.copy(alpha = 0.84f),
++                    0.36f to bg.copy(alpha = 0.70f),
++                    0.52f to bg.copy(alpha = 0.52f),
++                    0.66f to bg.copy(alpha = 0.34f),
++                    0.78f to bg.copy(alpha = 0.18f),
++                    0.90f to bg.copy(alpha = 0.07f),
++                    1f to bg.copy(alpha = 0f),
++                    startX = if (rtl) size.width else 0f,
++                    endX = if (rtl) size.width - fade else fade
++                )
++                onDrawBehind { drawRect(shade) }
++            }
++    )
++}
++
+ @Composable
+ private fun PersistentDetailBackdrop(
+     url: String?, owner: String?, hidden: Boolean, scrolledPastHero: Boolean,
+@@ -3724,18 +3755,21 @@ private fun PeopleSectionTabButton(
              .semantics {
                  role = Role.Tab
                  this.selected = selected
@@ -497,7 +541,7 @@ index aae1ea2..249e616 100644
      ) {
          Text(
              text = label,
-@@ -3745,7 +3749,8 @@ private fun PeopleSectionTabButton(
+@@ -3745,7 +3779,8 @@ private fun PeopleSectionTabButton(
                  selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
                  else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
              },

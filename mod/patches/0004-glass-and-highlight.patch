@@ -24,7 +24,7 @@ index 044b67a..c364b4d 100644
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
 new file mode 100644
-index 0000000..856fe8d
+index 0000000..5d230d1
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
 @@ -0,0 +1,115 @@
@@ -62,11 +62,11 @@ index 0000000..856fe8d
 + */
 +object ModLook {
 +    /** Focus highlight: flat white fill. */
-+    const val FILL = 0.07f
++    const val FILL = 0.05f
 +    /** Focus highlight: soft sheen from the upper left, on top of the fill. */
-+    const val SHEEN = 0.08f
++    const val SHEEN = 0.06f
 +    /** Selected but not focused (current page, chosen option): flat white pane. */
-+    const val SELECTED = 0.04f
++    const val SELECTED = 0.03f
 +    /** How much posters, photos and other picture cards grow on focus. */
 +    const val GROW = 1.06f
 +
