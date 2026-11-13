@@ -86,20 +86,13 @@ index 340162e..b14ea5f 100644
      ) {
          Box(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-index 5ecf3c4..df7f451 100644
+index 5ecf3c4..4c809bf 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-@@ -48,12 +48,58 @@ internal class ShownHeroMemory<T : Any> {
+@@ -48,12 +48,82 @@ internal class ShownHeroMemory<T : Any> {
          entry = Entry(url, width, height, SoftReference(image))
      }
  
-+    /** Nuvio Mod: the kept image whatever its address, for the first frame when coming back to Home. */
-+    fun last(width: Int, height: Int): T? =
-+        entry?.takeIf { it.width == width && it.height == height }?.image?.get()
-+
-+    /** Nuvio Mod: the kept image at whatever size, handed to the details page that opens on it. */
-+    fun lastAny(): T? = entry?.image?.get()
-+
 +    /** Nuvio Mod: the kept image with the address it was loaded from. */
 +    fun lastWithUrl(): Pair<String, T>? = entry?.let { e -> e.image.get()?.let { e.url to it } }
 +
@@ -123,8 +116,39 @@ index 5ecf3c4..df7f451 100644
 + */
 +internal fun modShownHeroFor(itemId: String): Pair<String, coil3.Image>? {
 +    val owner = modShownHeroOwner ?: return null
-+    if (!owner.substringBeforeLast('_').endsWith("_$itemId")) return null
++    val ids = modHeroOwnerIds[owner]
++    val matches = (ids != null && itemId in ids) || owner.substringBeforeLast('_').endsWith("_$itemId")
++    if (!matches) return null
 +    return shownHeroImage.lastWithUrl()
++}
++
++/** Nuvio Mod: for the trace only (no IDs logged): does Home know which title its hero card is? */
++internal fun modShownHeroIdsKnown(): Boolean = modShownHeroOwner?.let { modHeroOwnerIds[it] } != null
++
++/**
++ * Nuvio Mod: hero card key -> the IDs of the title on that card, recorded when Home picks its hero
++ * card. Small and bounded: only the last few cards are kept.
++ */
++private val modHeroOwnerIds = java.util.Collections.synchronizedMap(
++    object : LinkedHashMap<String, Set<String>>(16, 0.75f, true) {
++        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, Set<String>>?) = size > 12
++    }
++)
++
++internal fun modRecordHeroCard(item: ModernCarouselItem?) {
++    if (item == null) return
++    val ids = buildSet {
++        item.metaPreview?.id?.let { add(it) }
++        when (val p = item.payload) {
++            is ModernPayload.Catalog -> add(p.itemId)
++            is ModernPayload.ContinueWatching -> when (val cw = p.item) {
++                is ContinueWatchingItem.InProgress -> add(cw.progress.contentId)
++                is ContinueWatchingItem.NextUp -> add(cw.info.contentId)
++            }
++            else -> Unit
++        }
++    }.filter(String::isNotBlank).toSet()
++    if (ids.isNotEmpty()) modHeroOwnerIds[item.key] = ids
 +}
 +
 +internal object ModDetailSeed {
@@ -149,7 +173,7 @@ index 5ecf3c4..df7f451 100644
      val artwork: HeroArtworkSelection,
      val preview: HeroPreview?,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 647f0e4..20db722 100644
+index 647f0e4..ad209be 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 @@ -1030,15 +1030,20 @@ fun ModernHomeContent(
@@ -177,7 +201,18 @@ index 647f0e4..20db722 100644
                          if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
                          return distance
                      }
-@@ -1110,7 +1115,8 @@ fun ModernHomeContent(
+@@ -1059,6 +1064,10 @@ fun ModernHomeContent(
+ 
+             val preparedHeroScene = rememberPreparedHeroScene(liveHeroSceneState, heroMediaWidthPx, heroMediaHeightPx)
+             val heroSceneStateLambda = remember(preparedHeroScene) { { preparedHeroScene.value } }
++            // Nuvio Mod: remember which title each hero card is, so a details page can open on its picture.
++            LaunchedEffect(settledCarouselItemState) {
++                snapshotFlow { settledCarouselItemState.value }.collect { modRecordHeroCard(it) }
++            }
+             LaunchedEffect(artworkAccent, preparedHeroScene) {
+                 snapshotFlow { preparedHeroScene.value.artwork.ownerKey to preparedHeroScene.value.heroBackdrop }
+                     .collect { (owner, url) -> artworkAccent?.select(owner.orEmpty(), url) }
+@@ -1110,7 +1119,8 @@ fun ModernHomeContent(
              // Fade content rows when ANY hero media (catalog trailer or collection
              // hero video) is playing in fullscreen — not just catalog trailers.
              val trailerContentAlphaState = animateFloatAsState(
@@ -187,7 +222,7 @@ index 647f0e4..20db722 100644
                  animationSpec = tween(durationMillis = 480),
                  label = "trailerContentFade"
              )
-@@ -1119,9 +1125,26 @@ fun ModernHomeContent(
+@@ -1119,9 +1129,26 @@ fun ModernHomeContent(
              val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
  
              val foregroundModifier = Modifier.sidebarPageContent()
@@ -215,7 +250,7 @@ index 647f0e4..20db722 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1135,9 +1158,10 @@ fun ModernHomeContent(
+@@ -1135,9 +1162,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -229,7 +264,7 @@ index 647f0e4..20db722 100644
              }
              HeroTitleBlock(
                  previewProvider = { heroSceneStateLambda().preview },
-@@ -1147,13 +1171,8 @@ fun ModernHomeContent(
+@@ -1147,13 +1175,8 @@ fun ModernHomeContent(
                  showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                  mdbListShowOnHero = uiState.mdbListShowOnHero,
                  mdbListRatingOrder = uiState.mdbListRatingOrder,
@@ -246,44 +281,18 @@ index 647f0e4..20db722 100644
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                  modifier = heroMetadataModifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index b23ef0d..fbc469d 100644
+index b23ef0d..c1f38ba 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -181,6 +181,7 @@ internal fun ModernHeroMediaLayer(
          val page = HeroBackdropState.selectPageArtwork(artwork.ownerKey, displayedUrl)
          if (preparedImage != null && displayedUrl != null) {
              shownHeroImage.keep(displayedUrl, requestWidthPx, requestHeightPx, preparedImage)
-+            modShownHeroOwner = artwork.ownerKey // Nuvio Mod
++            modShownHeroOwner = artwork.ownerKey // Nuvio Mod: which card this picture belongs to
              HeroBackdropState.recordDisplayedArtwork(page, displayedUrl)
              artworkAccent?.imageLoaded(displayedUrl)
          }
-@@ -188,6 +189,16 @@ internal fun ModernHeroMediaLayer(
-         else if (menuBackdrop?.artworkUrl == publishedMenuUrl[0]) menuBackdrop?.artworkUrl = null
-         publishedMenuUrl[0] = if (fullScreenBackdrop) displayedUrl else null
-     }
-+    // Nuvio Mod: coming back to Home (from a details page, settings...) the hero used to start empty
-+    // and fade in from black. Until the picture is prepared again, draw the one that was on screen,
-+    // but only for the title it belongs to.
-+    val modSeedOwner = remember { modShownHeroOwner }
-+    val modSeedImage = remember { shownHeroImage.last(requestWidthPx, requestHeightPx) }
-+    val modOwnerSeen = remember { booleanArrayOf(false) }
-+    if (artwork.ownerKey != null) modOwnerSeen[0] = true
-+    val modHeroImage = preparedImage ?: modSeedImage?.takeIf {
-+        modSeedOwner != null && (artwork.ownerKey == modSeedOwner || (artwork.ownerKey == null && !modOwnerSeen[0]))
-+    }
-     val cinematic = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current?.visualStyle ==
-         com.nuvio.tv.domain.model.VisualStyle.CINEMATIC_GLASS
-     val liveTrailerGlass = cinematic && com.nuvio.tv.ui.v2.quality.LocalGlassTokens.current.liveBlur &&
-@@ -216,7 +227,7 @@ internal fun ModernHeroMediaLayer(
-     } else modifier) {
-       BoxWithConstraints(Modifier.fillMaxSize()) {
-         HeroBackdropImages(
--            image = preparedImage,
-+            image = modHeroImage,
-             modifier = Modifier.fillMaxSize().graphicsLayer {
-                 alpha = if (featheredTrailer) 1f else 1f - transitionProgressState.value
-             }.then(if (liveTrailerGlass) Modifier else Modifier.v2GlassSource())
-@@ -276,6 +287,7 @@ internal fun ModernHeroMediaLayer(
+@@ -276,6 +277,7 @@ internal fun ModernHeroMediaLayer(
                      transparentVideoBackground = featheredTrailer,
                      onVideoAspectRatioChanged = { videoAspect = it },
                      overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
@@ -291,7 +300,7 @@ index b23ef0d..fbc469d 100644
                      modifier = Modifier.fillMaxSize()
                  )
                }
-@@ -285,7 +297,8 @@ internal fun ModernHeroMediaLayer(
+@@ -285,7 +287,8 @@ internal fun ModernHeroMediaLayer(
      }
  }
  
@@ -301,7 +310,7 @@ index b23ef0d..fbc469d 100644
  
  @Composable
  internal fun ModernHeroGradientLayer(
-@@ -304,11 +317,12 @@ internal fun ModernHeroGradientLayer(
+@@ -304,11 +307,12 @@ internal fun ModernHeroGradientLayer(
          modifier = modifier
              .graphicsLayer {
                  compositingStrategy = CompositingStrategy.Auto
@@ -316,7 +325,7 @@ index b23ef0d..fbc469d 100644
                  val menuProgress = if (fullScreen) menuLayout?.let { it.expansion() } ?: 0f else 0f
                  val colorStops = if (fullScreen && menuProgress > 0f) {
                      com.nuvio.tv.ui.v2.components.openMenuScrimStops(
-@@ -340,15 +354,15 @@ internal fun ModernHeroGradientLayer(
+@@ -340,15 +344,15 @@ internal fun ModernHeroGradientLayer(
                  }
  
                  val bottomStripStartY = size.height * if (fullScreen) {
@@ -336,7 +345,7 @@ index b23ef0d..fbc469d 100644
                          )
                      } else {
                          arrayOf(
-@@ -372,8 +386,8 @@ internal fun ModernHeroGradientLayer(
+@@ -372,8 +376,8 @@ internal fun ModernHeroGradientLayer(
                          size = Size(horizontalFadeEndX, size.height)
                      )
                      
@@ -347,7 +356,7 @@ index b23ef0d..fbc469d 100644
                          brush = verticalGradient,
                          topLeft = Offset(0f, bottomStripStartY),
                          size = Size(size.width, size.height - bottomStripStartY)
-@@ -920,7 +934,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+@@ -920,7 +924,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
              outgoing = current
              current = image
              alpha.snapTo(0f)
