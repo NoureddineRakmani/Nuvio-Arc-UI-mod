@@ -461,7 +461,7 @@ index e634514..e4f8b4e 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
-index aae1ea2..b92eb7c 100644
+index aae1ea2..8bf6284 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 @@ -1,5 +1,6 @@
@@ -471,7 +471,39 @@ index aae1ea2..b92eb7c 100644
  import androidx.compose.ui.platform.LocalFocusManager
  import androidx.compose.ui.focus.FocusDirection
  import androidx.compose.ui.draw.drawWithContent
-@@ -738,6 +739,10 @@ fun MetaDetailsScreen(
+@@ -119,6 +120,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
+ import androidx.tv.material3.MaterialTheme
+ import androidx.tv.material3.Text
+ import coil3.compose.AsyncImage
++import coil3.compose.asPainter
+ import coil3.imageLoader
+ import coil3.memory.MemoryCache
+ import coil3.request.ImageRequest
+@@ -419,6 +421,7 @@ private fun applyDither(bmp: android.graphics.Bitmap) {
+ @Composable
+ fun MetaDetailsScreen(
+     viewModel: MetaDetailsViewModel = hiltViewModel(),
++    modSeedImage: coil3.Image? = null,
+     returnFocusSeason: Int? = null,
+     returnFocusEpisode: Int? = null,
+     heroRestoreToken: Int = 0,
+@@ -720,6 +723,15 @@ fun MetaDetailsScreen(
+                 true
+             }
+     ) {
++        // Nuvio Mod: Home's picture of this title, from the first frame until the page's own backdrop is in.
++        if (modSeedImage != null && settledBackdropUrl == null) {
++            val seedContext = LocalContext.current
++            val seedPainter = remember(modSeedImage) { modSeedImage.asPainter(seedContext) }
++            androidx.compose.foundation.Image(
++                painter = seedPainter, contentDescription = null, modifier = Modifier.fillMaxSize(),
++                contentScale = ContentScale.Crop, alignment = Alignment.TopEnd
++            )
++        }
+         PersistentDetailBackdrop(
+             url = detailBackdrop.url,
+             owner = uiState.meta?.let { "${it.apiType}:${it.id}" },
+@@ -738,6 +750,10 @@ fun MetaDetailsScreen(
              uiState.isLoading -> {
                  if (playOnLoad && !playOnLoadReturnContentRevealed) {
                      PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl)
@@ -482,7 +514,7 @@ index aae1ea2..b92eb7c 100644
                  } else {
                      MetaDetailsSkeleton(backdropAware = detailBackdrop.url != null)
                  }
-@@ -3518,6 +3523,34 @@ private fun PlayManualOverrideDialog(
+@@ -3518,6 +3534,34 @@ private fun PlayManualOverrideDialog(
      }
  }
  
@@ -517,7 +549,7 @@ index aae1ea2..b92eb7c 100644
  @Composable
  private fun PersistentDetailBackdrop(
      url: String?, owner: String?, hidden: Boolean, scrolledPastHero: Boolean,
-@@ -3724,18 +3757,21 @@ private fun PeopleSectionTabButton(
+@@ -3724,18 +3768,21 @@ private fun PeopleSectionTabButton(
              .semantics {
                  role = Role.Tab
                  this.selected = selected
@@ -543,7 +575,7 @@ index aae1ea2..b92eb7c 100644
      ) {
          Text(
              text = label,
-@@ -3745,7 +3781,8 @@ private fun PeopleSectionTabButton(
+@@ -3745,7 +3792,8 @@ private fun PeopleSectionTabButton(
                  selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
                  else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
              },

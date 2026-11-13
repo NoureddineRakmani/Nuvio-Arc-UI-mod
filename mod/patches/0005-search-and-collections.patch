@@ -1,8 +1,22 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index c97c2b1..8c9efe0 100644
+index c97c2b1..ec9ff7b 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -1310,7 +1310,11 @@ private fun PlaybackNavHost(
+@@ -378,8 +378,13 @@ private fun PlaybackNavHost(
+             val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
+             val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
+             val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
++            // Nuvio Mod: the picture Home was showing for this title, drawn until the page's own backdrop loads.
++            val modSeedImage = androidx.compose.runtime.remember(detailArgs) {
++                com.nuvio.tv.ui.screens.home.ModDetailSeed.take(detailArgs?.getString("itemId"), detailArgs?.getString("itemType"))
++            }
+             DetailChildHost(parentNavController = navController) { childNav ->
+             MetaDetailsScreen(
++                modSeedImage = modSeedImage,
+                 returnFocusSeason = returnFocusSeason,
+                 returnFocusEpisode = returnFocusEpisode,
+                 heroRestoreToken = heroRestoreToken,
+@@ -1310,7 +1315,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },

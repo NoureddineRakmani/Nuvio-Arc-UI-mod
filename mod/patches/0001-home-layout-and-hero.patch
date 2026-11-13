@@ -86,16 +86,19 @@ index 340162e..b14ea5f 100644
      ) {
          Box(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-index 5ecf3c4..194298c 100644
+index 5ecf3c4..3f87610 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-@@ -48,12 +48,19 @@ internal class ShownHeroMemory<T : Any> {
+@@ -48,12 +48,42 @@ internal class ShownHeroMemory<T : Any> {
          entry = Entry(url, width, height, SoftReference(image))
      }
  
 +    /** Nuvio Mod: the kept image whatever its address, for the first frame when coming back to Home. */
 +    fun last(width: Int, height: Int): T? =
 +        entry?.takeIf { it.width == width && it.height == height }?.image?.get()
++
++    /** Nuvio Mod: the kept image at whatever size, handed to the details page that opens on it. */
++    fun lastAny(): T? = entry?.image?.get()
 +
      fun recall(url: String, width: Int, height: Int): T? =
          entry?.takeIf { it.url == url && it.width == width && it.height == height }?.image?.get()
@@ -105,6 +108,26 @@ index 5ecf3c4..194298c 100644
  
 +/** Nuvio Mod: the title the kept hero image belongs to, so it is never shown for another title. */
 +@Volatile internal var modShownHeroOwner: String? = null
++
++/**
++ * Nuvio Mod: the exact picture Home was showing for the title being opened. The details page draws
++ * it from its first frame until its own backdrop has loaded, so it never opens on a dark screen.
++ * Taken once, and only by the page of that same title.
++ */
++internal object ModDetailSeed {
++    private class Seed(val id: String, val type: String, val image: coil3.Image)
++    @Volatile private var seed: Seed? = null
++
++    fun offer(id: String, type: String, image: coil3.Image?) {
++        seed = image?.let { Seed(id, type, it) }
++    }
++
++    fun take(id: String?, type: String?): coil3.Image? {
++        val current = seed
++        seed = null
++        return current?.takeIf { it.id == id && it.type == type }?.image
++    }
++}
 +
  internal data class ResolvedModernHeroState(
      val artwork: HeroArtworkSelection,
