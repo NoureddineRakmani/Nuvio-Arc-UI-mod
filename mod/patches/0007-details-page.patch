@@ -461,7 +461,7 @@ index e634514..e4f8b4e 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
-index aae1ea2..d95a13c 100644
+index aae1ea2..b648883 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 @@ -1,5 +1,6 @@
@@ -506,53 +506,16 @@ index aae1ea2..d95a13c 100644
          PersistentDetailBackdrop(
              url = detailBackdrop.url,
              owner = uiState.meta?.let { "${it.apiType}:${it.id}" },
-@@ -738,6 +753,10 @@ fun MetaDetailsScreen(
+@@ -738,6 +753,8 @@ fun MetaDetailsScreen(
              uiState.isLoading -> {
                  if (playOnLoad && !playOnLoadReturnContentRevealed) {
                      PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl)
 +                } else if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) {
-+                    // Nuvio Mod: no placeholder page. The picture (if any) stays as it is, with the
-+                    // finished page's own shade; only the page content arrives.
-+                    if (detailBackdrop.url != null) ModDetailLoadingShade()
++                    // Nuvio Mod: no placeholder page. The picture (if any) stays as it is; only the page content arrives.
                  } else {
                      MetaDetailsSkeleton(backdropAware = detailBackdrop.url != null)
                  }
-@@ -3518,6 +3537,34 @@ private fun PlayManualOverrideDialog(
-     }
- }
- 
-+/** Nuvio Mod: the loaded page's own left shade (same stops as its gradient bitmap), shown while it loads. */
-+@Composable
-+private fun ModDetailLoadingShade() {
-+    val bg = NuvioTheme.colors.Background
-+    val rtl = LocalLayoutDirection.current == LayoutDirection.Rtl
-+    Box(
-+        modifier = Modifier
-+            .fillMaxSize()
-+            .drawWithCache {
-+                val fade = size.width * 0.78f
-+                val shade = Brush.horizontalGradient(
-+                    0f to bg.copy(alpha = 1f),
-+                    0.10f to bg.copy(alpha = 0.95f),
-+                    0.22f to bg.copy(alpha = 0.84f),
-+                    0.36f to bg.copy(alpha = 0.70f),
-+                    0.52f to bg.copy(alpha = 0.52f),
-+                    0.66f to bg.copy(alpha = 0.34f),
-+                    0.78f to bg.copy(alpha = 0.18f),
-+                    0.90f to bg.copy(alpha = 0.07f),
-+                    1f to bg.copy(alpha = 0f),
-+                    startX = if (rtl) size.width else 0f,
-+                    endX = if (rtl) size.width - fade else fade
-+                )
-+                onDrawBehind { drawRect(shade) }
-+            }
-+    )
-+}
-+
- @Composable
- private fun PersistentDetailBackdrop(
-     url: String?, owner: String?, hidden: Boolean, scrolledPastHero: Boolean,
-@@ -3528,6 +3575,13 @@ private fun PersistentDetailBackdrop(
+@@ -3528,6 +3545,13 @@ private fun PersistentDetailBackdrop(
      val artworkAccent = com.nuvio.tv.ui.v2.appearance.LocalArtworkAccent.current
      if (owner != null) com.nuvio.tv.ui.v2.appearance.ObserveArtworkAccent(owner, url)
      val request = remember(context, url) {
@@ -566,7 +529,24 @@ index aae1ea2..d95a13c 100644
          ImageRequest.Builder(context).data(url).crossfade(false)
              .apply { url?.let(com.nuvio.tv.ui.screens.home.HeroImageRequests::backdropKey)?.let { placeholderMemoryCacheKey(it) } }
              .size(context.resources.displayMetrics.widthPixels.coerceAtLeast(1),
-@@ -3724,18 +3778,21 @@ private fun PeopleSectionTabButton(
+@@ -3598,6 +3622,8 @@ private fun BackdropLayer(
+         animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
+         label = "gradientFade"
+     )
++    // Nuvio Mod: no shade over the details picture in Nuvio v2.
++    val modNoShade = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null
+     Box(modifier = Modifier.fillMaxSize()) {
+         TrailerPlayer(
+             trailerUrl = trailerUrl,
+@@ -3623,6 +3649,7 @@ private fun BackdropLayer(
+                 .fillMaxSize()
+                 .drawWithCache {
+                     onDrawBehind {
++                        if (modNoShade) return@onDrawBehind
+                         if (pureDark && !isTrailerPlaying) drawRect(Color(0xFF03080D), alpha = 0.08f)
+                         if (gradientAlphaState.value > 0f) {
+                             drawImage(
+@@ -3724,18 +3751,21 @@ private fun PeopleSectionTabButton(
              .semantics {
                  role = Role.Tab
                  this.selected = selected
@@ -592,7 +572,7 @@ index aae1ea2..d95a13c 100644
      ) {
          Text(
              text = label,
-@@ -3745,7 +3802,8 @@ private fun PeopleSectionTabButton(
+@@ -3745,7 +3775,8 @@ private fun PeopleSectionTabButton(
                  selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
                  else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
              },
