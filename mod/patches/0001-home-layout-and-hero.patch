@@ -86,15 +86,19 @@ index 340162e..b14ea5f 100644
      ) {
          Box(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-index 5ecf3c4..362d135 100644
+index 5ecf3c4..9d6d4bb 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-@@ -48,12 +48,96 @@ internal class ShownHeroMemory<T : Any> {
+@@ -48,12 +48,100 @@ internal class ShownHeroMemory<T : Any> {
          entry = Entry(url, width, height, SoftReference(image))
      }
  
 +    /** Nuvio Mod: the kept image with the address it was loaded from. */
 +    fun lastWithUrl(): Pair<String, T>? = entry?.let { e -> e.image.get()?.let { e.url to it } }
++
++    /** Nuvio Mod: the kept image whatever its address, for the first frame when coming back to Home. */
++    fun last(width: Int, height: Int): T? =
++        entry?.takeIf { it.width == width && it.height == height }?.image?.get()
 +
      fun recall(url: String, width: Int, height: Int): T? =
          entry?.takeIf { it.url == url && it.width == width && it.height == height }?.image?.get()
@@ -323,7 +327,7 @@ index 647f0e4..dd4ea73 100644
                  optionsItem.value = null
              },
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index b23ef0d..c1f38ba 100644
+index b23ef0d..837af00 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -181,6 +181,7 @@ internal fun ModernHeroMediaLayer(
@@ -334,7 +338,33 @@ index b23ef0d..c1f38ba 100644
              HeroBackdropState.recordDisplayedArtwork(page, displayedUrl)
              artworkAccent?.imageLoaded(displayedUrl)
          }
-@@ -276,6 +277,7 @@ internal fun ModernHeroMediaLayer(
+@@ -188,6 +189,16 @@ internal fun ModernHeroMediaLayer(
+         else if (menuBackdrop?.artworkUrl == publishedMenuUrl[0]) menuBackdrop?.artworkUrl = null
+         publishedMenuUrl[0] = if (fullScreenBackdrop) displayedUrl else null
+     }
++    // Nuvio Mod: coming back to Home the hero starts empty and fades in from black (measured on her
++    // box: black without this, fine with it). Until the picture is prepared again, draw the one that
++    // was on screen, only for the title it belongs to.
++    val modSeedOwner = remember { modShownHeroOwner }
++    val modSeedImage = remember { shownHeroImage.last(requestWidthPx, requestHeightPx) }
++    val modOwnerSeen = remember { booleanArrayOf(false) }
++    if (artwork.ownerKey != null) modOwnerSeen[0] = true
++    val modHeroImage = preparedImage ?: modSeedImage?.takeIf {
++        modSeedOwner != null && (artwork.ownerKey == modSeedOwner || (artwork.ownerKey == null && !modOwnerSeen[0]))
++    }
+     val cinematic = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current?.visualStyle ==
+         com.nuvio.tv.domain.model.VisualStyle.CINEMATIC_GLASS
+     val liveTrailerGlass = cinematic && com.nuvio.tv.ui.v2.quality.LocalGlassTokens.current.liveBlur &&
+@@ -216,7 +227,7 @@ internal fun ModernHeroMediaLayer(
+     } else modifier) {
+       BoxWithConstraints(Modifier.fillMaxSize()) {
+         HeroBackdropImages(
+-            image = preparedImage,
++            image = modHeroImage,
+             modifier = Modifier.fillMaxSize().graphicsLayer {
+                 alpha = if (featheredTrailer) 1f else 1f - transitionProgressState.value
+             }.then(if (liveTrailerGlass) Modifier else Modifier.v2GlassSource())
+@@ -276,6 +287,7 @@ internal fun ModernHeroMediaLayer(
                      transparentVideoBackground = featheredTrailer,
                      onVideoAspectRatioChanged = { videoAspect = it },
                      overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
@@ -342,7 +372,7 @@ index b23ef0d..c1f38ba 100644
                      modifier = Modifier.fillMaxSize()
                  )
                }
-@@ -285,7 +287,8 @@ internal fun ModernHeroMediaLayer(
+@@ -285,7 +297,8 @@ internal fun ModernHeroMediaLayer(
      }
  }
  
@@ -352,7 +382,7 @@ index b23ef0d..c1f38ba 100644
  
  @Composable
  internal fun ModernHeroGradientLayer(
-@@ -304,11 +307,12 @@ internal fun ModernHeroGradientLayer(
+@@ -304,11 +317,12 @@ internal fun ModernHeroGradientLayer(
          modifier = modifier
              .graphicsLayer {
                  compositingStrategy = CompositingStrategy.Auto
@@ -367,7 +397,7 @@ index b23ef0d..c1f38ba 100644
                  val menuProgress = if (fullScreen) menuLayout?.let { it.expansion() } ?: 0f else 0f
                  val colorStops = if (fullScreen && menuProgress > 0f) {
                      com.nuvio.tv.ui.v2.components.openMenuScrimStops(
-@@ -340,15 +344,15 @@ internal fun ModernHeroGradientLayer(
+@@ -340,15 +354,15 @@ internal fun ModernHeroGradientLayer(
                  }
  
                  val bottomStripStartY = size.height * if (fullScreen) {
@@ -387,7 +417,7 @@ index b23ef0d..c1f38ba 100644
                          )
                      } else {
                          arrayOf(
-@@ -372,8 +376,8 @@ internal fun ModernHeroGradientLayer(
+@@ -372,8 +386,8 @@ internal fun ModernHeroGradientLayer(
                          size = Size(horizontalFadeEndX, size.height)
                      )
                      
@@ -398,7 +428,7 @@ index b23ef0d..c1f38ba 100644
                          brush = verticalGradient,
                          topLeft = Offset(0f, bottomStripStartY),
                          size = Size(size.width, size.height - bottomStripStartY)
-@@ -920,7 +924,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+@@ -920,7 +934,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
              outgoing = current
              current = image
              alpha.snapTo(0f)
