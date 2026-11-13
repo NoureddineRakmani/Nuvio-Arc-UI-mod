@@ -86,10 +86,10 @@ index 340162e..b14ea5f 100644
      ) {
          Box(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-index 5ecf3c4..4c809bf 100644
+index 5ecf3c4..362d135 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-@@ -48,12 +48,82 @@ internal class ShownHeroMemory<T : Any> {
+@@ -48,12 +48,96 @@ internal class ShownHeroMemory<T : Any> {
          entry = Entry(url, width, height, SoftReference(image))
      }
  
@@ -120,6 +120,18 @@ index 5ecf3c4..4c809bf 100644
 +    val matches = (ids != null && itemId in ids) || owner.substringBeforeLast('_').endsWith("_$itemId")
 +    if (!matches) return null
 +    return shownHeroImage.lastWithUrl()
++}
++
++/** Nuvio Mod: for the trace only (no IDs logged): the kind of card the hero shows and whether its picture is kept. */
++internal fun modShownHeroShape(): String {
++    val owner = modShownHeroOwner ?: return "none"
++    val kind = when {
++        owner.startsWith("cw_") -> "cw"
++        owner.startsWith("collection_") -> "collection"
++        owner.contains(':') -> "catalog"
++        else -> "otherkey"
++    }
++    return kind + "_pic_" + (if (shownHeroImage.lastWithUrl() != null) "kept" else "gone")
 +}
 +
 +/** Nuvio Mod: for the trace only (no IDs logged): does Home know which title its hero card is? */
@@ -156,6 +168,8 @@ index 5ecf3c4..4c809bf 100644
 +    @Volatile private var seed: Seed? = null
 +    /** Why the last offer had (or had no) picture; for the opt-in details trace only. */
 +    @Volatile var lastReason: String = "none"
++    /** Which place on Home asked to open the page; for the opt-in details trace only. */
++    @Volatile var caller: String = "unknown"
 +
 +    fun offer(id: String, type: String, image: coil3.Image?, reason: String = "") {
 +        seed = image?.let { Seed(id, type, it) }
@@ -172,11 +186,31 @@ index 5ecf3c4..4c809bf 100644
  internal data class ResolvedModernHeroState(
      val artwork: HeroArtworkSelection,
      val preview: HeroPreview?,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt
+index 8bfec61..8ca8bbf 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt
+@@ -517,6 +517,7 @@ fun HomeScreen(
+             mixItem = item,
+             onDismiss = { posterOptionsTarget = null },
+             onDetails = {
++                ModDetailSeed.caller = "posteroptions" // Nuvio Mod: trace only
+                 onNavigateToDetail(item.id, item.apiType, selectedPoster.addonBaseUrl)
+                 posterOptionsTarget = null
+             },
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 647f0e4..ad209be 100644
+index 647f0e4..dd4ea73 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-@@ -1030,15 +1030,20 @@ fun ModernHomeContent(
+@@ -250,6 +250,7 @@ fun ModernHomeContent(
+                     showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
+                     descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
+                     onItemClick = { item ->
++                        ModDetailSeed.caller = "herocarousel" // Nuvio Mod: trace only
+                         onNavigateToDetail(item.id, item.apiType, "")
+                     },
+                     onItemFocus = { item -> onItemFocus(item) }
+@@ -1030,15 +1031,20 @@ fun ModernHomeContent(
                  (normalHeight * if (trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW) 1.12f else 1f)
                      .coerceAtMost(screenHeight)
              }
@@ -201,7 +235,7 @@ index 647f0e4..ad209be 100644
                          if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
                          return distance
                      }
-@@ -1059,6 +1064,10 @@ fun ModernHomeContent(
+@@ -1059,6 +1065,10 @@ fun ModernHomeContent(
  
              val preparedHeroScene = rememberPreparedHeroScene(liveHeroSceneState, heroMediaWidthPx, heroMediaHeightPx)
              val heroSceneStateLambda = remember(preparedHeroScene) { { preparedHeroScene.value } }
@@ -212,7 +246,7 @@ index 647f0e4..ad209be 100644
              LaunchedEffect(artworkAccent, preparedHeroScene) {
                  snapshotFlow { preparedHeroScene.value.artwork.ownerKey to preparedHeroScene.value.heroBackdrop }
                      .collect { (owner, url) -> artworkAccent?.select(owner.orEmpty(), url) }
-@@ -1110,7 +1119,8 @@ fun ModernHomeContent(
+@@ -1110,7 +1120,8 @@ fun ModernHomeContent(
              // Fade content rows when ANY hero media (catalog trailer or collection
              // hero video) is playing in fullscreen — not just catalog trailers.
              val trailerContentAlphaState = animateFloatAsState(
@@ -222,7 +256,7 @@ index 647f0e4..ad209be 100644
                  animationSpec = tween(durationMillis = 480),
                  label = "trailerContentFade"
              )
-@@ -1119,9 +1129,26 @@ fun ModernHomeContent(
+@@ -1119,9 +1130,26 @@ fun ModernHomeContent(
              val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
  
              val foregroundModifier = Modifier.sidebarPageContent()
@@ -250,7 +284,7 @@ index 647f0e4..ad209be 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1135,9 +1162,10 @@ fun ModernHomeContent(
+@@ -1135,9 +1163,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -264,7 +298,7 @@ index 647f0e4..ad209be 100644
              }
              HeroTitleBlock(
                  previewProvider = { heroSceneStateLambda().preview },
-@@ -1147,13 +1175,8 @@ fun ModernHomeContent(
+@@ -1147,13 +1176,8 @@ fun ModernHomeContent(
                  showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                  mdbListShowOnHero = uiState.mdbListShowOnHero,
                  mdbListRatingOrder = uiState.mdbListRatingOrder,
@@ -280,6 +314,14 @@ index 647f0e4..ad209be 100644
                  descriptionMaxLines = heroDescriptionMaxLines,
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                  modifier = heroMetadataModifier
+@@ -1323,6 +1347,7 @@ fun ModernHomeContent(
+                 optionsItem.value = null
+             },
+             onDetails = {
++                ModDetailSeed.caller = "cwoptions" // Nuvio Mod: trace only
+                 onNavigateToDetail(selectedOptionsItem.contentId(), selectedOptionsItem.contentType(), "")
+                 optionsItem.value = null
+             },
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 index b23ef0d..c1f38ba 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt

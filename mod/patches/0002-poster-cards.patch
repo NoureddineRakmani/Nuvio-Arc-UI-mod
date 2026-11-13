@@ -122,7 +122,7 @@ index 6a9f831..32922b2 100644
  private class SelectKeyPress {
      var keyCode: Int? = null
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
-index 015dba5..7aac9b4 100644
+index 015dba5..5321e38 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
 @@ -424,6 +424,8 @@ internal val LocalRowFocusGlide = staticCompositionLocalOf<RowFocusGlide?> { nul
@@ -142,7 +142,15 @@ index 015dba5..7aac9b4 100644
      if (!glide.showing || v2FocusDrawsOwnEdge()) return
      Box(
          Modifier
-@@ -1249,7 +1252,8 @@ internal fun ModernRowSection(
+@@ -703,6 +706,7 @@ private fun ModernCatalogRowItem(
+                             enrichedBackdropUrl ?: item.metaPreview?.backdropUrl,
+                             enrichedLogoUrl ?: item.metaPreview?.logo
+                         )
++                        ModDetailSeed.caller = "card" // Nuvio Mod: trace only
+                         onNavigateToDetail(
+                             payload.itemId,
+                             payload.itemType,
+@@ -1249,7 +1253,8 @@ internal fun ModernRowSection(
                      }
                      .focusGroup(),
                  contentPadding = PaddingValues(start = rowStartPadding, end = ROW_END_PADDING),
@@ -152,3 +160,12 @@ index 015dba5..7aac9b4 100644
              ) {
                  itemsIndexed(
                      items = row.items.list,
+@@ -1318,7 +1323,7 @@ internal fun ModernRowSection(
+                             val comingUp = row.key == MODERN_COMING_UP_ROW_KEY
+                             val openComingUp = remember(onNavigateToDetail) {
+                                 { cw: ContinueWatchingItem ->
+-                                    (cw as? ContinueWatchingItem.NextUp)?.info?.let { onNavigateToDetail(it.contentId, it.contentType, "") }
++                                    (cw as? ContinueWatchingItem.NextUp)?.info?.let { ModDetailSeed.caller = "comingup"; onNavigateToDetail(it.contentId, it.contentType, "") }
+                                     Unit
+                                 }
+                             }
