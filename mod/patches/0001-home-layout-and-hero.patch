@@ -86,10 +86,10 @@ index 340162e..b14ea5f 100644
      ) {
          Box(
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-index 5ecf3c4..75a7546 100644
+index 5ecf3c4..df7f451 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HeroArtwork.kt
-@@ -48,12 +48,45 @@ internal class ShownHeroMemory<T : Any> {
+@@ -48,12 +48,58 @@ internal class ShownHeroMemory<T : Any> {
          entry = Entry(url, width, height, SoftReference(image))
      }
  
@@ -99,6 +99,9 @@ index 5ecf3c4..75a7546 100644
 +
 +    /** Nuvio Mod: the kept image at whatever size, handed to the details page that opens on it. */
 +    fun lastAny(): T? = entry?.image?.get()
++
++    /** Nuvio Mod: the kept image with the address it was loaded from. */
++    fun lastWithUrl(): Pair<String, T>? = entry?.let { e -> e.image.get()?.let { e.url to it } }
 +
      fun recall(url: String, width: Int, height: Int): T? =
          entry?.takeIf { it.url == url && it.width == width && it.height == height }?.image?.get()
@@ -114,6 +117,16 @@ index 5ecf3c4..75a7546 100644
 + * it from its first frame until its own backdrop has loaded, so it never opens on a dark screen.
 + * Taken once, and only by the page of that same title.
 + */
++/**
++ * Nuvio Mod: Home's hero picture if it is showing [itemId] right now. Hero owners are card keys
++ * ("catalog_<row>_<id>_<occurrence>"), so the title is the part before the last "_" ending in "_<id>".
++ */
++internal fun modShownHeroFor(itemId: String): Pair<String, coil3.Image>? {
++    val owner = modShownHeroOwner ?: return null
++    if (!owner.substringBeforeLast('_').endsWith("_$itemId")) return null
++    return shownHeroImage.lastWithUrl()
++}
++
 +internal object ModDetailSeed {
 +    private class Seed(val id: String, val type: String, val image: coil3.Image)
 +    @Volatile private var seed: Seed? = null

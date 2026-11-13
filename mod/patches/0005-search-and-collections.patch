@@ -1,8 +1,30 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index c97c2b1..79690be 100644
+index c97c2b1..f8c18fe 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -378,8 +378,15 @@ private fun PlaybackNavHost(
+@@ -253,12 +253,20 @@ private fun PlaybackNavHost(
+                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                     com.nuvio.tv.core.performance.DetailEntryTrace.begin()
+                     val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
++                    // Nuvio Mod: if Home's big picture is this title's, the details page opens on it
++                    // (the decoded picture itself, and its address so the page knows its backdrop at once).
++                    val modHero = com.nuvio.tv.ui.screens.home.modShownHeroFor(itemId)
++                    com.nuvio.tv.ui.screens.home.ModDetailSeed.offer(
++                        itemId, itemType, modHero?.second,
++                        "nav_" + (if (com.nuvio.tv.ui.screens.home.modShownHeroOwner == null) "noowner" else if (modHero != null) "match" else "other") +
++                            "_arcurl_" + (if (heroArtwork?.backdropUrl != null) "yes" else "no")
++                    )
+                     navController.navigate(
+                         Screen.Detail.createRoute(
+                             itemId = itemId,
+                             itemType = itemType,
+                             addonBaseUrl = addonBaseUrl,
+-                            heroBackdropUrl = heroArtwork?.backdropUrl,
++                            heroBackdropUrl = heroArtwork?.backdropUrl ?: modHero?.first,
+                             heroLogoUrl = heroArtwork?.logoUrl
+                         )
+                     )
+@@ -378,8 +386,15 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
@@ -18,7 +40,7 @@ index c97c2b1..79690be 100644
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -1310,7 +1317,11 @@ private fun PlaybackNavHost(
+@@ -1310,7 +1325,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },
