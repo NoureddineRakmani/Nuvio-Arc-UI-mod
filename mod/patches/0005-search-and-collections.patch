@@ -115,16 +115,17 @@ index a5e46cc..f9d2478 100644
                      // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt
 new file mode 100644
-index 0000000..dfe1772
+index 0000000..a9d3eca
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt
-@@ -0,0 +1,37 @@
+@@ -0,0 +1,54 @@
 +package com.nuvio.tv.ui.screens.search
 +
 +import android.content.Context
 +import coil3.imageLoader
 +import coil3.request.CachePolicy
 +import coil3.request.ImageRequest
++import kotlinx.coroutines.launch
 +import com.nuvio.tv.domain.model.Collection
 +
 +/**
@@ -143,18 +144,34 @@ index 0000000..dfe1772
 +
 +    fun keep(list: List<Collection>, context: Context) {
 +        last = list
-+        val loader = context.imageLoader
-+        list.asSequence()
++        val urls = list.asSequence()
 +            .flatMap { it.folders.asSequence() }
 +            .mapNotNull { folder -> folder.coverImageUrl?.takeIf { it.isNotBlank() } }
 +            .filter { warmed.add(it) }
-+            .forEach { url ->
-+                // Disk only: the tile decodes at its own size when drawn.
++            .toList()
++        if (urls.isEmpty()) return
++        val appContext = context.applicationContext
++        // Not while the app starts: Home's own pictures go first. Arc only loaded these once a
++        // collection row was scrolled to.
++        val wait = WARM_AFTER_START_MS -
++            (android.os.SystemClock.elapsedRealtime() - android.os.Process.getStartElapsedRealtime())
++        warmScope.launch {
++            if (wait > 0) kotlinx.coroutines.delay(wait)
++            val loader = appContext.imageLoader
++            urls.forEach { url ->
++                // Stored on disk only; decoded tiny here, the tile decodes at its own size when drawn.
 +                loader.enqueue(
-+                    ImageRequest.Builder(context).data(url).memoryCachePolicy(CachePolicy.DISABLED).build()
++                    ImageRequest.Builder(appContext).data(url)
++                        .memoryCachePolicy(CachePolicy.DISABLED)
++                        .size(64, 64)
++                        .build()
 +                )
 +            }
++        }
 +    }
++
++    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + kotlinx.coroutines.Dispatchers.Default)
++    private const val WARM_AFTER_START_MS = 10_000L
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 index b564497..d61f4f9 100644
