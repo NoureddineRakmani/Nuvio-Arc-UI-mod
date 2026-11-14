@@ -16,4 +16,6 @@ else
   git -C "$ROOT/mine" reset -q --hard FETCH_HEAD
 fi
 cp "$ROOT/mine/mod/dev/nuvio-try" "$HOME/nuvio-try" 2>/dev/null || true
+# Claude Code on this PC reads ~/nuvio-mod-dev/CLAUDE.md: it points to the project notes kept in the repo.
+[ -f "$ROOT/CLAUDE.md" ] || echo '@mine/mod/CLAUDE.md' > "$ROOT/CLAUDE.md"
 exec bash "$ROOT/mine/mod/dev/try.sh" "$@"

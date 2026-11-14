@@ -13,6 +13,11 @@ Secrets needed (Settings → Secrets and variables → Actions):
 Keep a copy of the signing key file (`nuvio-mod.p12`) and its password somewhere safe:
 if it's lost, Nuvio Mod has to be uninstalled and reinstalled once with a new key.
 
+## Working with Claude Code on the PC
+`mod/CLAUDE.md` holds the project context and rules for Claude Code; `mod/notes/` holds the change notes
+(`addendum.md` is the newest). `~/nuvio-try` creates `~/nuvio-mod-dev/CLAUDE.md`, which points to it, so start
+Claude Code in `~/nuvio-mod-dev`. Keep the notes up to date when something changes.
+
 ## Editing it yourself (on the PC)
 
 All commands work in the normal terminal (fish is fine).
