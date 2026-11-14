@@ -70,6 +70,47 @@ index a5e46cc..f9d2478 100644
                  }
                  is HomeRow.PlaceholderCatalog -> {
                      // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt
+new file mode 100644
+index 0000000..52ba9fa
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt
+@@ -0,0 +1,35 @@
++package com.nuvio.tv.ui.screens.search
++
++import android.content.Context
++import coil3.imageLoader
++import coil3.request.CachePolicy
++import coil3.request.ImageRequest
++import com.nuvio.tv.domain.model.Collection
++
++/**
++ * Nuvio Mod: collections are shown on the search page, not on Home. Home still reads them when the
++ * app starts; this keeps that list so the search page has it on its first frame, and downloads the
++ * folder cover pictures in the background so they are stored before Search opens (as they were
++ * when Home drew them). Focus GIFs are left to load on focus; folder contents are not touched.
++ */
++internal object ModSearchCollections {
++    @Volatile var last: List<Collection>? = null
++    private val warmed = java.util.Collections.synchronizedSet(mutableSetOf<String>())
++
++    fun visible(list: List<Collection>): List<Collection> = list.filter { it.folders.isNotEmpty() }
++
++    fun keep(list: List<Collection>, context: Context) {
++        last = list
++        val loader = context.imageLoader
++        list.asSequence()
++            .flatMap { it.folders.asSequence() }
++            .mapNotNull { folder -> folder.coverImageUrl?.takeIf { it.isNotBlank() } }
++            .filter { warmed.add(it) }
++            .forEach { url ->
++                // Disk only: the tile decodes at its own size when drawn.
++                loader.enqueue(
++                    ImageRequest.Builder(context).data(url).memoryCachePolicy(CachePolicy.DISABLED).build()
++                )
++            }
++    }
++}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 index b564497..d61f4f9 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
@@ -328,7 +369,7 @@ index b80f048..f07f580 100644
      val discoverLoading: Boolean = false,
      val discoverLoadingMore: Boolean = false,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
-index ba7dc2a..65bb277 100644
+index ba7dc2a..4ecc003 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 @@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.combine
@@ -341,7 +382,7 @@ index ba7dc2a..65bb277 100644
  import kotlinx.coroutines.joinAll
  import kotlinx.coroutines.launch
  import kotlinx.coroutines.withTimeoutOrNull
-@@ -62,9 +65,16 @@ class SearchViewModel @Inject constructor(
+@@ -62,9 +65,24 @@ class SearchViewModel @Inject constructor(
      val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
      private val serverCatalog: ServerCatalog,
      private val catalogSpeed: SearchCatalogSpeed,
@@ -352,13 +393,21 @@ index ba7dc2a..65bb277 100644
 +    // Nuvio Mod: the user's collections are shown on the search page instead of the home screen.
 +    val modCollections: StateFlow<List<com.nuvio.tv.domain.model.Collection>> =
 +        modCollectionsDataStore.collections
-+            .map { list -> list.filter { it.folders.isNotEmpty() } }
-+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
++            .map { list ->
++                ModSearchCollections.last = list
++                ModSearchCollections.visible(list)
++            }
++            // Starts with the list Home already read, so the rows are there on the first frame.
++            .stateIn(
++                viewModelScope,
++                SharingStarted.WhileSubscribed(5_000),
++                ModSearchCollections.last?.let { ModSearchCollections.visible(it) } ?: emptyList()
++            )
 +
      private val _uiState = MutableStateFlow(SearchUiState())
      val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
  
-@@ -171,7 +181,7 @@ class SearchViewModel @Inject constructor(
+@@ -171,7 +189,7 @@ class SearchViewModel @Inject constructor(
          }
          viewModelScope.launch {
              layoutPreferenceDataStore.discoverLocation.distinctUntilChanged().collectLatest { location ->

@@ -202,6 +202,23 @@ index 8bfec61..8ca8bbf 100644
                  onNavigateToDetail(item.id, item.apiType, selectedPoster.addonBaseUrl)
                  posterOptionsTarget = null
              },
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
+index b013ce9..c9e8aa5 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
+@@ -55,7 +55,11 @@ private data class CatalogUpdateResult(
+ @OptIn(FlowPreview::class)
+ internal fun HomeViewModel.observeCollectionsPipeline() {
+     viewModelScope.launch {
+-        combine(collectionsDataStore.collections, builtInCatalogs.collections) { saved, builtIn -> saved + builtIn }
++        combine(collectionsDataStore.collections, builtInCatalogs.collections) { saved, builtIn ->
++            // Nuvio Mod: hand the saved collections to the search page and preload their folder covers.
++            com.nuvio.tv.ui.screens.search.ModSearchCollections.keep(saved, appContext)
++            saved + builtIn
++        }
+             .distinctUntilChanged()
+             .debounce(300)
+             .collectLatest { collections ->
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 index 647f0e4..dd4ea73 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
