@@ -202,15 +202,34 @@ index 8bfec61..8ca8bbf 100644
                  onNavigateToDetail(item.id, item.apiType, selectedPoster.addonBaseUrl)
                  posterOptionsTarget = null
              },
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
+index 5455a55..e5e0b77 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
+@@ -79,6 +79,7 @@ class HomeViewModel @Inject constructor(
+     internal val episodeShuffleStore: com.nuvio.tv.data.local.EpisodeShuffleStore,
+     internal val episodeShuffle: com.nuvio.tv.domain.model.EpisodeShuffle,
+     internal val collectionsDataStore: CollectionsDataStore,
++    internal val modSearchHistoryDataStore: com.nuvio.tv.data.local.SearchHistoryDataStore, // Nuvio Mod
+     internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
+     internal val playerSettingsDataStore: PlayerSettingsDataStore,
+     internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
-index b013ce9..c9e8aa5 100644
+index b013ce9..ca1b6d0 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
-@@ -55,7 +55,11 @@ private data class CatalogUpdateResult(
+@@ -54,8 +54,18 @@ private data class CatalogUpdateResult(
+ 
  @OptIn(FlowPreview::class)
  internal fun HomeViewModel.observeCollectionsPipeline() {
++    // Nuvio Mod: read the search history now, so the search page shows it on its first frame.
      viewModelScope.launch {
 -        combine(collectionsDataStore.collections, builtInCatalogs.collections) { saved, builtIn -> saved + builtIn }
++        modSearchHistoryDataStore.recentSearches.collect { recent ->
++            com.nuvio.tv.ui.screens.search.ModSearchCollections.recentSearches = recent
++        }
++    }
++    viewModelScope.launch {
 +        combine(collectionsDataStore.collections, builtInCatalogs.collections) { saved, builtIn ->
 +            // Nuvio Mod: hand the saved collections to the search page and preload their folder covers.
 +            com.nuvio.tv.ui.screens.search.ModSearchCollections.keep(saved, appContext)

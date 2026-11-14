@@ -72,10 +72,10 @@ index a5e46cc..f9d2478 100644
                      // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt
 new file mode 100644
-index 0000000..52ba9fa
+index 0000000..dfe1772
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/ModSearchCollections.kt
-@@ -0,0 +1,35 @@
+@@ -0,0 +1,37 @@
 +package com.nuvio.tv.ui.screens.search
 +
 +import android.content.Context
@@ -92,6 +92,8 @@ index 0000000..52ba9fa
 + */
 +internal object ModSearchCollections {
 +    @Volatile var last: List<Collection>? = null
++    /** Recent searches, read by Home when the app starts, so the search page has them on its first frame. */
++    @Volatile var recentSearches: List<String>? = null
 +    private val warmed = java.util.Collections.synchronizedSet(mutableSetOf<String>())
 +
 +    fun visible(list: List<Collection>): List<Collection> = list.filter { it.folders.isNotEmpty() }
@@ -369,7 +371,7 @@ index b80f048..f07f580 100644
      val discoverLoading: Boolean = false,
      val discoverLoadingMore: Boolean = false,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
-index ba7dc2a..4ecc003 100644
+index ba7dc2a..ed3a345 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 @@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.combine
@@ -382,7 +384,7 @@ index ba7dc2a..4ecc003 100644
  import kotlinx.coroutines.joinAll
  import kotlinx.coroutines.launch
  import kotlinx.coroutines.withTimeoutOrNull
-@@ -62,9 +65,24 @@ class SearchViewModel @Inject constructor(
+@@ -62,10 +65,28 @@ class SearchViewModel @Inject constructor(
      val posterOptions: com.nuvio.tv.ui.components.posteroptions.PosterOptionsController,
      private val serverCatalog: ServerCatalog,
      private val catalogSpeed: SearchCatalogSpeed,
@@ -390,6 +392,7 @@ index ba7dc2a..4ecc003 100644
      @ApplicationContext private val context: Context
  ) : ViewModel() {
  
+-    private val _uiState = MutableStateFlow(SearchUiState())
 +    // Nuvio Mod: the user's collections are shown on the search page instead of the home screen.
 +    val modCollections: StateFlow<List<com.nuvio.tv.domain.model.Collection>> =
 +        modCollectionsDataStore.collections
@@ -404,10 +407,14 @@ index ba7dc2a..4ecc003 100644
 +                ModSearchCollections.last?.let { ModSearchCollections.visible(it) } ?: emptyList()
 +            )
 +
-     private val _uiState = MutableStateFlow(SearchUiState())
++    // Nuvio Mod: start with the history Home already read instead of an empty list.
++    private val _uiState = MutableStateFlow(
++        SearchUiState(recentSearches = ModSearchCollections.recentSearches?.take(MAX_RECENT_SEARCHES).orEmpty())
++    )
      val uiState: StateFlow<SearchUiState> = _uiState.asStateFlow()
  
-@@ -171,7 +189,7 @@ class SearchViewModel @Inject constructor(
+     /** Saved focus state for restoring scroll/focus position after returning from details. */
+@@ -171,7 +192,7 @@ class SearchViewModel @Inject constructor(
          }
          viewModelScope.launch {
              layoutPreferenceDataStore.discoverLocation.distinctUntilChanged().collectLatest { location ->
