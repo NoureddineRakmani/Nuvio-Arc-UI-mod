@@ -13,7 +13,7 @@ index 1fd64c8..8c29b38 100644
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..55f6d15 100644
+index b771237..fbab0e0 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 @@ -1,6 +1,15 @@
@@ -40,7 +40,22 @@ index b771237..55f6d15 100644
  import androidx.compose.foundation.layout.height
  import androidx.compose.foundation.shape.RoundedCornerShape
  import androidx.compose.runtime.staticCompositionLocalOf
-@@ -56,6 +66,13 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
+@@ -33,6 +43,14 @@ import androidx.compose.runtime.withFrameNanos
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+ import androidx.compose.ui.focus.FocusDirection
++import androidx.compose.ui.input.key.Key
++import androidx.compose.ui.input.key.KeyEventType
++import androidx.compose.ui.input.key.key
++import androidx.compose.ui.input.key.onKeyEvent
++import androidx.compose.ui.input.key.type
++import androidx.compose.ui.platform.LocalFocusManager
++import androidx.compose.ui.platform.LocalLayoutDirection
++import androidx.compose.ui.unit.LayoutDirection
+ import androidx.compose.ui.focus.FocusRequester
+ import androidx.compose.ui.focus.focusProperties
+ import androidx.compose.ui.focus.focusRequester
+@@ -56,6 +74,13 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
  
  val LocalV2TopChrome = staticCompositionLocalOf { false }
  
@@ -54,7 +69,7 @@ index b771237..55f6d15 100644
  /** Alternative chrome around the same navigation controller and destination graph. */
  @Composable
  @OptIn(ExperimentalTvMaterial3Api::class)
-@@ -72,11 +89,19 @@ fun V2TopNavigation(
+@@ -72,12 +97,22 @@ fun V2TopNavigation(
  ) {
      val visible = currentRoute in rootRoutes
      val contentFocus = remember { FocusRequester() }
@@ -72,9 +87,12 @@ index b771237..55f6d15 100644
 +        label = "modTopBarAlpha"
 +    )
      val entryFocus = routeFocus[lastRoute] ?: routeFocus[selectedRoute] ?: routeFocus.values.first()
++    val focusManager = LocalFocusManager.current
++    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
  
      // Destination BackHandlers are composed later and retain priority for sheets/settings.
-@@ -91,7 +116,9 @@ fun V2TopNavigation(
+     BackHandler(enabled = visible) {
+@@ -91,13 +126,26 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
@@ -85,7 +103,25 @@ index b771237..55f6d15 100644
              .focusRequester(contentFocus).focusRestorer()
              .focusProperties {
                  this.onExit = {
-@@ -105,16 +132,22 @@ fun V2TopNavigation(
+                     if (visible && requestedFocusDirection == FocusDirection.Up) entryFocus.requestFocus()
+                 }
+-            }.focusGroup()) {
++            }.focusGroup()
++            // Nuvio Mod: Left with nothing further left (start of a row, left column...) brings the
++            // menu in, like the side menu does. Same check as Arc's side menu: try to move first.
++            .onKeyEvent { event ->
++                val openKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
++                if (visible && event.type == KeyEventType.KeyDown && event.key == openKey) {
++                    if (!focusManager.moveFocus(if (isRtl) FocusDirection.Right else FocusDirection.Left)) {
++                        entryFocus.requestFocus()
++                    }
++                    true
++                } else false
++            }) {
+             CompositionLocalProvider(LocalContentFocusRequester provides contentFocus,
+                 LocalSidebarExpanded provides navFocused,
+                 LocalV2TopChrome provides visible) {
+@@ -105,16 +153,22 @@ fun V2TopNavigation(
              }
          }
          if (visible) {
@@ -116,7 +152,7 @@ index b771237..55f6d15 100644
                              val isSelected = item.route == selectedRoute
                              var itemFocused by remember { mutableStateOf(false) }
                              Button(onClick = {
-@@ -123,14 +156,17 @@ fun V2TopNavigation(
+@@ -123,14 +177,17 @@ fun V2TopNavigation(
                              }, modifier = Modifier.focusRequester(routeFocus.getValue(item.route))
                                  .focusProperties { down = contentFocus }
                                  .onFocusChanged { itemFocused = it.isFocused; if (it.isFocused) lastRoute = item.route }
@@ -140,7 +176,7 @@ index b771237..55f6d15 100644
                                      contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
                                      focusedContentColor = Color.White)) {
                                  when {
-@@ -143,21 +179,24 @@ fun V2TopNavigation(
+@@ -143,21 +200,24 @@ fun V2TopNavigation(
                          }
                      }
                      if (profile != null) {
