@@ -9,6 +9,8 @@ if [ ! -d "$ROOT/mine/.git" ]; then
   echo "== Getting my changes (first time)"
   git clone -q --depth 1 --branch dev --filter=blob:none --sparse "$FORK_URL" "$ROOT/mine"
   git -C "$ROOT/mine" sparse-checkout set mod
+elif [ -f "$ROOT/unpushed" ]; then
+  echo "(Your last save is not on GitHub yet: using it as is. Send it with: bash ~/nuvio-try save)"
 else
   git -C "$ROOT/mine" fetch -q --depth 1 origin dev
   git -C "$ROOT/mine" reset -q --hard FETCH_HEAD
