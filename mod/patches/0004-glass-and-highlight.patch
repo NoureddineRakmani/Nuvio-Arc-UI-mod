@@ -24,10 +24,10 @@ index 044b67a..c364b4d 100644
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
 new file mode 100644
-index 0000000..5d230d1
+index 0000000..33b4fc0
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,160 @@
 +package com.nuvio.tv.ui.v2.components
 +
 +import androidx.compose.foundation.BorderStroke
@@ -49,6 +49,8 @@ index 0000000..5d230d1
 +import androidx.compose.ui.graphics.Shape
 +import androidx.compose.ui.graphics.drawOutline
 +import androidx.compose.ui.graphics.drawscope.DrawScope
++import androidx.compose.ui.layout.boundsInRoot
++import androidx.compose.ui.layout.onGloballyPositioned
 +import androidx.compose.ui.unit.dp
 +import androidx.tv.material3.Button
 +import androidx.tv.material3.ButtonColors
@@ -142,6 +144,49 @@ index 0000000..5d230d1
 +    } else {
 +        Button(onClick = onClick, modifier = modifier, enabled = enabled, content = content)
 +    }
++}
++
++
++/**
++ * Nuvio Mod: shade behind the title and description only. It starts at the screen's start edge, stays
++ * even across the text block and fades out just past the block's end, over the full height.
++ * Each page reports where its description block ends ([ModTextShade.reportEnd]); nothing is drawn
++ * until it has.
++ */
++object ModTextShade {
++    /** Start-edge distance (px, from the screen's start edge) where Home's and the details page's text blocks end. */
++    val homeEnd = androidx.compose.runtime.mutableFloatStateOf(0f)
++    val detailEnd = androidx.compose.runtime.mutableFloatStateOf(0f)
++
++    /** Peak strength at the start edge. */
++    const val STRENGTH = 0.62f
++
++    /** Left-to-right layouts only (her app); in RTL the shade is drawn mirrored from the same value. */
++    fun Modifier.reportEnd(target: androidx.compose.runtime.MutableFloatState): Modifier =
++        this.onGloballyPositioned { coordinates -> target.floatValue = coordinates.boundsInRoot().right }
++}
++
++/** Draws the text shade from the start edge to [endPx] (+ a soft fade-out). */
++fun DrawScope.drawModTextShade(endPx: Float, color: Color, rtl: Boolean, alpha: Float = 1f) {
++    if (endPx <= 0f || alpha <= 0f) return
++    val fadeOut = 140.dp.toPx()
++    val total = (endPx + fadeOut).coerceAtMost(size.width)
++    if (total <= 0f) return
++    val a = ModTextShade.STRENGTH * alpha
++    val textEnd = (endPx / total).coerceIn(0.05f, 0.98f)
++    val stops = arrayOf(
++        0f to color.copy(alpha = a),
++        textEnd * 0.45f to color.copy(alpha = a * 0.94f),
++        textEnd * 0.80f to color.copy(alpha = a * 0.78f),
++        textEnd to color.copy(alpha = a * 0.55f),
++        (textEnd + (1f - textEnd) * 0.45f) to color.copy(alpha = a * 0.22f),
++        (textEnd + (1f - textEnd) * 0.75f) to color.copy(alpha = a * 0.07f),
++        1f to color.copy(alpha = 0f)
++    )
++    val brush = if (rtl) Brush.horizontalGradient(*stops, startX = size.width, endX = size.width - total)
++        else Brush.horizontalGradient(*stops, startX = 0f, endX = total)
++    drawRect(brush = brush, topLeft = Offset(if (rtl) size.width - total else 0f, 0f),
++        size = androidx.compose.ui.geometry.Size(total, size.height))
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
 index b0043f1..63e022c 100644

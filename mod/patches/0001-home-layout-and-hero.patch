@@ -327,7 +327,7 @@ index 647f0e4..dd4ea73 100644
                  optionsItem.value = null
              },
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index b23ef0d..3183a8a 100644
+index b23ef0d..91d2587 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -181,6 +181,7 @@ internal fun ModernHeroMediaLayer(
@@ -422,16 +422,21 @@ index b23ef0d..3183a8a 100644
                          )
                      } else {
                          arrayOf(
-@@ -363,6 +378,8 @@ internal fun ModernHeroGradientLayer(
+@@ -363,6 +378,13 @@ internal fun ModernHeroGradientLayer(
                  )
  
                  onDrawBehind {
-+                    // Nuvio Mod: no shade over a full-screen picture in Nuvio v2.
-+                    if (fullScreen && modV2) return@onDrawBehind
++                    // Nuvio Mod: over a full-screen picture in Nuvio v2, only a shade behind the text block.
++                    if (fullScreen && modV2) {
++                        com.nuvio.tv.ui.v2.components.drawModTextShade(
++                            com.nuvio.tv.ui.v2.components.ModTextShade.homeEnd.floatValue, bgColor, isRtl
++                        )
++                        return@onDrawBehind
++                    }
                      if (pureDark) drawRect(Color(0xFF03080D).copy(alpha = 0.12f))
                      // 1. Horizontal fade (reversed in RTL)
                      val rectLeft = if (isRtl) size.width - horizontalFadeEndX else 0f
-@@ -372,8 +389,8 @@ internal fun ModernHeroGradientLayer(
+@@ -372,8 +394,8 @@ internal fun ModernHeroGradientLayer(
                          size = Size(horizontalFadeEndX, size.height)
                      )
                      
@@ -442,7 +447,17 @@ index b23ef0d..3183a8a 100644
                          brush = verticalGradient,
                          topLeft = Offset(0f, bottomStripStartY),
                          size = Size(size.width, size.height - bottomStripStartY)
-@@ -920,7 +937,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+@@ -424,7 +446,8 @@ internal fun HeroTitleBlock(
+     if (displayPreview == null) return
+     
+     Box(
+-        modifier = modifier,
++        // Nuvio Mod: the text shade ends where this block ends.
++        modifier = with(com.nuvio.tv.ui.v2.components.ModTextShade) { modifier.reportEnd(com.nuvio.tv.ui.v2.components.ModTextShade.homeEnd) },
+         contentAlignment = Alignment.BottomStart
+     ) {
+         HeroTitleContent(
+@@ -920,7 +943,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
              outgoing = current
              current = image
              alpha.snapTo(0f)
