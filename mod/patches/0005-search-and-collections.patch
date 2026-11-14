@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index c97c2b1..f285746 100644
+index c97c2b1..2e0d764 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 @@ -57,6 +57,7 @@ import com.nuvio.tv.ui.screens.party.PartyScreen
@@ -18,59 +18,94 @@ index c97c2b1..f285746 100644
              fun createContinueWatchingRoute(
                  item: ContinueWatchingItem,
                  manualSelection: Boolean = false,
-@@ -250,20 +252,50 @@ private fun PlaybackNavHost(
+@@ -249,21 +251,73 @@ private fun PlaybackNavHost(
+                 }
              }
  
-             HomeScreen(
-+                viewModel = modHomeViewModel,
-                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
-                     com.nuvio.tv.core.performance.DetailEntryTrace.begin()
-                     val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
-+                    // Nuvio Mod: if Home's big picture is this title's, the details page opens on it
-+                    // (the decoded picture itself, and its address so the page knows its backdrop at once).
-+                    val modHero = com.nuvio.tv.ui.screens.home.modShownHeroFor(itemId)
-+                    com.nuvio.tv.ui.screens.home.ModDetailSeed.offer(
-+                        itemId, itemType, modHero?.second,
-+                        "nav_" + (if (com.nuvio.tv.ui.screens.home.modShownHeroOwner == null) "noowner" else if (modHero != null) "match" else "other") +
-+                            "_ids_" + (if (com.nuvio.tv.ui.screens.home.modShownHeroIdsKnown()) "known" else "unknown") +
-+                            "_from_" + com.nuvio.tv.ui.screens.home.ModDetailSeed.caller + "_hero_" + com.nuvio.tv.ui.screens.home.modShownHeroShape() +
-+                            "_arcurl_" + (if (heroArtwork?.backdropUrl != null) "yes" else "no")
-+                    )
-+                    com.nuvio.tv.ui.screens.home.ModDetailSeed.caller = "unknown"
-                     navController.navigate(
-                         Screen.Detail.createRoute(
-                             itemId = itemId,
-                             itemType = itemType,
-                             addonBaseUrl = addonBaseUrl,
+-            HomeScreen(
+-                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+-                    com.nuvio.tv.core.performance.DetailEntryTrace.begin()
+-                    val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
+-                    navController.navigate(
+-                        Screen.Detail.createRoute(
+-                            itemId = itemId,
+-                            itemType = itemType,
+-                            addonBaseUrl = addonBaseUrl,
 -                            heroBackdropUrl = heroArtwork?.backdropUrl,
-+                            heroBackdropUrl = heroArtwork?.backdropUrl ?: modHero?.first,
-                             heroLogoUrl = heroArtwork?.logoUrl
-                         )
+-                            heroLogoUrl = heroArtwork?.logoUrl
+-                        )
++            // Nuvio Mod: Home's way into a details page (with the hero picture handed over), optionally
++            // opened on one episode.
++            fun modOpenDetail(itemId: String, itemType: String, addonBaseUrl: String?, focusSeason: Int? = null, focusEpisode: Int? = null) {
++                com.nuvio.tv.core.performance.DetailEntryTrace.begin()
++                val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
++                // Nuvio Mod: if Home's big picture is this title's, the details page opens on it
++                // (the decoded picture itself, and its address so the page knows its backdrop at once).
++                val modHero = com.nuvio.tv.ui.screens.home.modShownHeroFor(itemId)
++                com.nuvio.tv.ui.screens.home.ModDetailSeed.offer(
++                    itemId, itemType, modHero?.second,
++                    "nav_" + (if (com.nuvio.tv.ui.screens.home.modShownHeroOwner == null) "noowner" else if (modHero != null) "match" else "other") +
++                        "_ids_" + (if (com.nuvio.tv.ui.screens.home.modShownHeroIdsKnown()) "known" else "unknown") +
++                        "_from_" + com.nuvio.tv.ui.screens.home.ModDetailSeed.caller + "_hero_" + com.nuvio.tv.ui.screens.home.modShownHeroShape() +
++                        "_arcurl_" + (if (heroArtwork?.backdropUrl != null) "yes" else "no")
++                )
++                com.nuvio.tv.ui.screens.home.ModDetailSeed.caller = "unknown"
++                navController.navigate(
++                    Screen.Detail.createRoute(
++                        itemId = itemId,
++                        itemType = itemType,
++                        addonBaseUrl = addonBaseUrl,
++                        heroBackdropUrl = heroArtwork?.backdropUrl ?: modHero?.first,
++                        heroLogoUrl = heroArtwork?.logoUrl,
++                        returnFocusSeason = focusSeason,
++                        returnFocusEpisode = focusEpisode
                      )
-                 },
+-                },
++                )
++            }
++
++            HomeScreen(
++                viewModel = modHomeViewModel,
++                onNavigateToDetail = { itemId, itemType, addonBaseUrl -> modOpenDetail(itemId, itemType, addonBaseUrl) },
                  onContinueWatchingClick = onContinueWatchingClick@{ item ->
-+                    // Nuvio Mod: a Coming up card carries no episode id; look it up, then open its streams
-+                    // (or the show's page on that episode if it can't be found).
++                    // Nuvio Mod: a Coming up card carries no episode id. One that is out: look it up and open its
++                    // streams. One not out yet, or not found: the show's page, on that episode.
 +                    val modComingUp = (item as? ContinueWatchingItem.NextUp)?.info?.takeIf { it.comingUpKey != null && it.videoId.isBlank() }
 +                    if (modComingUp != null) {
++                        com.nuvio.tv.core.performance.DetailEntryTrace.begin()
++                        com.nuvio.tv.core.performance.DetailEntryTrace.mark(
++                            "mod_comingup_S${modComingUp.season}E${modComingUp.episode}_out_${modComingUp.hasAired}"
++                        )
++                        val series = modComingUp.contentType.equals("series", ignoreCase = true)
++                        val openPage = {
++                            com.nuvio.tv.ui.screens.home.ModDetailSeed.caller = "comingup"
++                            modOpenDetail(
++                                modComingUp.contentId, modComingUp.contentType, "",
++                                focusSeason = modComingUp.season.takeIf { series && it > 0 },
++                                focusEpisode = modComingUp.episode.takeIf { series && modComingUp.season > 0 }
++                            )
++                        }
++                        if (!modComingUp.hasAired) {
++                            com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_not_out")
++                            openPage()
++                            return@onContinueWatchingClick
++                        }
 +                        modHomeViewModel.modOpenComingUp(modComingUp) { target ->
 +                            if (navController.currentDestination?.route != Screen.Home.route) return@modOpenComingUp
-+                            navController.openCalendarWatchTarget(
-+                                target ?: com.nuvio.tv.core.calendar.CalendarWatchTarget(
-+                                    contentId = modComingUp.contentId, contentType = modComingUp.contentType, name = modComingUp.name,
-+                                    poster = modComingUp.poster, backdrop = modComingUp.backdrop, logo = modComingUp.logo, videoId = null,
-+                                    season = modComingUp.season.takeIf { modComingUp.contentType == "series" },
-+                                    episode = modComingUp.episode.takeIf { modComingUp.contentType == "series" },
-+                                    episodeTitle = modComingUp.episodeTitle
-+                                )
-+                            )
++                            if (target?.videoId != null) {
++                                com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_streams")
++                                navController.openCalendarWatchTarget(target)
++                            } else {
++                                com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_no_episode_id")
++                                openPage()
++                            }
 +                        }
 +                        return@onContinueWatchingClick
 +                    }
                      if (!playbackAvailability.canStream(item)) {
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingClick
-@@ -378,8 +410,15 @@ private fun PlaybackNavHost(
+@@ -378,8 +432,15 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
@@ -86,7 +121,7 @@ index c97c2b1..f285746 100644
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -1310,7 +1349,11 @@ private fun PlaybackNavHost(
+@@ -1310,7 +1371,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },
