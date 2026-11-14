@@ -582,3 +582,43 @@ index aae1ea2..b648883 100644
          )
      }
  }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt
+index d5b3a63..af2fdd6 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt
+@@ -1132,6 +1132,9 @@ class MetaDetailsViewModel @Inject constructor(
+                 )
+             }
+ 
++            // Nuvio Mod: ask for the ratings now (often already cached by Home), not after the TMDB step.
++            if (isMdbListActive && !isServerItem) launch { loadMDBListRatingsEarly() }
++
+             val metaLookupId = resolveMetaLookupId(itemId = itemId, itemType = itemType)
+             // Update effective content ID as early as possible so watch-progress
+             // observers use the canonical (usually IMDB) ID, not the navigation ID.
+@@ -1836,6 +1839,15 @@ class MetaDetailsViewModel @Inject constructor(
+         }
+     }
+ 
++    private suspend fun loadMDBListRatingsEarly() {
++        val settings = mdbListSettingsDataStore.settings.first()
++        val result = runCatching { mdbListRepository.getRatingsForItem(itemId, itemType) }.getOrNull() ?: return
++        _uiState.update { state ->
++            if (state.mdbListRatings != null) state
++            else state.copy(mdbListRatings = result.ratings, mdbListRatingOrder = settings.enabledRatingOrder())
++        }
++    }
++
+     private suspend fun loadMDBListRatings(meta: Meta) {
+         val settings = mdbListSettingsDataStore.settings.first()
+         val isMdbListActive = mdbListRepository.isAvailable(settings)
+@@ -1849,7 +1861,8 @@ class MetaDetailsViewModel @Inject constructor(
+ 
+         _uiState.update { state ->
+             state.copy(
+-                mdbListRatings = ratingsResult?.ratings,
++                // Nuvio Mod: keep the early ratings if this later lookup finds none.
++                mdbListRatings = ratingsResult?.ratings ?: state.mdbListRatings,
+                 mdbListRatingOrder = settings.enabledRatingOrder(),
+                 isMdbListRatingsActive = isMdbListActive
+             )

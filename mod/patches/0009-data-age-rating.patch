@@ -32,3 +32,48 @@ index dd56595..9c88148 100644
 +    @Json(name = "certificationLocal") val certificationLocal: String? = null,
 +    @Json(name = "certification") val certification: String? = null
  )
+diff --git a/app/src/main/java/com/nuvio/tv/data/repository/MDBListRepository.kt b/app/src/main/java/com/nuvio/tv/data/repository/MDBListRepository.kt
+index 5f54fd2..bebe71c 100644
+--- a/app/src/main/java/com/nuvio/tv/data/repository/MDBListRepository.kt
++++ b/app/src/main/java/com/nuvio/tv/data/repository/MDBListRepository.kt
+@@ -70,6 +70,40 @@ class MDBListRepository internal constructor(
+         return ratingsLoader.getRatings(ref.provider, ref.mediaType, ref.id, credential)?.imdb
+     }
+ 
++    /**
++     * Nuvio Mod: ratings from the title's id alone, so a details page can ask the moment it opens
++     * instead of after its metadata and TMDB step (seconds later). Same lookup as below.
++     */
++    suspend fun getRatingsForItem(itemId: String, itemType: String): MDBListRatingsResult? =
++        getRatingsForMeta(
++            meta = Meta(
++                id = itemId,
++                type = when (normalizeMediaType(itemType)) {
++                    "show" -> com.nuvio.tv.domain.model.ContentType.SERIES
++                    else -> com.nuvio.tv.domain.model.ContentType.MOVIE
++                },
++                name = itemId,
++                poster = null,
++                posterShape = com.nuvio.tv.domain.model.PosterShape.POSTER,
++                background = null,
++                logo = null,
++                description = null,
++                releaseInfo = null,
++                imdbRating = null,
++                genres = emptyList(),
++                runtime = null,
++                director = emptyList(),
++                cast = emptyList(),
++                videos = emptyList(),
++                country = null,
++                awards = null,
++                language = null,
++                links = emptyList()
++            ),
++            fallbackItemId = itemId,
++            fallbackItemType = itemType
++        )
++
+     suspend fun getRatingsForMeta(
+         meta: Meta,
+         fallbackItemId: String,
