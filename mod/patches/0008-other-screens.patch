@@ -1398,6 +1398,47 @@ index 2c25446..05f1c0b 100644
                  shape = RoundedCornerShape(NuvioTheme.radii.md),
              ),
          ),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/player/LoadingOverlay.kt b/app/src/main/java/com/nuvio/tv/ui/screens/player/LoadingOverlay.kt
+index f1b8161..acfb777 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/player/LoadingOverlay.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/player/LoadingOverlay.kt
+@@ -43,6 +43,7 @@ import androidx.compose.ui.layout.ContentScale
+ import androidx.compose.ui.text.style.TextAlign
+ import androidx.compose.ui.unit.dp
+ import coil3.compose.AsyncImage
++import coil3.compose.asPainter
+ import coil3.request.ImageRequest
+ import coil3.request.crossfade
+ import androidx.compose.ui.platform.LocalContext
+@@ -68,7 +69,8 @@ fun LoadingOverlay(
+     sourceLine: String? = null,
+     filename: String? = null,
+     progress: Float? = null,
+-    modifier: Modifier = Modifier
++    modifier: Modifier = Modifier,
++    modPicture: coil3.Image? = null // Nuvio Mod: drawn at once instead of black while the backdrop loads
+ ) {
+     var logoLoadFailed by remember(logoUrl) { mutableStateOf(false) }
+     val showLogo = !logoUrl.isNullOrBlank() && !logoLoadFailed
+@@ -127,7 +129,17 @@ fun LoadingOverlay(
+                 .fillMaxSize()
+                 .background(Color.Black)
+         ) {
+-            if (backdropRequest != null) {
++            if (modPicture != null) {
++                // Nuvio Mod: Home's own picture for the whole loading screen; loading the backdrop again would
++                // swap in a differently framed copy part-way.
++                androidx.compose.foundation.Image(
++                    painter = remember(modPicture) { modPicture.asPainter(context) },
++                    contentDescription = stringResource(R.string.cd_loading_backdrop),
++                    modifier = Modifier.fillMaxSize(),
++                    contentScale = ContentScale.Crop,
++                    alignment = Alignment.TopEnd
++                )
++            } else if (backdropRequest != null) {
+                 AsyncImage(
+                     model = backdropRequest,
+                     contentDescription = stringResource(R.string.cd_loading_backdrop),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
 index 30d3890..5450e65 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
@@ -1460,7 +1501,7 @@ index 7b92442..3d4559c 100644
              .onPreviewKeyEvent { event ->
                  val native = event.nativeKeyEvent
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
-index 6eb6b9a..18c75bb 100644
+index 6eb6b9a..96f4397 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
 @@ -2,6 +2,7 @@
@@ -1471,7 +1512,31 @@ index 6eb6b9a..18c75bb 100644
  import com.nuvio.tv.core.util.TtffTrace
  import android.content.Intent
  import android.net.Uri
-@@ -969,7 +970,7 @@ private fun RightStreamSection(
+@@ -136,6 +137,7 @@ import dev.chrisbanes.haze.hazeSource
+ @Composable
+ fun StreamScreen(
+     viewModel: StreamScreenViewModel = hiltViewModel(),
++    modPicture: coil3.Image? = null, // Nuvio Mod: Home's picture of this title, shown while the loading screen loads its own
+     startFromBeginning: Boolean = false,
+     restoreSourceSelection: Boolean = false,
+     onSourceSelectionRestoreHandled: () -> Unit = {},
+@@ -445,6 +447,7 @@ fun StreamScreen(
+                 visible = true,
+                 backdropUrl = uiState.backdrop ?: uiState.poster,
+                 logoUrl = uiState.logo,
++                modPicture = modPicture,
+                 title = uiState.title,
+                 message = stringResource(R.string.stream_finding_source),
+                 modifier = Modifier.fillMaxSize()
+@@ -454,6 +457,7 @@ fun StreamScreen(
+                 visible = true,
+                 backdropUrl = uiState.backdrop ?: uiState.poster,
+                 logoUrl = uiState.logo,
++                modPicture = modPicture,
+                 title = uiState.title,
+                 message = if (uiState.directAutoPlayMessage != null) {
+                     uiState.directAutoPlayMessage
+@@ -969,7 +973,7 @@ private fun RightStreamSection(
                          if (hazeState != null) {
                              Modifier.hazeEffect(state = hazeState) {
                                  blurRadius = NuvioTheme.effects.blurPanel
@@ -1480,7 +1545,7 @@ index 6eb6b9a..18c75bb 100644
                                  inputScale = HazeInputScale.Fixed(0.66f)
                              }
                          } else {
-@@ -1114,24 +1115,24 @@ private fun ErrorState(
+@@ -1114,24 +1118,24 @@ private fun ErrorState(
          var isFocused by remember { mutableStateOf(false) }
          Card(
              onClick = onRetry,
@@ -1510,7 +1575,7 @@ index 6eb6b9a..18c75bb 100644
                  modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
              )
          }
-@@ -1582,10 +1583,10 @@ internal fun StreamResultSurface(
+@@ -1582,10 +1586,10 @@ internal fun StreamResultSurface(
      content: @Composable () -> Unit
  ) {
      if (LocalV2Appearance.current != null) {
@@ -1523,7 +1588,7 @@ index 6eb6b9a..18c75bb 100644
                  .nuvioRemoteClick(onClick)
                  .clickable(remember { MutableInteractionSource() }, indication = null, onClick = onClick)
          ) { content() }
-@@ -1668,27 +1669,27 @@ internal fun PlayerChoiceDialog(
+@@ -1668,27 +1672,27 @@ internal fun PlayerChoiceDialog(
                      var internalFocused by remember { mutableStateOf(false) }
                      Card(
                          onClick = onInternalSelected,
@@ -1557,7 +1622,7 @@ index 6eb6b9a..18c75bb 100644
                              modifier = Modifier
                                  .padding(horizontal = NuvioTheme.spacing.lg, vertical = 14.dp)
                                  .fillMaxWidth(),
-@@ -1699,26 +1700,26 @@ internal fun PlayerChoiceDialog(
+@@ -1699,26 +1703,26 @@ internal fun PlayerChoiceDialog(
                      var externalFocused by remember { mutableStateOf(false) }
                      Card(
                          onClick = onExternalSelected,

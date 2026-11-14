@@ -461,7 +461,7 @@ index e634514..e4f8b4e 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
-index aae1ea2..b648883 100644
+index aae1ea2..33cb3b4 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 @@ -1,5 +1,6 @@
@@ -515,7 +515,22 @@ index aae1ea2..b648883 100644
                  } else {
                      MetaDetailsSkeleton(backdropAware = detailBackdrop.url != null)
                  }
-@@ -3528,6 +3545,13 @@ private fun PersistentDetailBackdrop(
+@@ -1375,7 +1392,13 @@ private fun MetaDetailsContent(
+ ) {
+     val playbackAvailability = LocalPlaybackAvailability.current
+     // Restored secondary focus must remain immediately reachable.
+-    val secondaryReady = secondaryContentReady || (detailReturnEpisodeFocusRequest?.season != null && detailReturnEpisodeFocusRequest.episode != null)
++    // Nuvio Mod: once shown for an episode request (e.g. Back from the player), the rows stay. Consuming the request
++    // (focus landed on the episode) before the hero picture is in used to remove them, dropping focus to the top.
++    var modSecondaryShown by rememberSaveable(meta.id) { mutableStateOf(false) }
++    val secondaryReady = modSecondaryShown || secondaryContentReady || (detailReturnEpisodeFocusRequest?.season != null && detailReturnEpisodeFocusRequest.episode != null)
++    if (secondaryReady && !modSecondaryShown) {
++        androidx.compose.runtime.SideEffect { modSecondaryShown = true }
++    }
+     var pendingDown by remember { mutableStateOf(false) }
+     var secondaryDemanded by rememberSaveable(meta.id) { mutableStateOf(false) }
+     val detailFocusManager = LocalFocusManager.current
+@@ -3528,6 +3551,13 @@ private fun PersistentDetailBackdrop(
      val artworkAccent = com.nuvio.tv.ui.v2.appearance.LocalArtworkAccent.current
      if (owner != null) com.nuvio.tv.ui.v2.appearance.ObserveArtworkAccent(owner, url)
      val request = remember(context, url) {
@@ -529,7 +544,7 @@ index aae1ea2..b648883 100644
          ImageRequest.Builder(context).data(url).crossfade(false)
              .apply { url?.let(com.nuvio.tv.ui.screens.home.HeroImageRequests::backdropKey)?.let { placeholderMemoryCacheKey(it) } }
              .size(context.resources.displayMetrics.widthPixels.coerceAtLeast(1),
-@@ -3598,6 +3622,8 @@ private fun BackdropLayer(
+@@ -3598,6 +3628,8 @@ private fun BackdropLayer(
          animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
          label = "gradientFade"
      )
@@ -538,7 +553,7 @@ index aae1ea2..b648883 100644
      Box(modifier = Modifier.fillMaxSize()) {
          TrailerPlayer(
              trailerUrl = trailerUrl,
-@@ -3623,6 +3649,7 @@ private fun BackdropLayer(
+@@ -3623,6 +3655,7 @@ private fun BackdropLayer(
                  .fillMaxSize()
                  .drawWithCache {
                      onDrawBehind {
@@ -546,7 +561,7 @@ index aae1ea2..b648883 100644
                          if (pureDark && !isTrailerPlaying) drawRect(Color(0xFF03080D), alpha = 0.08f)
                          if (gradientAlphaState.value > 0f) {
                              drawImage(
-@@ -3724,18 +3751,21 @@ private fun PeopleSectionTabButton(
+@@ -3724,18 +3757,21 @@ private fun PeopleSectionTabButton(
              .semantics {
                  role = Role.Tab
                  this.selected = selected
@@ -572,7 +587,7 @@ index aae1ea2..b648883 100644
      ) {
          Text(
              text = label,
-@@ -3745,7 +3775,8 @@ private fun PeopleSectionTabButton(
+@@ -3745,7 +3781,8 @@ private fun PeopleSectionTabButton(
                  selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
                  else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
              },

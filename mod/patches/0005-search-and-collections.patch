@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index c97c2b1..2e0d764 100644
+index c97c2b1..045c188 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 @@ -57,6 +57,7 @@ import com.nuvio.tv.ui.screens.party.PartyScreen
@@ -18,7 +18,7 @@ index c97c2b1..2e0d764 100644
              fun createContinueWatchingRoute(
                  item: ContinueWatchingItem,
                  manualSelection: Boolean = false,
-@@ -249,21 +251,73 @@ private fun PlaybackNavHost(
+@@ -249,25 +251,76 @@ private fun PlaybackNavHost(
                  }
              }
  
@@ -68,8 +68,8 @@ index c97c2b1..2e0d764 100644
 +                viewModel = modHomeViewModel,
 +                onNavigateToDetail = { itemId, itemType, addonBaseUrl -> modOpenDetail(itemId, itemType, addonBaseUrl) },
                  onContinueWatchingClick = onContinueWatchingClick@{ item ->
-+                    // Nuvio Mod: a Coming up card carries no episode id. One that is out: look it up and open its
-+                    // streams. One not out yet, or not found: the show's page, on that episode.
++                    // Nuvio Mod: a Coming up card carries no episode id: look it up and open its streams; if it is not
++                    // found, the show's page, on that episode.
 +                    val modComingUp = (item as? ContinueWatchingItem.NextUp)?.info?.takeIf { it.comingUpKey != null && it.videoId.isBlank() }
 +                    if (modComingUp != null) {
 +                        com.nuvio.tv.core.performance.DetailEntryTrace.begin()
@@ -85,15 +85,13 @@ index c97c2b1..2e0d764 100644
 +                                focusEpisode = modComingUp.episode.takeIf { series && modComingUp.season > 0 }
 +                            )
 +                        }
-+                        if (!modComingUp.hasAired) {
-+                            com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_not_out")
-+                            openPage()
-+                            return@onContinueWatchingClick
-+                        }
++                        // Nuvio Mod: out or not by its air date, the card opens the episode's streams (premium sources can
++                        // have episodes before they air publicly); the show's page only when no episode id is found.
 +                        modHomeViewModel.modOpenComingUp(modComingUp) { target ->
 +                            if (navController.currentDestination?.route != Screen.Home.route) return@modOpenComingUp
 +                            if (target?.videoId != null) {
 +                                com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_streams")
++                                com.nuvio.tv.ui.screens.home.ModStreamSeed.offerFromHome(target.contentId) // Nuvio Mod
 +                                navController.openCalendarWatchTarget(target)
 +                            } else {
 +                                com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_no_episode_id")
@@ -105,7 +103,28 @@ index c97c2b1..2e0d764 100644
                      if (!playbackAvailability.canStream(item)) {
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingClick
-@@ -378,8 +432,15 @@ private fun PlaybackNavHost(
+                     }
++                    com.nuvio.tv.ui.screens.home.ModStreamSeed.offerFromHome(item) // Nuvio Mod: no black loading screen
+                     navController.navigate(createContinueWatchingRoute(item))
+                 },
+                 onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning@{ item ->
+@@ -275,6 +328,7 @@ private fun PlaybackNavHost(
+                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
+                         return@onContinueWatchingStartFromBeginning
+                     }
++                    com.nuvio.tv.ui.screens.home.ModStreamSeed.offerFromHome(item) // Nuvio Mod: no black loading screen
+                     navController.navigate(
+                         createContinueWatchingRoute(item, startFromBeginning = true)
+                     )
+@@ -284,6 +338,7 @@ private fun PlaybackNavHost(
+                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
+                         return@onContinueWatchingPlayManually
+                     }
++                    com.nuvio.tv.ui.screens.home.ModStreamSeed.offerFromHome(item) // Nuvio Mod: no black loading screen
+                     navController.navigate(
+                         createContinueWatchingRoute(item, manualSelection = true)
+                     )
+@@ -378,8 +433,15 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
@@ -121,7 +140,20 @@ index c97c2b1..2e0d764 100644
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -1310,7 +1371,11 @@ private fun PlaybackNavHost(
+@@ -601,7 +663,12 @@ private fun PlaybackNavHost(
+             val startFromBeginning = streamArgs
+                 ?.getString("startFromBeginning")
+                 ?.toBooleanStrictOrNull() == true
++            // Nuvio Mod: Home's hero picture, when this title's card was opened from Home (ModStreamSeed).
++            val modStreamPicture = androidx.compose.runtime.remember(backStackEntry.id) {
++                com.nuvio.tv.ui.screens.home.ModStreamSeed.take(streamArgs?.getString("contentId"))
++            }
+             StreamScreen(
++                modPicture = modStreamPicture,
+                 startFromBeginning = startFromBeginning,
+                 restoreSourceSelection = restoreSourceSelection,
+                 onSourceSelectionRestoreHandled = {
+@@ -1310,7 +1377,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },
