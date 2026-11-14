@@ -1,8 +1,28 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index c97c2b1..43b630c 100644
+index c97c2b1..f285746 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -253,12 +253,23 @@ private fun PlaybackNavHost(
+@@ -57,6 +57,7 @@ import com.nuvio.tv.ui.screens.party.PartyScreen
+ import com.nuvio.tv.ui.screens.settings.TmdbSettingsScreen
+ import com.nuvio.tv.ui.screens.stream.StreamScreen
+ import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
++import com.nuvio.tv.ui.screens.home.modOpenComingUp
+ import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
+ import com.nuvio.tv.ui.screens.cast.CastDetailScreen
+ import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
+@@ -186,6 +187,7 @@ private fun PlaybackNavHost(
+         }
+ 
+         composable(Screen.Home.route) {
++            val modHomeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
+             fun createContinueWatchingRoute(
+                 item: ContinueWatchingItem,
+                 manualSelection: Boolean = false,
+@@ -250,20 +252,50 @@ private fun PlaybackNavHost(
+             }
+ 
+             HomeScreen(
++                viewModel = modHomeViewModel,
                  onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                      com.nuvio.tv.core.performance.DetailEntryTrace.begin()
                      val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
@@ -27,7 +47,30 @@ index c97c2b1..43b630c 100644
                              heroLogoUrl = heroArtwork?.logoUrl
                          )
                      )
-@@ -378,8 +389,15 @@ private fun PlaybackNavHost(
+                 },
+                 onContinueWatchingClick = onContinueWatchingClick@{ item ->
++                    // Nuvio Mod: a Coming up card carries no episode id; look it up, then open its streams
++                    // (or the show's page on that episode if it can't be found).
++                    val modComingUp = (item as? ContinueWatchingItem.NextUp)?.info?.takeIf { it.comingUpKey != null && it.videoId.isBlank() }
++                    if (modComingUp != null) {
++                        modHomeViewModel.modOpenComingUp(modComingUp) { target ->
++                            if (navController.currentDestination?.route != Screen.Home.route) return@modOpenComingUp
++                            navController.openCalendarWatchTarget(
++                                target ?: com.nuvio.tv.core.calendar.CalendarWatchTarget(
++                                    contentId = modComingUp.contentId, contentType = modComingUp.contentType, name = modComingUp.name,
++                                    poster = modComingUp.poster, backdrop = modComingUp.backdrop, logo = modComingUp.logo, videoId = null,
++                                    season = modComingUp.season.takeIf { modComingUp.contentType == "series" },
++                                    episode = modComingUp.episode.takeIf { modComingUp.contentType == "series" },
++                                    episodeTitle = modComingUp.episodeTitle
++                                )
++                            )
++                        }
++                        return@onContinueWatchingClick
++                    }
+                     if (!playbackAvailability.canStream(item)) {
+                         Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
+                         return@onContinueWatchingClick
+@@ -378,8 +410,15 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
@@ -43,7 +86,7 @@ index c97c2b1..43b630c 100644
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -1310,7 +1328,11 @@ private fun PlaybackNavHost(
+@@ -1310,7 +1349,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },

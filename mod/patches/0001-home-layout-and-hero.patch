@@ -190,6 +190,80 @@ index 5ecf3c4..9d6d4bb 100644
  internal data class ResolvedModernHeroState(
      val artwork: HeroArtworkSelection,
      val preview: HeroPreview?,
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt
+index 6871bed..f57d639 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt
+@@ -270,7 +270,9 @@ class CalendarComingUpSource @Inject constructor(
+     private val zoneProvider: CalendarZoneProvider,
+     private val refresher: dagger.Lazy<CalendarRefresher>,
+     private val metaRepository: MetaRepository,
+-    @param:CalendarClock private val clock: Clock
++    @param:CalendarClock private val clock: Clock,
++    // Nuvio Mod: finds the episode a Coming up card is for, like the Calendar's own Watch button.
++    private val modEpisodeResolver: dagger.Lazy<com.nuvio.tv.core.calendar.CalendarEpisodeResolver>
+ ) {
+     private var localized: Pair<String, Context>? = null
+ 
+@@ -369,6 +371,17 @@ class CalendarComingUpSource @Inject constructor(
+         return context.withAppLocale().also { localized = tag to it }
+     }
+ 
++    /** Nuvio Mod: the episode a Coming up card stands for, with the id the stream list needs; null if the Calendar can't tell. */
++    suspend fun modWatchTarget(info: NextUpInfo): com.nuvio.tv.core.calendar.CalendarWatchTarget? {
++        val key = info.comingUpKey ?: return null
++        val title = refresher.get().state.value.titles.firstOrNull { it.matchesKey(key) } ?: return null
++        val entry = (
++            if (title.type == CalendarTitleType.MOVIE) title.entries.firstOrNull()
++            else title.entries.firstOrNull { it.kind == CalendarEntryKind.EPISODE && it.season == info.season && it.episode == info.episode }
++        ) ?: return null
++        return modEpisodeResolver.get().resolve(com.nuvio.tv.core.calendar.CalendarReminder(title, entry, clock.instant()))
++    }
++
+     private fun cachedArt(type: String, ids: List<String>): Pair<String?, String?> {
+         val meta = ids.firstNotNullOfOrNull { metaRepository.getCachedMeta(type, it) } ?: return null to null
+         return meta.background to meta.logo
+@@ -414,6 +427,40 @@ internal fun HomeViewModel.hideFromComingUp(card: ContinueWatchingItem) {
+     viewModelScope.launch { source.hide(card) }
+ }
+ 
++// Nuvio Mod: one Coming up card opens at a time, however often it's pressed while its episode is looked up.
++private var modComingUpOpening: kotlinx.coroutines.Job? = null
++
++/**
++ * Nuvio Mod: a Coming up card that has aired goes straight to its episode's streams. The card itself has no
++ * episode id, so it comes from the Upcoming row's own card when there is one, else from the Calendar.
++ */
++internal fun HomeViewModel.modOpenComingUp(info: NextUpInfo, open: (com.nuvio.tv.core.calendar.CalendarWatchTarget?) -> Unit) {
++    if (modComingUpOpening?.isActive == true) return
++    modComingUpOpening = viewModelScope.launch {
++        val upcoming = _uiState.value.upcomingItems.firstNotNullOfOrNull { item ->
++            (item as? ContinueWatchingItem.NextUp)?.info?.takeIf {
++                it.videoId.isNotBlank() && it.contentId == info.contentId && it.season == info.season && it.episode == info.episode
++            }
++        }
++        val target = if (upcoming != null) {
++            com.nuvio.tv.core.calendar.CalendarWatchTarget(
++                contentId = upcoming.contentId, contentType = upcoming.contentType, name = upcoming.name,
++                poster = upcoming.poster, backdrop = upcoming.backdrop, logo = upcoming.logo, videoId = upcoming.videoId,
++                season = upcoming.season, episode = upcoming.episode, episodeTitle = upcoming.episodeTitle
++            )
++        } else {
++            try {
++                calendarComingUp?.modWatchTarget(info)
++            } catch (cancelled: kotlinx.coroutines.CancellationException) {
++                throw cancelled
++            } catch (_: Exception) {
++                null
++            }
++        }
++        open(target?.let { it.copy(backdrop = it.backdrop ?: info.backdrop, logo = it.logo ?: info.logo) })
++    }
++}
++
+ private const val COMING_UP_WAIT_MS = 10_000L
+ private const val WATCH_PROGRESS_SETTLE_MS = 2_000L
+ private const val COMING_UP_START_DELAY_MS = 1_500L
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt
 index 8bfec61..8ca8bbf 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeScreen.kt
