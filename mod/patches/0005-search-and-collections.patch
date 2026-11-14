@@ -71,7 +71,7 @@ index a5e46cc..f9d2478 100644
                  is HomeRow.PlaceholderCatalog -> {
                      // Keep placeholder rows as-is — they'll be rendered as shimmer skeletons
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
-index b564497..2d2e006 100644
+index b564497..d61f4f9 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 @@ -1,5 +1,6 @@
@@ -125,7 +125,24 @@ index b564497..2d2e006 100644
                      keyboardController = keyboardController,
                      clearHistoryFocusRequester = if (showRecentSearches) recentClearHistoryFocusRequester else null,
                      isScreenActive = isScreenActive
-@@ -751,34 +755,43 @@ fun SearchScreen(
+@@ -735,15 +739,8 @@ fun SearchScreen(
+                             modifier = Modifier.padding(horizontal = 52.dp)
+                         )
+                     }
+-                } else {
+-                    item(key = "search_start") {
+-                        EmptyScreenState(
+-                            title = stringResource(R.string.search_start_title),
+-                            subtitle = stringResource(R.string.search_start_subtitle),
+-                            icon = Icons.Default.Search
+-                        )
+-                    }
+                 }
++                // Nuvio Mod: no "Lancer une recherche" placeholder.
+             } else {
+                 // The "press Done to search" hint is gone: search now runs as you type, so the
+                 // instruction is wrong, and it was re-appearing on every keystroke. Neither the
+@@ -751,36 +748,34 @@ fun SearchScreen(
  
                  when {
                      trimmedSubmittedQuery.length < MIN_SEARCH_QUERY_LENGTH && !hasPendingUnsubmittedQuery -> {
@@ -161,8 +178,8 @@ index b564497..2d2e006 100644
 -                                    },
 -                                    icon = Icons.Default.Search
 -                                )
-+                            }
-+                        }
+                             }
+                         }
 +                        if (modCollections.isNotEmpty()) {
 +                            modCollections.forEach { collection ->
 +                                item(key = "mod_collection_${collection.id}") {
@@ -172,21 +189,12 @@ index b564497..2d2e006 100644
 +                                    )
 +                                }
 +                            }
-+                        } else if (!showRecentSearches) {
-+                            item {
-+                                    EmptyScreenState(
-+                                        title = stringResource(R.string.search_start_title),
-+                                        subtitle = if (uiState.discoverLocation == DiscoverLocation.OFF) {
-+                                            stringResource(R.string.search_start_subtitle_no_discover)
-+                                        } else {
-+                                            stringResource(R.string.search_start_subtitle)
-+                                        },
-+                                        icon = Icons.Default.Search
-+                                    )
-                             }
-                         }
++                        }
++                        // Nuvio Mod: no "Lancer une recherche" placeholder when there is nothing else to show.
                      }
-@@ -1357,8 +1370,10 @@ private fun SearchInputField(
+ 
+                     // Nothing to show yet, either still waiting on the debounce or on the first
+@@ -1357,8 +1352,10 @@ private fun SearchInputField(
                  }
  
                  // Layer 3: Actual button
@@ -199,7 +207,7 @@ index b564497..2d2e006 100644
                      modifier = Modifier
                          .then(
                              if (voiceFocusRequester != null) {
-@@ -1368,16 +1383,24 @@ private fun SearchInputField(
+@@ -1368,16 +1365,24 @@ private fun SearchInputField(
                              }
                          )
                          .onFocusChanged { isVoiceButtonFocused = it.isFocused }
@@ -227,7 +235,7 @@ index b564497..2d2e006 100644
                          )
                  ) {
                      Icon(
-@@ -1396,9 +1419,10 @@ private fun SearchInputField(
+@@ -1396,9 +1401,10 @@ private fun SearchInputField(
              onValueChange = onQueryChanged,
              modifier = Modifier
                  .weight(1f)
@@ -240,7 +248,7 @@ index b564497..2d2e006 100644
                  .focusRequester(searchFocusRequester)
                  .focusProperties {
                      canFocus = isScreenActive
-@@ -1453,7 +1477,7 @@ private fun SearchInputField(
+@@ -1453,7 +1459,7 @@ private fun SearchInputField(
                  }
              ),
              singleLine = true,
@@ -249,7 +257,7 @@ index b564497..2d2e006 100644
              placeholder = {
                  Text(
                      text = stringResource(R.string.search_placeholder),
-@@ -1508,3 +1532,56 @@ private fun SearchInputField(
+@@ -1508,3 +1514,56 @@ private fun SearchInputField(
          }
      }
  }
