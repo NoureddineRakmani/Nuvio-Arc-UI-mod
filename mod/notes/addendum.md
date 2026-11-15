@@ -2,8 +2,22 @@
 
 Read after `ui-changes.md`. Where the two differ, this file wins.
 
+## 2026-11-15 — future-proofing pass (after an audit she asked for: "no janky patches, future proof")
+Measured before: on Arc 1.2.0-arc.1 patches 05, 07, 08 failed in CI. Causes and what changed:
+- **Name + icons were inside patch 08** (20 MB: 451 text files × ~38 languages, 259 images; 76 conflicts on 1.2.0). Now `mod/dev/brand.py` builds a resource overlay (`arc/mod-brand/res`, added to the `fullDebug`/`fullRelease` source sets by a line it appends to `app/build.gradle.kts`) at every build, locally and in CI; icons are plain files in `mod/brand/res`. `arc/app/src/main/res` is Arc's, untouched. Checked on a debug APK with aapt2: label, texts, icons.
+- **Rename rules** (top of `brand.py`): "Nuvio Arc"/"Arc"/"Nuvio" → the name, except `KEEP_WHOLE` (fork credit, licence title/body) and `KEEP_NUVIO` (Nuvio account, servers, parties with Nuvio apps, supporting the Nuvio team: only "Arc"/"Nuvio Arc" renamed there). French "d'Arc" → "de PG Prime". Her call if she wants a text moved between lists.
+- **`--3way` never merged in CI** (depth-1 clone has no old version). `mod/arc-base` = Arc version of the patches; CI fetches it when Arc is newer; `try.sh prepare` builds on it (no longer on "the Arc of the latest release"); `try.sh update` moves to a newer Arc; `save` rewrites `mod/arc-base`.
+- **Code**: Home's navigation additions → `ui/navigation/ModHomeNavigation.kt` (`modOfferHeroToDetail`, `modOpenComingUpCard`); `NuvioNavHost.kt` keeps one-line calls. Trace-only code of the black-screen hunt removed (`ModDetailSeed.caller/lastReason`, `mod_seed_*`, `mod_first_state_*`, `mod_arc_placeholder_*`); **`mod_comingup_*` marks kept** (bug open). Glass tint/alphas only in `ModLook.kt`. Top menu's details-page focus guard written once (`modMenuCanFocus`, `MOD_MENU_UP_WINDOW_MS`). Hero shade values that draw nothing in v2 full-screen back to Arc's.
+- Left on purpose: the 500 ms "entered with Up" window in `V2TopNavigation.kt` (works on her TV; a key-state version needs a TV test first); `modShownHeroFor`'s key fallback (only used for a hero card not yet recorded; removing it risks the black-screen fix); `if (false &&`/`if (true) return` switches (smaller patch than deleting Arc's lines); `nuvioGlass`/`nuvioV2Focus` keep a mod copy next to Arc's original (player) — when Arc changes its glass/focus internals, compare by hand.
+- Moved onto **Arc 1.2.0-arc.1** with `update`; hand merges: `NuvioNavHost.kt` (`rootComposable` wrapper), `SearchScreen.kt` (voice button `onVoiceFocusChanged`).
+
+## Not written down before (found in the audit)
+- Streams screen opened from a Home card starts on Home's hero picture: `ModStreamSeed` (HeroArtwork.kt) → `StreamScreen(modPicture)` → `LoadingOverlay(modPicture)`.
+- Top menu on the details page: Up from the top buttons enters it (`LocalModTopMenuAbove`; the buttons' `up` is `FocusRequester.Default` there), Back in the menu returns to the page; the menu can't take focus by itself (page opening, back from the player).
+- Home trailers with black bars baked in are slid up, not zoomed (`TrailerPlayer(liftLetterbox)`).
+
 ## SHE NOW EDITS TOO (88fb8f6) — read before changing anything
-`mod/dev/try.sh` has `edit`, `keep [smooth|fast]`, `save "note"`, `discard` (documented in `mod/README.md`, "Editing it yourself"). Her `save` regenerates the 9 themed patches from `~/nuvio-mod-dev/arc/app/src` (same path → theme rules as the cloud regen script, test-app name undone), verifies on a clean worktree, commits and **pushes to `dev`**.
+`mod/dev/try.sh` has `edit`, `keep [smooth|fast]`, `save "note"`, `discard` (documented in `mod/README.md`, "Editing it yourself"). Her `save` regenerates the 9 themed patches from `~/nuvio-mod-dev/arc/app/src` (same path → theme rules as the cloud regen script), verifies on a clean worktree, commits and **pushes to `dev`**.
 - Before editing, start from the repo's current `dev` patches (`bash ~/nuvio-try edit`). Never regenerate patches from an older tree: it would erase saved edits.
 - If `dev` moved while there are unsaved edits, `save` re-applies the edits on top (3-way); clashes stop with `~/nuvio-mod-dev/my-edits.diff`.
 - State files: `~/nuvio-mod-dev/prepared`, `~/nuvio-mod-dev/unpushed`.
@@ -22,7 +36,7 @@ Read in source: NuvioTV has no Coming up row (upcoming episodes are Continue Wat
 Now: every Coming up card → `onContinueWatchingClick` → NavHost intercept (`comingUpKey != null && videoId blank`):
 - out (`hasAired`) → `HomeViewModel.modOpenComingUp` (HomeComingUp.kt): videoId from matching Upcoming-row card, else `CalendarComingUpSource.modWatchTarget` (Calendar title by key + entry by S/E → Arc's resolver; may fetch meta, ≤ 8 s) → streams (`openCalendarWatchTarget`); if no id → details on that episode.
 - not out → details on that episode.
-- Details on an episode goes through the local `modOpenDetail(itemId, type, addon, focusSeason, focusEpisode)` in NavHost's Home route (Home's normal route with hero hand-over, + `returnFocusSeason/Episode`, the mechanism Arc's Calendar uses).
+- All of this lives in `ui/navigation/ModHomeNavigation.kt` (`modOpenComingUpCard`); details on an episode = `modOpenDetailOnEpisode` (Home's normal route with hero hand-over, + `returnFocusSeason/Episode`, the mechanism Arc's Calendar uses). In the code every Coming up card tries the streams first, out or not (premium sources can have episodes early).
 - Trace: `mod_comingup_S<s>E<e>_out_<bool>`, then `mod_comingup_streams` / `_no_episode_id` / `_not_out`.
 Unconfirmed candidates for "flash then S1E1": streams screen opening then returning to details (stream `onBackPress` → details without focus?), or details opening on S11 then `resolveReturnFocusStep` / `updateNextToWatch` moving to nextToWatch = S1 (no watch history). Get a log first.
 

@@ -4,7 +4,8 @@ My own version of Nuvio Arc, installed next to Nuvio and Nuvio Arc (it never rep
 
 - App name on the TV: **PG Prime** (was "Nuvio Mod"; package `com.nuvio.tv.test.mod`)
 - Built automatically by `.github/workflows/build-my-nuvio.yml`: every 6 hours it checks for a new Nuvio Arc release, applies my changes and publishes a new release here. The app's built-in updater picks it up.
-- My UI changes live in `mod/patches/` as small `.patch` files. Nothing else in this repository needs to be edited.
+- My UI changes live in `mod/patches/` as small `.patch` files. The app's name and my icons are separate:
+  `mod/brand/` (see its README). `mod/arc-base` says which Arc version the patches are made on.
 - To build right now: Actions tab → "Build my Nuvio" → Run workflow.
 
 Secrets needed (Settings → Secrets and variables → Actions):
@@ -29,10 +30,13 @@ All commands work in the normal terminal (fish is fine).
 | `bash ~/nuvio-try keep` | Build and install the folder **as it is now**, with your edits (`keep smooth`, `keep fast` also work). |
 | `bash ~/nuvio-try save "what I changed"` | Turns your edits into the patch files, checks they rebuild your folder exactly, sends them to GitHub (`dev`). |
 | `bash ~/nuvio-try discard` | Throws your unsaved edits away and gives a fresh copy. |
+| `bash ~/nuvio-try update` | Arc released a new version: moves my changes onto it. It says whether everything fits; then `keep fast` to try and `save` to keep. If it lists files "by hand", tell Claude. |
 | `bash ~/nuvio-try` / `smooth` / `fast` | Fresh copy from GitHub, build, install. **Refuses to run if you have unsaved edits**, so nothing is lost by accident. |
 
 Good to know
 - Only files under `app/src` are saved. Changes elsewhere (build files, Android Studio's `.idea`) are ignored.
+- The texts in `app/src/main/res` still say "Nuvio Arc": that is normal. The name "PG Prime" and my icons are
+  put on top when the app is built (`mod/brand/`), so they never clash with Arc's updates.
 - If Claude changed the patches on GitHub while you were editing, `save` puts your edits on top of the new version. If both changed the same lines, it stops and keeps your edits in `~/nuvio-mod-dev/my-edits.diff`.
 - `save` sends to `dev`, never to `main`: the published Nuvio Mod only changes when `main` is updated.
 - One-time setup for `save`: your name and email for commits (`git config --global user.name "…"` and `git config --global user.email "…"`), and signing in to GitHub (`sudo pacman -S --needed github-cli && gh auth login && gh auth setup-git`). `save` tells you when one is missing.

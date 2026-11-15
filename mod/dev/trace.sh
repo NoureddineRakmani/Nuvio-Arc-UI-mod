@@ -10,7 +10,7 @@ adb -s "$BOX" shell am force-stop "$APP"
 adb -s "$BOX" logcat -c
 adb -s "$BOX" shell monkey -p "$APP" -c android.intent.category.LEANBACK_LAUNCHER 1 >/dev/null 2>&1
 echo
-echo "Nuvio Mod Test is opening on the TV."
+echo "PG Prime Test is opening on the TV."
 echo "On Home: move to a poster, wait until the big background shows that title, press OK."
 echo "When the details page has appeared, press Back. Do this 3 times with different titles."
 read -r -p "Then press Enter here... " _

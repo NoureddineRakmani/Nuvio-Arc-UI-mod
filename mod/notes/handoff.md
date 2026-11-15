@@ -13,7 +13,7 @@ Goal: Flora's own version of Nuvio Arc with her UI tweaks, installed NEXT TO her
 - Arc's own CI: Java 17, `:app:assembleFullRelease`, local.properties from a secret; release build is R8-minified.
 
 ## CI (`.github/workflows/build-my-nuvio.yml`, builds `main` only)
-Every 6 h / on push to `mod/**` / manual → newest Arc release → clone its tag → apply `mod/patches/*.patch` → updater pointed at her repo; versionCode = ArcReleaseCode×1000 + run%1000; versionName = `<arc tag>.mod.<run>`; label "PG Prime" → `assembleFullRelease -PnuvioAppIdSuffix=.mod` → package check → publish release. Skips scheduled runs if nothing changed.
+Every 6 h / on push to `mod/**` / manual → newest Arc release → clone its tag → (if newer than `mod/arc-base`: fetch that older tag too, so `git apply --3way` can merge) → apply `mod/patches/*.patch` → updater pointed at her repo; versionCode = ArcReleaseCode×1000 + run%1000; versionName = `<arc tag>.mod.<run>`; name + icons by `mod/dev/brand.py --name "PG Prime"` (resource overlay `arc/mod-brand/res` on the `fullRelease`/`fullDebug` source sets; nothing renamed in Arc's files) → `assembleFullRelease -PnuvioAppIdSuffix=.mod` → package check → publish release. Skips scheduled runs if nothing changed.
 Secrets (set by Flora): `MOD_KEYSTORE_BASE64`, `MOD_KEYSTORE_PASSWORD`, `MOD_LOCAL_PROPERTIES`. Never print their values.
 
 ## App settings (local.properties keys)

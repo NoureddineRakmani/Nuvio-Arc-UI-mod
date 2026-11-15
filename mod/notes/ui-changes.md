@@ -43,7 +43,7 @@ Enrichment on; modern home off; Continue Watching off; language English; visuals
 - AIOStreams "PG Prime".
 
 ## ModLook.kt = the single definition of the look
-`FILL`, `SHEEN`, `SELECTED`, `GROW` 1.06, `Corner` 12dp, `Pill`; `drawModSoftHighlight`, `Modifier.modPillHighlight(focused, shape, fill)`, `Modifier.modFocusHighlight(shape, fill)` (tracks focus itself, no-op outside v2), `modNoRingInV2(stroke)`, `ModPlainButton` (= `NuvioActionPill` in v2).
+`FILL`, `SHEEN`, `SELECTED`, `GROW` 1.06, `GlassTint` + `GLASS_FROSTED`/`GLASS_PLAIN` (glass surfaces and the top menu bar), `Corner` 12dp, `Pill`; `drawModSoftHighlight`, `Modifier.modPillHighlight(focused, shape, fill)`, `Modifier.modFocusHighlight(shape, fill)` (tracks focus itself, no-op outside v2), `modNoRingInV2(stroke)`, `ModPlainButton` (= `NuvioActionPill` in v2).
 
 ## Left as Arc made them (on purpose)
 Profile picker and editor; 4 accent-filled buttons (Scout rate controls, Scout action, collection TMDB picker primary, collection-management selected tab); source-status chips on the stream screen; rings that mark "selected" (theme card, app icon, layout card), the search-jump landing marker; a few plain buttons (red sign-out, 2 MDBList, 4 comments, 1 library dialog, 1 profile screen). Arc's dead-code switches stay (smaller diff against Arc).

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Quick local build of Nuvio Mod for trying changes on the TV ("Nuvio Mod Test").
+# Quick local build of Nuvio Mod for trying changes on the TV ("PG Prime Test").
 # This small starter fetches the latest changes, then runs the real script.
 set -euo pipefail
 ROOT="$HOME/nuvio-mod-dev"

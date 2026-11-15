@@ -98,12 +98,17 @@ would make the patch clash with Arc's next edit of them.
   `adb logcat -d -v time -s NuvioDetails:V MetaDetailsViewModel:V StreamScreenViewModel:V`.
 - Prefer a log over reasoning about what *might* happen.
 
-## Where things stand (2026-11-14, `dev` at 1f2619d)
+## Where things stand (2026-11-15)
+Future-proofing pass done (see the top of `notes/addendum.md`): name and icons out of the patches, real merges on
+Arc updates, patches moved onto Arc 1.2.0-arc.1, code cleanup. **She has not tried that build yet**: things to
+look at on the TV are the app name/icons/banner, Home → details (no black), Coming up cards, Search (voice
+button + field focus), top menu on Home and on the details page. `main` not published.
+
 **Open bug — Home "Coming up" (Calendar) row:** a card showing S11 E62 (La Villa des cœurs brisés, airs daily)
 opens the show page on **S1 E1**; she says "it does flash something briefly and then S1E1". Official NuvioTV has no
 such row. Fixes so far (see addendum): 8a9e0df (aired card → look up episode id → streams), 1f2619d (every card →
 `onContinueWatchingClick` → NavHost intercept → streams if out, else details with `returnFocusSeason/Episode`
-through `modOpenDetail`; trace marks `mod_comingup_*`). Still S1 E1 on her build. Two candidate paths, neither
+through `ui/navigation/ModHomeNavigation.kt`; trace marks `mod_comingup_*`). Still S1 E1 on her build. Two candidate paths, neither
 confirmed: (a) streams screen opens then something returns to details; (b) details opens on S11 then Arc's
 next-to-watch/return-focus logic (`MetaDetailsViewModel.updateNextToWatch`, `resolveReturnFocusStep` in
 `MetaDetailsScreen.kt`) moves back to S1 because she has no watch history for the show.
