@@ -81,22 +81,17 @@ index 0000000..4f7d4d6
 +    return true
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index 1f76052..4b73013 100644
+index 318cea2..ec07ee3 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -186,6 +186,7 @@ private fun PlaybackNavHost(
-         }
- 
-         composable(Screen.Home.route) {
-+            val modHomeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel = androidx.hilt.navigation.compose.hiltViewModel() // Nuvio Mod
-             fun createContinueWatchingRoute(
-                 item: ContinueWatchingItem,
-                 manualSelection: Boolean = false,
-@@ -250,24 +251,28 @@ private fun PlaybackNavHost(
+@@ -271,25 +271,31 @@ private fun PlaybackNavHost(
+                 }
              }
  
++            // Nuvio Mod: Home's view model, also needed by the Coming up cards below.
++            val modHomeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
              HomeScreen(
-+                viewModel = modHomeViewModel, // Nuvio Mod: the same one the Coming up cards use below
++                viewModel = modHomeViewModel, // Nuvio Mod
                  onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
                      com.nuvio.tv.core.performance.DetailEntryTrace.begin()
                      val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
@@ -122,7 +117,7 @@ index 1f76052..4b73013 100644
                      navController.navigate(createContinueWatchingRoute(item))
                  },
                  onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning@{ item ->
-@@ -275,6 +280,7 @@ private fun PlaybackNavHost(
+@@ -297,6 +303,7 @@ private fun PlaybackNavHost(
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingStartFromBeginning
                      }
@@ -130,7 +125,7 @@ index 1f76052..4b73013 100644
                      navController.navigate(
                          createContinueWatchingRoute(item, startFromBeginning = true)
                      )
-@@ -284,6 +290,7 @@ private fun PlaybackNavHost(
+@@ -306,6 +313,7 @@ private fun PlaybackNavHost(
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingPlayManually
                      }
@@ -138,7 +133,7 @@ index 1f76052..4b73013 100644
                      navController.navigate(
                          createContinueWatchingRoute(item, manualSelection = true)
                      )
-@@ -381,8 +388,13 @@ private fun PlaybackNavHost(
+@@ -403,8 +411,13 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
@@ -152,7 +147,7 @@ index 1f76052..4b73013 100644
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -609,7 +621,12 @@ private fun PlaybackNavHost(
+@@ -631,7 +644,12 @@ private fun PlaybackNavHost(
              val startFromBeginning = streamArgs
                  ?.getString("startFromBeginning")
                  ?.toBooleanStrictOrNull() == true
@@ -165,7 +160,7 @@ index 1f76052..4b73013 100644
                  startFromBeginning = startFromBeginning,
                  restoreSourceSelection = restoreSourceSelection,
                  onSourceSelectionRestoreHandled = {
-@@ -1333,7 +1350,11 @@ private fun PlaybackNavHost(
+@@ -1361,7 +1379,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },
@@ -179,10 +174,10 @@ index 1f76052..4b73013 100644
          }
  
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
-index 50dbcd8..9643b7e 100644
+index eb0fae2..bf98896 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
-@@ -398,7 +398,8 @@ private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<Hom
+@@ -403,7 +403,8 @@ private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<Hom
                      latest.takeIf { it.items.isNotEmpty() }?.let(HomeRow::Catalog)
                  }
                  is HomeRow.CollectionRow -> {
@@ -253,7 +248,7 @@ index 0000000..a9d3eca
 +    private const val WARM_AFTER_START_MS = 10_000L
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
-index b564497..d61f4f9 100644
+index 4085ad3..d620cf8 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchScreen.kt
 @@ -1,5 +1,6 @@
@@ -287,7 +282,7 @@ index b564497..d61f4f9 100644
      val watchedMovieIds by viewModel.watchedMovieIds.collectAsState()
      val watchedSeriesIds by viewModel.watchedSeriesIds.collectAsState()
      val context = LocalContext.current
-@@ -404,8 +408,8 @@ fun SearchScreen(
+@@ -408,8 +412,8 @@ fun SearchScreen(
          searchRowFocusedItemIndex.keys.retainAll(visibleRowKeys)
      }
  
@@ -298,7 +293,7 @@ index b564497..d61f4f9 100644
              discoverLocation = uiState.discoverLocation,
              query = trimmedQuery,
              submittedQuery = trimmedSubmittedQuery
-@@ -700,7 +704,7 @@ fun SearchScreen(
+@@ -708,7 +712,7 @@ fun SearchScreen(
                          onOpenDiscover()
                      },
                      discoverFocusRequester = discoverButtonFocusRequester,
@@ -307,7 +302,7 @@ index b564497..d61f4f9 100644
                      keyboardController = keyboardController,
                      clearHistoryFocusRequester = if (showRecentSearches) recentClearHistoryFocusRequester else null,
                      isScreenActive = isScreenActive
-@@ -735,15 +739,8 @@ fun SearchScreen(
+@@ -743,15 +747,8 @@ fun SearchScreen(
                              modifier = Modifier.padding(horizontal = 52.dp)
                          )
                      }
@@ -324,7 +319,7 @@ index b564497..d61f4f9 100644
              } else {
                  // The "press Done to search" hint is gone: search now runs as you type, so the
                  // instruction is wrong, and it was re-appearing on every keystroke. Neither the
-@@ -751,36 +748,34 @@ fun SearchScreen(
+@@ -759,36 +756,34 @@ fun SearchScreen(
  
                  when {
                      trimmedSubmittedQuery.length < MIN_SEARCH_QUERY_LENGTH && !hasPendingUnsubmittedQuery -> {
@@ -376,7 +371,7 @@ index b564497..d61f4f9 100644
                      }
  
                      // Nothing to show yet, either still waiting on the debounce or on the first
-@@ -1357,8 +1352,10 @@ private fun SearchInputField(
+@@ -1366,8 +1361,10 @@ private fun SearchInputField(
                  }
  
                  // Layer 3: Actual button
@@ -389,10 +384,10 @@ index b564497..d61f4f9 100644
                      modifier = Modifier
                          .then(
                              if (voiceFocusRequester != null) {
-@@ -1368,16 +1365,24 @@ private fun SearchInputField(
-                             }
-                         )
-                         .onFocusChanged { isVoiceButtonFocused = it.isFocused }
+@@ -1380,16 +1377,24 @@ private fun SearchInputField(
+                             isVoiceButtonFocused = it.isFocused
+                             onVoiceFocusChanged(it.isFocused)
+                         }
 -                        .nuvioControlSurface(RoundedCornerShape(NuvioTheme.radii.md))
 +                        .then(if (isV2) Modifier
 +                            .nuvioGlass(com.nuvio.tv.ui.v2.components.GlassRole.CONTROL, false, RoundedCornerShape(50) /* Nuvio Mod: pill */)
@@ -417,7 +412,7 @@ index b564497..d61f4f9 100644
                          )
                  ) {
                      Icon(
-@@ -1396,9 +1401,10 @@ private fun SearchInputField(
+@@ -1408,9 +1413,10 @@ private fun SearchInputField(
              onValueChange = onQueryChanged,
              modifier = Modifier
                  .weight(1f)
@@ -430,7 +425,7 @@ index b564497..d61f4f9 100644
                  .focusRequester(searchFocusRequester)
                  .focusProperties {
                      canFocus = isScreenActive
-@@ -1453,7 +1459,7 @@ private fun SearchInputField(
+@@ -1465,7 +1471,7 @@ private fun SearchInputField(
                  }
              ),
              singleLine = true,
@@ -439,7 +434,7 @@ index b564497..d61f4f9 100644
              placeholder = {
                  Text(
                      text = stringResource(R.string.search_placeholder),
-@@ -1508,3 +1514,56 @@ private fun SearchInputField(
+@@ -1520,3 +1526,56 @@ private fun SearchInputField(
          }
      }
  }
@@ -510,7 +505,7 @@ index b80f048..f07f580 100644
      val discoverLoading: Boolean = false,
      val discoverLoadingMore: Boolean = false,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
-index eed1778..16bf734 100644
+index 2ca3011..65d01ed 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 @@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.combine

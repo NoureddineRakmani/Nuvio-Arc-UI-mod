@@ -20,10 +20,10 @@ index c941772..ed666fd 100644
              Box(
                  modifier = Modifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt b/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
-index 5564259..72b00e5 100644
+index 6298355..ea90097 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
-@@ -763,7 +763,7 @@ fun ContinueWatchingCard(
+@@ -756,7 +756,7 @@ fun ContinueWatchingCard(
                      )
                      .clip(cwClipShape)
                      .then(
@@ -122,7 +122,7 @@ index 6a9f831..32922b2 100644
  private class SelectKeyPress {
      var keyCode: Int? = null
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
-index 9c7fbb7..a1c8fd3 100644
+index 1437a92..da248f0 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
 @@ -445,6 +445,8 @@ internal val LocalRowFocusGlide = staticCompositionLocalOf<RowFocusGlide?> { nul
@@ -142,7 +142,7 @@ index 9c7fbb7..a1c8fd3 100644
      if (!glide.showing || v2FocusDrawsOwnEdge()) return
      Box(
          Modifier
-@@ -1295,7 +1298,8 @@ internal fun ModernRowSection(
+@@ -1302,7 +1305,8 @@ internal fun ModernRowSection(
                      }
                      .focusGroup(),
                  contentPadding = PaddingValues(start = rowStartPadding, end = ROW_END_PADDING),
@@ -152,7 +152,7 @@ index 9c7fbb7..a1c8fd3 100644
              ) {
                  itemsIndexed(
                      items = row.items.list,
-@@ -1362,9 +1366,12 @@ internal fun ModernRowSection(
+@@ -1369,9 +1373,12 @@ internal fun ModernRowSection(
                      when (val payload = item.payload) {
                          is ModernPayload.ContinueWatching -> {
                              val comingUp = row.key == MODERN_COMING_UP_ROW_KEY

@@ -285,10 +285,10 @@ index 1c4be0f..dfb395e 100644
                  Box(Modifier.fillMaxWidth().height(cardMetrics.cardHeight).clip(shape).background(cardBgColor)) {
                      AsyncImage(thumbnailRequest, episode.title.localizeEpisodeTitle(context),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
-index e634514..14cd035 100644
+index fc30a2b..19c15e6 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/HeroSection.kt
-@@ -327,9 +327,14 @@ fun HeroContentSection(
+@@ -328,9 +328,14 @@ fun HeroContentSection(
      )
      // During a trailer the hero fills the screen so the logo sits at the bottom
      // on screens taller than the hero (lower-density TV boxes).
@@ -305,7 +305,7 @@ index e634514..14cd035 100644
          animationSpec = tween(600),
          label = "heroHeight"
      )
-@@ -349,7 +354,9 @@ fun HeroContentSection(
+@@ -350,7 +355,9 @@ fun HeroContentSection(
                  .then(if (v2Hero) Modifier else Modifier.animateContentSize(
                      animationSpec = tween(600)
                  ))
@@ -316,7 +316,7 @@ index e634514..14cd035 100644
              verticalArrangement = Arrangement.Bottom
          ) {
              // Logo/Title — always visible during trailer, animates size
-@@ -467,7 +474,8 @@ fun HeroContentSection(
+@@ -468,7 +475,8 @@ fun HeroContentSection(
                              onClick = onToggleLibrary,
                              onLongPress = onLibraryLongPress,
                              busy = isLibraryPending,
@@ -325,8 +325,8 @@ index e634514..14cd035 100644
 +                            iconOnly = true // Nuvio Mod
                          )
  
-                         if (meta.apiType == "movie") {
-@@ -488,7 +496,8 @@ fun HeroContentSection(
+                         if (meta.isWatchedAsOneItem()) {
+@@ -489,7 +497,8 @@ fun HeroContentSection(
                                  toggleable = true,
                                  selectedContainerColor = NuvioTheme.colors.Secondary,
                                  selectedContentColor = NuvioTheme.colors.OnSecondary,
@@ -336,7 +336,7 @@ index e634514..14cd035 100644
                              )
                          }
  
-@@ -497,7 +506,8 @@ fun HeroContentSection(
+@@ -498,7 +507,8 @@ fun HeroContentSection(
                                  painter = trailerPainter,
                                  contentDescription = stringResource(R.string.hero_play_trailer),
                                  onClick = onTrailerClick,
@@ -346,7 +346,7 @@ index e634514..14cd035 100644
                              )
                          }
  
-@@ -509,7 +519,8 @@ fun HeroContentSection(
+@@ -510,7 +520,8 @@ fun HeroContentSection(
                                  ),
                                  onClick = { if (!shuffleActionPending) onRandomEpisodeClick() },
                                  focusRequester = randomEpisodeFocusRequester,
@@ -356,7 +356,7 @@ index e634514..14cd035 100644
                              )
                          }
  
-@@ -607,6 +618,8 @@ internal fun PlayButton(
+@@ -608,6 +619,8 @@ internal fun PlayButton(
      restoreFocusToken: Int = 0,
      onFocusRestored: () -> Unit = {}
  ) {
@@ -365,7 +365,7 @@ index e634514..14cd035 100644
      val isV2 = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null
      val v2Cinematic = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current?.visualStyle ==
          com.nuvio.tv.domain.model.VisualStyle.CINEMATIC_GLASS
-@@ -631,7 +644,7 @@ internal fun PlayButton(
+@@ -632,7 +645,7 @@ internal fun PlayButton(
              }
          },
          modifier = modifier
@@ -374,7 +374,7 @@ index e634514..14cd035 100644
              .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
              .onFocusChanged {
                  if (it.hasFocus) com.nuvio.tv.core.performance.DetailEntryTrace.mark("controls_focus", once = true)
-@@ -671,7 +684,7 @@ internal fun PlayButton(
+@@ -672,7 +685,7 @@ internal fun PlayButton(
                  }
                  false
              }
@@ -383,7 +383,7 @@ index e634514..14cd035 100644
              .then(
                  if (text == null) {
                      Modifier.semantics { this.contentDescription = playFallbackLabel }
-@@ -683,7 +696,7 @@ internal fun PlayButton(
+@@ -684,7 +697,7 @@ internal fun PlayButton(
          colors = ButtonDefaults.colors(
              containerColor = if (isV2) Color.Transparent else NuvioTheme.colors.Secondary,
              focusedContainerColor = if (isV2) {
@@ -392,7 +392,7 @@ index e634514..14cd035 100644
              } else {
                  NuvioTheme.colors.Secondary
              },
-@@ -691,12 +704,12 @@ internal fun PlayButton(
+@@ -692,12 +705,12 @@ internal fun PlayButton(
              focusedContentColor = if (isV2) NuvioTheme.colors.TextPrimary else NuvioTheme.colors.OnSecondary
          ),
          shape = ButtonDefaults.shape(
@@ -407,7 +407,7 @@ index e634514..14cd035 100644
              )
          ),
          contentPadding = PaddingValues(horizontal = NuvioTheme.spacing.xl, vertical = 14.dp)
-@@ -739,6 +752,8 @@ private fun ScoutRateButton(
+@@ -740,6 +753,8 @@ private fun ScoutRateButton(
      onClick: () -> Unit,
      onFocused: () -> Unit
  ) {
@@ -416,7 +416,7 @@ index e634514..14cd035 100644
      val secondary = NuvioTheme.colors.Secondary
      if (com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current != null) {
          val shape = RoundedCornerShape(12.dp)
-@@ -763,7 +778,7 @@ private fun ScoutRateButton(
+@@ -764,7 +779,7 @@ private fun ScoutRateButton(
              .size(NuvioTheme.spacing.xxxl)
              .nuvioControlSurface(CircleShape)
              .onFocusChanged { if (it.isFocused) onFocused() }
@@ -425,7 +425,7 @@ index e634514..14cd035 100644
              .semantics { contentDescription = label },
          colors = IconButtonDefaults.colors(
              containerColor = if (rating != null) secondary else NuvioTheme.colors.BackgroundCard,
-@@ -772,7 +787,7 @@ private fun ScoutRateButton(
+@@ -773,7 +788,7 @@ private fun ScoutRateButton(
              focusedContentColor = NuvioTheme.colors.OnSecondary
          ),
          border = IconButtonDefaults.border(
@@ -434,7 +434,7 @@ index e634514..14cd035 100644
          ),
          shape = IconButtonDefaults.shape(shape = CircleShape)
      ) {
-@@ -789,11 +804,14 @@ private fun ActionIconButtonPainter(
+@@ -790,11 +805,14 @@ private fun ActionIconButtonPainter(
      contentDescription: String,
      onClick: () -> Unit,
      onFocused: () -> Unit = {},
@@ -451,7 +451,7 @@ index e634514..14cd035 100644
              Icon(painter, null, Modifier.size(17.dp))
          }
          return
-@@ -807,7 +825,7 @@ private fun ActionIconButtonPainter(
+@@ -808,7 +826,7 @@ private fun ActionIconButtonPainter(
              .onFocusChanged { state ->
                  if (state.isFocused) onFocused()
              }
@@ -460,7 +460,7 @@ index e634514..14cd035 100644
          scale = if (isV2) IconButtonDefaults.scale(focusedScale = 1f) else IconButtonDefaults.scale(),
          colors = IconButtonDefaults.colors(
              containerColor = if (isV2) Color.Transparent else NuvioTheme.colors.BackgroundCard,
-@@ -850,11 +868,14 @@ private fun ActionIconButton(
+@@ -851,11 +869,14 @@ private fun ActionIconButton(
      selectedContentColor: Color = Color.Black,
      busy: Boolean = false,
      onFocused: () -> Unit = {},
@@ -477,7 +477,7 @@ index e634514..14cd035 100644
              when {
                  busy -> LoadingIndicator(Modifier.size(17.dp), color = androidx.tv.material3.LocalContentColor.current)
                  icon != null -> Icon(icon, null, Modifier.size(17.dp))
-@@ -914,7 +935,7 @@ private fun ActionIconButton(
+@@ -915,7 +936,7 @@ private fun ActionIconButton(
                  }
                  false
              }
@@ -486,7 +486,7 @@ index e634514..14cd035 100644
              .semantics {
                  if (toggleable) {
                      role = Role.Checkbox
-@@ -1289,12 +1310,14 @@ private fun MetaInfoDivider() {
+@@ -1290,12 +1311,14 @@ private fun MetaInfoDivider() {
  @OptIn(ExperimentalTvMaterial3Api::class)
  @Composable
  private fun V2DetailGlassAction(label: String, onClick: () -> Unit, onFocused: () -> Unit,
@@ -502,7 +502,7 @@ index e634514..14cd035 100644
          .onPreviewKeyEvent { event ->
              val native = event.nativeKeyEvent
              if (onLongPress != null && native.keyCode == AndroidKeyEvent.KEYCODE_MENU) {
-@@ -1304,8 +1327,12 @@ private fun V2DetailGlassAction(label: String, onClick: () -> Unit, onFocused: (
+@@ -1305,8 +1328,12 @@ private fun V2DetailGlassAction(label: String, onClick: () -> Unit, onFocused: (
                  if (native.action == AndroidKeyEvent.ACTION_UP) consumed = false
                  true
              } else false
@@ -519,7 +519,7 @@ index e634514..14cd035 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
-index aae1ea2..e0f2b01 100644
+index 0b53a47..1dbd47a 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 @@ -1,5 +1,6 @@
@@ -529,7 +529,7 @@ index aae1ea2..e0f2b01 100644
  import androidx.compose.ui.platform.LocalFocusManager
  import androidx.compose.ui.focus.FocusDirection
  import androidx.compose.ui.draw.drawWithContent
-@@ -119,6 +120,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
+@@ -118,6 +119,7 @@ import androidx.tv.material3.ExperimentalTvMaterial3Api
  import androidx.tv.material3.MaterialTheme
  import androidx.tv.material3.Text
  import coil3.compose.AsyncImage
@@ -537,7 +537,7 @@ index aae1ea2..e0f2b01 100644
  import coil3.imageLoader
  import coil3.memory.MemoryCache
  import coil3.request.ImageRequest
-@@ -419,6 +421,7 @@ private fun applyDither(bmp: android.graphics.Bitmap) {
+@@ -415,6 +417,7 @@ private fun applyDither(bmp: android.graphics.Bitmap) {
  @Composable
  fun MetaDetailsScreen(
      viewModel: MetaDetailsViewModel = hiltViewModel(),
@@ -545,7 +545,7 @@ index aae1ea2..e0f2b01 100644
      returnFocusSeason: Int? = null,
      returnFocusEpisode: Int? = null,
      heroRestoreToken: Int = 0,
-@@ -720,6 +723,15 @@ fun MetaDetailsScreen(
+@@ -716,6 +719,15 @@ fun MetaDetailsScreen(
                  true
              }
      ) {
@@ -561,7 +561,7 @@ index aae1ea2..e0f2b01 100644
          PersistentDetailBackdrop(
              url = detailBackdrop.url,
              owner = uiState.meta?.let { "${it.apiType}:${it.id}" },
-@@ -738,6 +750,8 @@ fun MetaDetailsScreen(
+@@ -734,6 +746,8 @@ fun MetaDetailsScreen(
              uiState.isLoading -> {
                  if (playOnLoad && !playOnLoadReturnContentRevealed) {
                      PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl)
@@ -570,7 +570,7 @@ index aae1ea2..e0f2b01 100644
                  } else {
                      MetaDetailsSkeleton(backdropAware = detailBackdrop.url != null)
                  }
-@@ -1375,7 +1389,13 @@ private fun MetaDetailsContent(
+@@ -1371,7 +1385,13 @@ private fun MetaDetailsContent(
  ) {
      val playbackAvailability = LocalPlaybackAvailability.current
      // Restored secondary focus must remain immediately reachable.
@@ -585,7 +585,7 @@ index aae1ea2..e0f2b01 100644
      var pendingDown by remember { mutableStateOf(false) }
      var secondaryDemanded by rememberSaveable(meta.id) { mutableStateOf(false) }
      val detailFocusManager = LocalFocusManager.current
-@@ -3598,6 +3618,8 @@ private fun BackdropLayer(
+@@ -3594,6 +3614,8 @@ private fun BackdropLayer(
          animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
          label = "gradientFade"
      )
@@ -594,7 +594,7 @@ index aae1ea2..e0f2b01 100644
      Box(modifier = Modifier.fillMaxSize()) {
          TrailerPlayer(
              trailerUrl = trailerUrl,
-@@ -3623,6 +3645,7 @@ private fun BackdropLayer(
+@@ -3619,6 +3641,7 @@ private fun BackdropLayer(
                  .fillMaxSize()
                  .drawWithCache {
                      onDrawBehind {
@@ -602,7 +602,7 @@ index aae1ea2..e0f2b01 100644
                          if (pureDark && !isTrailerPlaying) drawRect(Color(0xFF03080D), alpha = 0.08f)
                          if (gradientAlphaState.value > 0f) {
                              drawImage(
-@@ -3724,18 +3747,21 @@ private fun PeopleSectionTabButton(
+@@ -3720,18 +3743,21 @@ private fun PeopleSectionTabButton(
              .semantics {
                  role = Role.Tab
                  this.selected = selected
@@ -628,7 +628,7 @@ index aae1ea2..e0f2b01 100644
      ) {
          Text(
              text = label,
-@@ -3745,7 +3771,8 @@ private fun PeopleSectionTabButton(
+@@ -3741,7 +3767,8 @@ private fun PeopleSectionTabButton(
                  selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
                  else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
              },
@@ -639,10 +639,10 @@ index aae1ea2..e0f2b01 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt
-index 192894a..da73d96 100644
+index 4228712..87d0e68 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsViewModel.kt
-@@ -1131,6 +1131,9 @@ class MetaDetailsViewModel @Inject constructor(
+@@ -1134,6 +1134,9 @@ class MetaDetailsViewModel @Inject constructor(
                  )
              }
  
@@ -652,7 +652,7 @@ index 192894a..da73d96 100644
              val metaLookupId = resolveMetaLookupId(itemId = itemId, itemType = itemType)
              // Update effective content ID as early as possible so watch-progress
              // observers use the canonical (usually IMDB) ID, not the navigation ID.
-@@ -1835,6 +1838,15 @@ class MetaDetailsViewModel @Inject constructor(
+@@ -1839,6 +1842,15 @@ class MetaDetailsViewModel @Inject constructor(
          }
      }
  
@@ -668,7 +668,7 @@ index 192894a..da73d96 100644
      private suspend fun loadMDBListRatings(meta: Meta) {
          val settings = mdbListSettingsDataStore.settings.first()
          val isMdbListActive = mdbListRepository.isAvailable(settings)
-@@ -1848,7 +1860,8 @@ class MetaDetailsViewModel @Inject constructor(
+@@ -1852,7 +1864,8 @@ class MetaDetailsViewModel @Inject constructor(
  
          _uiState.update { state ->
              state.copy(

@@ -400,7 +400,7 @@ index 625befb..f82e1de 100644
                  modifier = Modifier.weight(1f).height(36.dp).focusRequester(cancelFocusRequester)
              ) {
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutCardSettings.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutCardSettings.kt
-index 7de7ddb..d34128b 100644
+index e82790c..02052de 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutCardSettings.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutCardSettings.kt
 @@ -2,6 +2,7 @@
@@ -411,7 +411,7 @@ index 7de7ddb..d34128b 100644
  import com.nuvio.tv.ui.theme.NuvioTheme
  
  import androidx.compose.foundation.BorderStroke
-@@ -459,7 +460,7 @@ private fun CwStyleCard(
+@@ -482,7 +483,7 @@ private fun CwStyleCard(
  
      Card(
          onClick = onClick,
@@ -420,7 +420,7 @@ index 7de7ddb..d34128b 100644
              .onFocusChanged { state ->
                  val nowFocused = state.isFocused
                  if (isFocused != nowFocused) {
-@@ -469,7 +470,7 @@ private fun CwStyleCard(
+@@ -492,7 +493,7 @@ private fun CwStyleCard(
              .semantics {
                  role = Role.RadioButton
                  this.selected = isSelected
@@ -429,7 +429,7 @@ index 7de7ddb..d34128b 100644
          colors = CardDefaults.colors(
              containerColor = NuvioTheme.colors.Background,
              focusedContainerColor = NuvioTheme.colors.Background
-@@ -480,7 +481,7 @@ private fun CwStyleCard(
+@@ -503,7 +504,7 @@ private fun CwStyleCard(
                  shape = RoundedCornerShape(SettingsSecondaryCardRadius)
              ) else Border.None,
              focusedBorder = Border(
@@ -438,7 +438,7 @@ index 7de7ddb..d34128b 100644
                  shape = RoundedCornerShape(SettingsSecondaryCardRadius)
              )
          ),
-@@ -837,7 +838,7 @@ private fun CardDepthResetButton(
+@@ -895,7 +896,7 @@ private fun CardDepthResetButton(
      val shape = RoundedCornerShape(SettingsSecondaryCardRadius)
      Button(
          onClick = onClick,
@@ -447,7 +447,7 @@ index 7de7ddb..d34128b 100644
          shape = ButtonDefaults.shape(shape = shape),
          colors = ButtonDefaults.colors(
              containerColor = NuvioTheme.colors.Background,
-@@ -849,10 +850,10 @@ private fun CardDepthResetButton(
+@@ -907,10 +908,10 @@ private fun CardDepthResetButton(
                  shape = shape
              ),
              focusedBorder = Border(

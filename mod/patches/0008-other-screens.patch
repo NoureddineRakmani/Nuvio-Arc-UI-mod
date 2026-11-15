@@ -609,7 +609,7 @@ index 4445834..fdda6e2 100644
              colors = CardDefaults.colors(
                  containerColor = Color.Transparent,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
-index d700a88..7992fc9 100644
+index 28476ca..25f1d10 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
 @@ -645,7 +645,7 @@ internal fun CalendarRowItem(
@@ -621,7 +621,7 @@ index d700a88..7992fc9 100644
              shape = CardDefaults.shape(shape),
              colors = CardDefaults.colors(
                  containerColor = Color.Transparent,
-@@ -793,7 +793,7 @@ private fun CalendarStatus(row: CalendarRow, size: Dp, showBellOff: Boolean, onB
+@@ -797,7 +797,7 @@ private fun CalendarStatus(row: CalendarRow, size: Dp, showBellOff: Boolean, onB
                      .size(size)
                      .onFocusChanged { focused = it.isFocused }
                      .nuvioV2Focus(focused, CircleShape, stationary = true)
@@ -1440,10 +1440,10 @@ index f1b8161..acfb777 100644
                      model = backdropRequest,
                      contentDescription = stringResource(R.string.cd_loading_backdrop),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
-index 70f0f06..14012f4 100644
+index 8df5639..982aec2 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
-@@ -2618,7 +2618,7 @@ private fun ProfileNameField(
+@@ -2707,7 +2707,7 @@ private fun ProfileNameField(
                      focusManager.moveFocus(FocusDirection.Down)
                  }
              ),
@@ -1453,10 +1453,10 @@ index 70f0f06..14012f4 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
-index c9338a7..ae6043e 100644
+index 0e7d256..a7af2fe 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
-@@ -205,7 +205,7 @@ private fun ScoutTab(item: ScoutTabItem, modifier: Modifier, onFocused: () -> Un
+@@ -238,7 +238,7 @@ private fun ScoutTab(item: ScoutTabItem, modifier: Modifier, onFocused: () -> Un
                  if (it.isFocused) onFocused()
              }
              .nuvioV2Focus(focused, shape, stationary = true)
@@ -1465,7 +1465,7 @@ index c9338a7..ae6043e 100644
              .then(
                  if (v2 && item.selected && !focused) {
                      Modifier.drawWithContent {
-@@ -347,7 +347,7 @@ internal fun ScoutOptionRow(
+@@ -380,7 +380,7 @@ internal fun ScoutOptionRow(
          modifier = modifier
              .fillMaxWidth()
              .onFocusChanged { focused = it.isFocused }
