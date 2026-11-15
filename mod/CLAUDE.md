@@ -22,7 +22,7 @@ Read before changing anything: `mine/mod/README.md`, then the notes in `mine/mod
 
 ## Safety (her requests — never break these)
 - Never replace or touch the apps `com.nuvio.tv` (official Nuvio) or `com.nuvio.tv.test` (Nuvio Arc).
-  Her real mod is `com.nuvio.tv.test.mod`; test builds are `com.nuvio.tv.test.dev` ("Nuvio Mod Test").
+  Her real mod is `com.nuvio.tv.test.mod`; test builds are `com.nuvio.tv.test.dev` ("PG Prime Test"; the app is named PG Prime since 2026-11-15).
 - Never print, quote or copy API keys/tokens: `arc/local.properties`, her settings file, her addon configs.
   Mask them if you must read a file containing them.
 - Don't send signed playback reports from a modified build (those keys stay empty).
@@ -48,7 +48,7 @@ tag `1.1.0-nt.stable`. TV box adb: `192.168.1.10:5555`.
 2. Edit `~/nuvio-mod-dev/arc/app/src/...`.
 3. Quick compile check (much faster than a full build):
    `cd ~/nuvio-mod-dev/arc && ./gradlew :app:compileFullDebugKotlin -PnuvioAppIdSuffix=.dev --console=plain -q`
-4. `bash ~/nuvio-try keep fast` — build the edits (optimized, like real Arc) and install "Nuvio Mod Test".
+4. `bash ~/nuvio-try keep fast` — build the edits (optimized, like real Arc) and install "PG Prime Test".
    `keep` alone = quick debug build: laggy, never compare its speed with Arc.
 5. She tries it on the TV.
 6. `bash ~/nuvio-try save "note"` — turns `arc/app/src` into the 9 patch files, verifies them on a clean copy,

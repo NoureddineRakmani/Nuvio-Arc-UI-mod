@@ -5,7 +5,7 @@ Goal: Flora's own version of Nuvio Arc with her UI tweaks, installed NEXT TO her
 ## Fixed facts
 - Fork: `NoureddineRakmani/Nuvio-Arc-UI-mod` (public; `main` = released, `dev` = work in progress). Upstream: `ysosrs123/NuvioTV-Fork`.
 - TV box (Homatics, 192.168.1.10:5555 over adb) has `com.nuvio.tv` (official Nuvio) and `com.nuvio.tv.test` (Nuvio Arc). DO NOT replace either.
-- Her mod = `com.nuvio.tv.test.mod`, label "Nuvio Mod", via Arc's `-PnuvioAppIdSuffix=.mod`. Local test builds use `.dev` ("Nuvio Mod Test").
+- Her mod = `com.nuvio.tv.test.mod`, label "PG Prime" (was "Nuvio Mod"), via Arc's `-PnuvioAppIdSuffix=.mod`. Local test builds use `.dev` ("PG Prime Test").
 - Her shell is fish: give her fish-compatible commands.
 - Arc has a built-in updater: reads GitHub Releases of `GITHUB_OWNER`/`GITHUB_REPO` in `app/build.gradle.kts`; picks the highest `<!-- nuvio-fork-version-code: N -->` in release notes; assets named `app-full-<abi>-release.apk`.
 - Arc's debug build has no package suffix (would clash with Arc): always use a suffix.
@@ -13,7 +13,7 @@ Goal: Flora's own version of Nuvio Arc with her UI tweaks, installed NEXT TO her
 - Arc's own CI: Java 17, `:app:assembleFullRelease`, local.properties from a secret; release build is R8-minified.
 
 ## CI (`.github/workflows/build-my-nuvio.yml`, builds `main` only)
-Every 6 h / on push to `mod/**` / manual → newest Arc release → clone its tag → apply `mod/patches/*.patch` → updater pointed at her repo; versionCode = ArcReleaseCode×1000 + run%1000; versionName = `<arc tag>.mod.<run>`; label "Nuvio Mod" → `assembleFullRelease -PnuvioAppIdSuffix=.mod` → package check → publish release. Skips scheduled runs if nothing changed.
+Every 6 h / on push to `mod/**` / manual → newest Arc release → clone its tag → apply `mod/patches/*.patch` → updater pointed at her repo; versionCode = ArcReleaseCode×1000 + run%1000; versionName = `<arc tag>.mod.<run>`; label "PG Prime" → `assembleFullRelease -PnuvioAppIdSuffix=.mod` → package check → publish release. Skips scheduled runs if nothing changed.
 Secrets (set by Flora): `MOD_KEYSTORE_BASE64`, `MOD_KEYSTORE_PASSWORD`, `MOD_LOCAL_PROPERTIES`. Never print their values.
 
 ## App settings (local.properties keys)

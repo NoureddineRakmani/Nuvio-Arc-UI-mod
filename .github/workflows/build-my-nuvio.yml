@@ -3,7 +3,7 @@ name: Build my Nuvio
 # What this does, every 6 hours (or when I push a change, or press "Run workflow"):
 #   1. Finds the newest Nuvio Arc release.
 #   2. Downloads Arc's source for that release and applies my UI changes from mod/patches/.
-#   3. Builds it as a SEPARATE app: "Nuvio Mod" (package com.nuvio.tv.test.mod),
+#   3. Builds it as a SEPARATE app: "PG Prime" (package com.nuvio.tv.test.mod),
 #      signed with my own key, with its built-in updater pointed at this repository.
 #   4. Publishes it as a release here, so the app updates itself on the TV.
 # It never builds anything that could replace the official Nuvio (com.nuvio.tv)
@@ -31,7 +31,7 @@ env:
   UPSTREAM_REPO: ysosrs123/NuvioTV-Fork
   APP_ID_SUFFIX: .mod
   EXPECTED_PACKAGE: com.nuvio.tv.test.mod
-  APP_LABEL: Nuvio Mod
+  APP_LABEL: PG Prime
   GH_TOKEN: ${{ github.token }}
 
 jobs:
@@ -98,7 +98,7 @@ jobs:
             fi
           done
 
-      - name: Turn it into a separate "Nuvio Mod" app
+      - name: Turn it into a separate "PG Prime" app
         if: steps.arc.outputs.skip == 'false'
         working-directory: arc
         run: |
@@ -154,7 +154,7 @@ jobs:
 
           with open(pathlib.Path.home() / "mod.env", "w") as out:
               out.write(f"MOD_VERSION={name}\nMOD_CODE={code}\n")
-          print(f"Nuvio Mod {name} (code {code}), updates from {owner}/{repo}")
+          print(f"PG Prime {name} (code {code}), updates from {owner}/{repo}")
           PY
           cat ~/mod.env >> "$GITHUB_ENV"
 
@@ -225,6 +225,6 @@ jobs:
           gh release create "$MOD_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
-            --title "Nuvio Mod $MOD_VERSION" \
+            --title "PG Prime $MOD_VERSION" \
             --notes-file notes.md \
             app/build/outputs/apk/full/release/*.apk

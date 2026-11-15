@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds Arc + my patches on this PC as a separate test app and installs it on the TV box.
-#   App name: "Nuvio Mod Test"   package: com.nuvio.tv.test.dev
+#   App name: "PG Prime Test"   package: com.nuvio.tv.test.dev
 # It never touches Nuvio, Nuvio Arc or Nuvio Mod.
 set -euo pipefail
 ROOT="$HOME/nuvio-mod-dev"
@@ -11,7 +11,7 @@ UPSTREAM_URL="https://github.com/ysosrs123/NuvioTV-Fork.git"
 BOX="${NUVIO_BOX:-192.168.1.10:5555}"
 SUFFIX=".dev"
 EXPECTED="com.nuvio.tv.test.dev"
-LABEL="Nuvio Mod Test"
+LABEL="PG Prime Test"
 START=$(date +%s)
 # Commands (see mod/README.md, "Editing it yourself"):
 #   bash ~/nuvio-try [smooth|fast]     fresh copy of Arc + my changes from GitHub, build, install
