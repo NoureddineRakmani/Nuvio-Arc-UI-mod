@@ -13,7 +13,7 @@ index 1fd64c8..8c29b38 100644
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..b6b7fc2 100644
+index b771237..cdf7f38 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 @@ -1,6 +1,15 @@
@@ -48,7 +48,7 @@ index b771237..b6b7fc2 100644
  import androidx.compose.runtime.getValue
  import androidx.compose.runtime.mutableStateOf
  import androidx.compose.runtime.remember
-@@ -33,6 +44,14 @@ import androidx.compose.runtime.withFrameNanos
+@@ -33,6 +44,15 @@ import androidx.compose.runtime.withFrameNanos
  import androidx.compose.ui.Alignment
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.focus.FocusDirection
@@ -56,6 +56,7 @@ index b771237..b6b7fc2 100644
 +import androidx.compose.ui.input.key.KeyEventType
 +import androidx.compose.ui.input.key.key
 +import androidx.compose.ui.input.key.onKeyEvent
++import androidx.compose.ui.input.key.onPreviewKeyEvent
 +import androidx.compose.ui.input.key.type
 +import androidx.compose.ui.platform.LocalFocusManager
 +import androidx.compose.ui.platform.LocalLayoutDirection
@@ -63,23 +64,34 @@ index b771237..b6b7fc2 100644
  import androidx.compose.ui.focus.FocusRequester
  import androidx.compose.ui.focus.focusProperties
  import androidx.compose.ui.focus.focusRequester
-@@ -56,6 +75,13 @@ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
+@@ -55,6 +75,15 @@ import com.nuvio.tv.ui.v2.components.NuvioAvatar
+ import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
  
  val LocalV2TopChrome = staticCompositionLocalOf { false }
- 
++/** Nuvio Mod: true where a non-root page has the top menu above it: its top buttons then let Up leave the page. */
++val LocalModTopMenuAbove = staticCompositionLocalOf { false }
++
 +// Nuvio Mod: every item has this exact height. Android TV buttons are otherwise at least 40dp tall,
 +// which made the bar thick and left the small avatar floating in a tall pill.
 +private val MOD_NAV_ITEM_HEIGHT = 32.dp
 +// Nuvio Mod: avatar size in the profile pill; the pill has the same side padding as the other items.
 +private val MOD_NAV_AVATAR_SIZE = 20.dp
 +
-+
+ 
  /** Alternative chrome around the same navigation controller and destination graph. */
  @Composable
- @OptIn(ExperimentalTvMaterial3Api::class)
-@@ -72,12 +98,25 @@ fun V2TopNavigation(
+@@ -71,13 +100,34 @@ fun V2TopNavigation(
+     onExit: () -> Unit
  ) {
      val visible = currentRoute in rootRoutes
++    // Nuvio Mod: on the details page too, Up at the top of the page brings the menu in (Back and Left keep
++    // their page behaviour there).
++    val modOnDetail = currentRoute?.startsWith("detail/") == true
++    val barShown = visible || modOnDetail
++    // Nuvio Mod: on the details page the menu shows only when entered with Up; focus that lands in it by itself
++    // (when the page opens) is sent back to the page.
++    var modBarEnterable by remember { mutableStateOf(false) }
++    var modLastUpMs by remember { mutableStateOf(0L) }
      val contentFocus = remember { FocusRequester() }
 +    // Nuvio Mod: the bar uses the original Nuvio frosted glass (blurred page behind a dark tint).
 +    val navHazeState = remember { HazeState() }
@@ -90,7 +102,7 @@ index b771237..b6b7fc2 100644
      var returnToContent by remember { mutableStateOf(false) }
 +    // Nuvio Mod: the bar only shows while the remote is in it (press Up to bring it in).
 +    val navBarAlpha = androidx.compose.animation.core.animateFloatAsState(
-+        targetValue = if (navFocused) 1f else 0f,
++        targetValue = if (navFocused && (!modOnDetail || modBarEnterable)) 1f else 0f,
 +        animationSpec = androidx.compose.animation.core.tween(durationMillis = 140),
 +        label = "modTopBarAlpha"
 +    )
@@ -103,23 +115,32 @@ index b771237..b6b7fc2 100644
  
      // Destination BackHandlers are composed later and retain priority for sheets/settings.
      BackHandler(enabled = visible) {
-@@ -91,13 +130,26 @@ fun V2TopNavigation(
+@@ -91,46 +141,94 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
 -        Box(Modifier.fillMaxSize().padding(top = if (visible) 54.dp else 0.dp)
 +        // Nuvio Mod: pages fill the whole screen and the bar floats over them (no band at the top).
 +        Box(Modifier.fillMaxSize()
-+            .then(if (visible && modBlurOn) Modifier.hazeSource(state = navHazeState) else Modifier)
++            .then(if (barShown && modBlurOn) Modifier.hazeSource(state = navHazeState) else Modifier)
              .focusRequester(contentFocus).focusRestorer()
              .focusProperties {
                  this.onExit = {
-                     if (visible && requestedFocusDirection == FocusDirection.Up) entryFocus.requestFocus()
+-                    if (visible && requestedFocusDirection == FocusDirection.Up) entryFocus.requestFocus()
++                    if (barShown && requestedFocusDirection == FocusDirection.Up) {
++                        modBarEnterable = true
++                        entryFocus.requestFocus()
++                    }
                  }
 -            }.focusGroup()) {
 +            }.focusGroup()
 +            // Nuvio Mod: Left with nothing further left (start of a row, left column...) brings the
 +            // menu in, like the side menu does. Same check as Arc's side menu: try to move first.
++            // Nuvio Mod: remembers when Up was pressed in the page, so the menu knows it was entered with Up.
++            .onPreviewKeyEvent { event ->
++                if (event.key == Key.DirectionUp && event.type == KeyEventType.KeyDown) modLastUpMs = android.os.SystemClock.uptimeMillis()
++                false
++            }
 +            .onKeyEvent { event ->
 +                val openKey = if (isRtl) Key.DirectionRight else Key.DirectionLeft
 +                if (visible && event.type == KeyEventType.KeyDown && event.key == openKey) {
@@ -131,15 +152,19 @@ index b771237..b6b7fc2 100644
 +            }) {
              CompositionLocalProvider(LocalContentFocusRequester provides contentFocus,
                  LocalSidebarExpanded provides navFocused,
-                 LocalV2TopChrome provides visible) {
-@@ -105,16 +157,22 @@ fun V2TopNavigation(
+-                LocalV2TopChrome provides visible) {
++                LocalV2TopChrome provides visible,
++                LocalModTopMenuAbove provides modOnDetail) {
+                 navigationContent(true)
              }
          }
-         if (visible) {
+-        if (visible) {
 -            NuvioGlassSurface(GlassRole.NAVIGATION,
 -                Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 10.dp).fillMaxWidth(),
 -                shape = RoundedCornerShape(12.dp)) {
 -                Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp)
+-                    .onFocusChanged { navFocused = it.hasFocus }.focusGroup(),
++        if (barShown) {
 +            // Nuvio Mod: a centered pill that is only as wide as its content.
 +            Box(Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 12.dp)
 +                .graphicsLayer { alpha = navBarAlpha.value }
@@ -152,7 +177,24 @@ index b771237..b6b7fc2 100644
 +                .background(Color(0xFF161618).copy(alpha = 0.65f))) {
 +                // Nuvio Mod: same 3dp gap on every side, so the item pills sit evenly inside the bar.
 +                Row(Modifier.padding(3.dp)
-                     .onFocusChanged { navFocused = it.hasFocus }.focusGroup(),
++                    .onFocusChanged {
++                        navFocused = it.hasFocus
++                        if (!it.hasFocus) modBarEnterable = false
++                        else if (modOnDetail && !modBarEnterable) {
++                            // Nuvio Mod: on the details page, focus that arrives right after Up enters the menu;
++                            // focus that lands here by itself (page opening) goes back to the page.
++                            if (android.os.SystemClock.uptimeMillis() - modLastUpMs < 500) modBarEnterable = true
++                            else contentFocus.requestFocus()
++                        }
++                    }
++                    // Nuvio Mod: on the details page, Back in the menu returns to the page (it does not leave it).
++                    .onPreviewKeyEvent { event ->
++                        if (modOnDetail && (event.key == Key.Back || event.key == Key.Escape)) {
++                            if (event.type == KeyEventType.KeyUp) contentFocus.requestFocus()
++                            true
++                        } else false
++                    }
++                    .focusGroup(),
                      verticalAlignment = Alignment.CenterVertically) {
 -                    com.nuvio.tv.ui.v2.components.V2Wordmark(modifier = Modifier.width(116.dp).height(30.dp))
 -                    LazyRow(Modifier.weight(1f), contentPadding = PaddingValues(4.dp),
@@ -163,9 +205,11 @@ index b771237..b6b7fc2 100644
                              val isSelected = item.route == selectedRoute
                              var itemFocused by remember { mutableStateOf(false) }
                              Button(onClick = {
-@@ -123,14 +181,17 @@ fun V2TopNavigation(
+                                 onNavigate(item.route)
+                                 returnToContent = true
                              }, modifier = Modifier.focusRequester(routeFocus.getValue(item.route))
-                                 .focusProperties { down = contentFocus }
+-                                .focusProperties { down = contentFocus }
++                                .focusProperties { down = contentFocus}
                                  .onFocusChanged { itemFocused = it.isFocused; if (it.isFocused) lastRoute = item.route }
 -                                .nuvioV2Focus(itemFocused, RoundedCornerShape(7.dp))
 -                                .semantics { selected = isSelected },
@@ -187,14 +231,15 @@ index b771237..b6b7fc2 100644
                                      contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
                                      focusedContentColor = Color.White)) {
                                  when {
-@@ -143,21 +204,24 @@ fun V2TopNavigation(
+@@ -143,21 +241,24 @@ fun V2TopNavigation(
                          }
                      }
                      if (profile != null) {
 -                        Spacer(Modifier.width(12.dp))
 +                        Spacer(Modifier.width(4.dp))
                          var profileFocused by remember { mutableStateOf(false) }
-                         Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus }
+-                        Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus }
++                        Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus}
                              .onFocusChanged { profileFocused = it.isFocused }
 -                            .nuvioV2Focus(profileFocused, RoundedCornerShape(7.dp)),
 -                            shape = ButtonDefaults.shape(RoundedCornerShape(7.dp)),
