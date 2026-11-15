@@ -37,11 +37,17 @@ Read before changing anything: `mine/mod/README.md`, then the notes in `mine/mod
 | `~/nuvio-try` | starter: updates `mine`, then runs `mine/mod/dev/try.sh` |
 | `~/nuvio-mod-dev/mine` | sparse, depth-1 clone of the fork, `mod/` only. **Reset to GitHub `dev` on every `nuvio-try` run** (unless `unpushed` exists) — never keep work here |
 | `~/nuvio-mod-dev/arc` | Arc tag + all patches applied = the code. **Edit here** (`arc/app/src`) |
+| `~/nuvio-mod-dev/arc/mod-brand` | generated at each build by `mod/dev/brand.py` (name + icons); never edit, never saved |
 | `~/nuvio-mod-dev/prepared`, `unpushed` | state markers used by `try.sh` |
 | `~/nuvio-mod-dev/CLAUDE.md` | one line importing this file; keep it that way |
 
-Repos: fork `NoureddineRakmani/Nuvio-Arc-UI-mod` (branch `dev`); upstream Arc `ysosrs123/NuvioTV-Fork`,
-tag `1.1.0-nt.stable`. TV box adb: `192.168.1.10:5555`.
+Repos: fork `NoureddineRakmani/Nuvio-Arc-UI-mod` (branch `dev`); upstream Arc `ysosrs123/NuvioTV-Fork`.
+The Arc version the patches are made on is written in `mod/arc-base` (saved with the patches; never edit by hand).
+TV box adb: `192.168.1.10:5555`.
+
+In the fork, besides `mod/patches`: `mod/dev/` (`try.sh`, `brand.py`, `trace.sh`), `mod/brand/res` (her icons and
+banners as plain files), `.github/workflows/build-my-nuvio.yml`. These are edited in `mine/` and committed there
+(`git -C ~/nuvio-mod-dev/mine commit` + `push origin HEAD:dev`), not through `save`.
 
 ## The loop (commands in `mod/README.md`, "Editing it yourself")
 1. `bash ~/nuvio-try edit` — fresh copy from GitHub `dev` (refuses if there are unsaved edits).
@@ -55,11 +61,29 @@ tag `1.1.0-nt.stable`. TV box adb: `192.168.1.10:5555`.
    commits and pushes to `dev`. Needs `gh auth login && gh auth setup-git` and a git name/email (ask her).
 `bash ~/nuvio-try discard` throws unsaved edits away. Never hand-edit `mod/patches/*.patch`; `save` regenerates them.
 
+**New Arc release** (they come every 1-2 days): `bash ~/nuvio-try update` checks out the newest Arc and merges the
+patches onto it (old version fetched for a real 3-way merge). Files where Arc and the mod changed the same lines
+are left with `<<<<<<<` marks: resolve them in `arc/app/src`, compile, `keep fast`, then `save` (which also
+writes the new version to `mod/arc-base`). `discard` goes back to the old version. The release build (CI) does
+the same merge by itself and only fails when a hand merge is needed.
+
+**Name and icons are not in the patches.** `mod/dev/brand.py` (run by `try.sh` at every build and by CI) writes
+`arc/mod-brand/res`: every text that names the app, renamed, + the pictures from `mod/brand/res`; the build puts
+that folder on top of Arc's resources. So `arc/app/src/main/res` keeps Arc's own texts ("Nuvio Arc"): that is
+expected, don't "fix" it there. Which texts keep the name Nuvio (credits, licence, Nuvio account/team): the two
+lists at the top of `brand.py`.
+
 Patches are file-disjoint by theme; `save` files each changed path into one of:
 01 home layout and hero · 02 poster cards · 03 top menu (`MainActivity.kt`, `ui/v2/navigation`) · 04 glass and
 highlight (other `ui/v2`, incl. `ui/v2/components/ModLook.kt` = the single definition of the look) · 05 search
 and collections · 06 settings · 07 details page · 08 other screens · 09 data.
 Mark every change with a `// Nuvio Mod:` comment, keep diffs against Arc small (survives Arc updates).
+Logic longer than a few lines goes in a mod-owned file (`ModLook.kt`, `ui/navigation/ModHomeNavigation.kt`,
+`ui/screens/search/ModSearchCollections.kt`, the `Mod*` parts of `ui/screens/home/HeroArtwork.kt`) with a one-line
+call from Arc's file: Arc's big files (`NuvioNavHost.kt`, `SearchScreen.kt`, `MetaDetailsScreen.kt`) change in
+almost every release. Colours/strengths of the look live only in `ModLook.kt`.
+Arc code switched off with `if (false && …)` / `if (true) return` is deliberate: deleting Arc's lines instead
+would make the patch clash with Arc's next edit of them.
 
 ## Kotlin/Compose lessons from this project
 - An extension function/property must be **imported**; it can't be called by its fully qualified name

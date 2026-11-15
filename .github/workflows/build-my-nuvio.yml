@@ -90,13 +90,21 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
+          # My patches were made on the Arc version named in mod/arc-base. When Arc is newer, download
+          # that older version too: git needs it to merge Arc's changes with mine (--3way).
+          base=$(tr -d '[:space:]' < ../mine/mod/arc-base 2>/dev/null || true)
+          if [ -n "$base" ] && [ "$base" != "${{ steps.arc.outputs.tag }}" ]; then
+            echo "Patches are for Arc $base; merging onto ${{ steps.arc.outputs.tag }}."
+            git fetch -q --depth 1 origin "refs/tags/$base" || echo "::warning::Could not download Arc $base; merging is limited."
+          fi
           for p in ../mine/mod/patches/*.patch; do
             echo "Applying $(basename "$p")"
             if ! git apply --3way --whitespace=nowarn "$p"; then
-              echo "::error::$(basename "$p") no longer fits Arc ${{ steps.arc.outputs.tag }}. Ask Claude to update it."
+              echo "::error::$(basename "$p") no longer fits Arc ${{ steps.arc.outputs.tag }}. On the PC: bash ~/nuvio-try update, then ask Claude to finish it."
               exit 1
             fi
           done
+          git reset -q
 
       - name: Turn it into a separate "PG Prime" app
         if: steps.arc.outputs.skip == 'false'
@@ -141,22 +149,13 @@ jobs:
               sys.exit("Arc's build file changed: the package suffix option is gone, refusing to build.")
           gradle.write_text(s)
 
-          # Launcher name, in every language.
-          count = 0
-          for f in pathlib.Path("app/src/main/res").glob("values*/strings.xml"):
-              t = f.read_text(encoding="utf-8")
-              t2, k = re.subn(r'(<string name="app_name"[^>]*>)[^<]*(</string>)', rf'\g<1>{label}\g<2>', t)
-              if k:
-                  f.write_text(t2, encoding="utf-8")
-                  count += k
-          if not count:
-              sys.exit("Could not find the app name to rename.")
-
           with open(pathlib.Path.home() / "mod.env", "w") as out:
               out.write(f"MOD_VERSION={name}\nMOD_CODE={code}\n")
           print(f"PG Prime {name} (code {code}), updates from {owner}/{repo}")
           PY
           cat ~/mod.env >> "$GITHUB_ENV"
+          # Name and icons, in every language: an extra resource folder on top of Arc's (see mod/brand).
+          python3 ../mine/mod/dev/brand.py . ../mine/mod --name "$APP_LABEL"
 
       - name: Signing key and app settings
         if: steps.arc.outputs.skip == 'false'

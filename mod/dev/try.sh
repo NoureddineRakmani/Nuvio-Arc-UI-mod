@@ -7,11 +7,13 @@ ROOT="$HOME/nuvio-mod-dev"
 MINE="$ROOT/mine"
 ARC="$ROOT/arc"
 FORK="NoureddineRakmani/Nuvio-Arc-UI-mod"
-UPSTREAM_URL="https://github.com/ysosrs123/NuvioTV-Fork.git"
+UPSTREAM_REPO="ysosrs123/NuvioTV-Fork"
+UPSTREAM_URL="https://github.com/$UPSTREAM_REPO.git"
 BOX="${NUVIO_BOX:-192.168.1.10:5555}"
 SUFFIX=".dev"
 EXPECTED="com.nuvio.tv.test.dev"
-LABEL="PG Prime Test"
+NAME="PG Prime"          # the app's name inside its texts
+LABEL="PG Prime Test"    # the name under the test app's icon
 START=$(date +%s)
 # Commands (see mod/README.md, "Editing it yourself"):
 #   bash ~/nuvio-try [smooth|fast]     fresh copy of Arc + my changes from GitHub, build, install
@@ -19,16 +21,17 @@ START=$(date +%s)
 #   bash ~/nuvio-try keep [smooth|fast] build and install the folder as it is now, with your edits
 #   bash ~/nuvio-try save "note"       turn your edits into the patch files and send them to GitHub
 #   bash ~/nuvio-try discard           throw your unsaved edits away and start from a fresh copy
+#   bash ~/nuvio-try update [tag]      move my changes onto the newest Arc release (or the one named)
 #   bash ~/nuvio-try trace             record what happens when opening details pages (no build)
 CMD="${1:-}"
 case "$CMD" in
   trace) exec bash "$(dirname "$0")/trace.sh" ;;
-  edit|keep|save|discard) shift ;;
+  edit|keep|save|discard|update) shift ;;
   ""|smooth|fast) CMD="build" ;;
-  *) printf 'Unknown command "%s". Use: smooth, fast, edit, keep, save, discard, trace\n' "$CMD"; exit 1 ;;
+  *) printf 'Unknown command "%s". Use: smooth, fast, edit, keep, save, discard, update, trace\n' "$CMD"; exit 1 ;;
 esac
 shopt -s nullglob
-MARK="$ROOT/prepared"        # line 1: state of app/src right after applying the patches; line 2: patch commit used
+MARK="$ROOT/prepared"        # line 1: state of app/src right after applying the patches ("updating" during an Arc update); line 2: patch commit used
 UNPUSHED="$ROOT/unpushed"    # exists when "save" made a commit that is not on GitHub yet
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 fail() { printf '\n\033[1;31mSTOPPED: %s\033[0m\n' "$*"; exit 1; }
@@ -46,13 +49,10 @@ guard_edits() {
 
 prepare() {
 
-# 1. Which Arc version: the one my published Nuvio Mod is built from.
+# 1. Which Arc version: the one my patches were made on (mod/arc-base, saved with them).
 step "Checking which Arc version to use"
-# (releases/latest = the newest published release; "releases?per_page=1" sorted by creation and gave an old one)
-tag=$(curl -fsSL "https://api.github.com/repos/$FORK/releases/latest" 2>/dev/null \
-  | python3 -c 'import json,sys,re; print(re.sub(r"[.-]mod\.\d+$","",json.load(sys.stdin)["tag_name"]))' 2>/dev/null || true)
-if [ -z "$tag" ] && [ -f "$ROOT/arc-tag" ]; then tag=$(cat "$ROOT/arc-tag"); fi
-[ -n "$tag" ] || fail "Could not find the Arc version (no internet?)."
+tag=$(tr -d '[:space:]' < "$MINE/mod/arc-base" 2>/dev/null || true)
+[ -n "$tag" ] || fail "mod/arc-base is missing: cannot tell which Arc version my changes are for. Tell Claude."
 echo "Arc $tag"
 
 # 2. Arc's source, reset to a clean copy (build caches are kept, so rebuilds stay fast).
@@ -75,28 +75,16 @@ for p in "$MINE"/mod/patches/*.patch; do
 done
 git -C "$ARC" reset -q
 
-# 4. Make it the separate test app.
-( cd "$ARC" && python3 - "$LABEL" <<'PY'
-import pathlib, re, sys
-label = sys.argv[1]
-g = pathlib.Path("app/build.gradle.kts"); s = g.read_text()
-s, n = re.subn(r'buildConfigField\("boolean", "UPDATE_CHECK_ENABLED", "true"\)',
-               'buildConfigField("boolean", "UPDATE_CHECK_ENABLED", "false")', s)
-if "nuvioAppIdSuffix" not in s: sys.exit("Arc's build file changed: package suffix option is gone.")
-g.write_text(s)
-count = 0
-for f in list(pathlib.Path("app/src/main/res").glob("values*/strings.xml")) + list(pathlib.Path("app/src/debug/res").glob("values*/strings.xml")):
-    t = f.read_text(encoding="utf-8")
-    t2, k = re.subn(r'(<string name="app_name"[^>]*>)[^<]*(</string>)', rf'\g<1>{label}\g<2>', t)
-    if k: f.write_text(t2, encoding="utf-8"); count += k
-if not count: sys.exit("Could not find the app name to rename.")
-PY
-) || fail "Could not prepare the test app."
 printf '%s\n%s\n' "$(src_tree)" "$(git -C "$MINE" rev-parse HEAD)" > "$MARK"
 }
 
 build_install() {
 local MODE="${1:-}"
+
+# 4. Make it the separate test app: its own name and icons, updater off. Nothing in app/src changes
+#    (mod/dev/brand.py writes an extra resource folder, arc/mod-brand, that the build puts on top).
+python3 "$MINE/mod/dev/brand.py" "$ARC" "$MINE/mod" --name "$NAME" --app-name "$LABEL" --no-updates \
+  || fail "Could not prepare the test app's name and icons. Tell Claude."
 
 # 5. App settings (the same 13 lines as the MOD_LOCAL_PROPERTIES secret).
 SETTINGS="$ROOT/app-settings.txt"
@@ -175,10 +163,16 @@ save_edits() {
 then: bash ~/nuvio-try save \"$msg\""
 
   if [ "$cur" != "$ptree" ]; then
+    if grep -rlE '^(<<<<<<<|>>>>>>>) ' "$ARC/app/src" >/dev/null 2>&1; then
+      fail "Some files still have unfinished merges (lines starting with <<<<<<< or >>>>>>>):
+$(grep -rlE '^(<<<<<<<|>>>>>>>) ' "$ARC/app/src" | sed "s|$ARC/|  |")
+Tell Claude."
+    fi
     step "Checking GitHub for newer changes"
     git -C "$MINE" fetch -q --depth 1 origin dev
     if [ "$(git -C "$MINE" rev-parse FETCH_HEAD)" != "$pcommit" ]; then
       [ -f "$UNPUSHED" ] && fail "GitHub changed and you also have a save that is not on GitHub yet. Tell Claude."
+      [ "$ptree" = "updating" ] && fail "GitHub changed while moving to a new Arc version. Tell Claude."
       echo "The patches changed on GitHub since you started editing: putting your edits on top of the new version."
       git -C "$ARC" diff --binary "$ptree" "$cur" -- app/src > "$ROOT/my-edits.diff"
       git -C "$MINE" reset -q --hard FETCH_HEAD
@@ -199,20 +193,6 @@ then: bash ~/nuvio-try save \"$msg\""
     git -C "$ARC" worktree add -q --detach "$tmp" HEAD
     git -C "$ARC" worktree add -q --detach "$chk" HEAD
     rm -rf "$tmp/app/src" && cp -a "$ARC/app/src" "$tmp/app/src"
-    # Undo the test app's name change; it is added by every build, not part of your edits.
-    ( cd "$tmp" && python3 - "$LABEL" <<'PY'
-import pathlib, re, subprocess, sys
-label = sys.argv[1]
-pat = re.compile(r'(<string name="app_name"[^>]*>)([^<]*)(</string>)')
-for f in pathlib.Path("app/src").glob("*/res/values*/strings.xml"):
-    t = f.read_text(encoding="utf-8")
-    if label not in t: continue
-    try: orig = subprocess.run(["git", "show", f"HEAD:{f.as_posix()}"], capture_output=True, text=True, check=True).stdout
-    except subprocess.CalledProcessError: continue
-    m = pat.search(orig)
-    if m: f.write_text(pat.sub(lambda x: x.group(1) + m.group(2) + x.group(3) if x.group(2) == label else x.group(0), t), encoding="utf-8")
-PY
-    )
     git -C "$tmp" add -A -- app/src
     mkdir -p "$out"
     local P=app/src/main/java/com/nuvio/tv f r t
@@ -242,7 +222,9 @@ PY
     echo "Checked: the patch files rebuild your folder exactly."
     rm -f "$MINE"/mod/patches/*.patch && cp "$out"/*.patch "$MINE/mod/patches/"
     git -C "$ARC" worktree remove -f "$tmp"; git -C "$ARC" worktree remove -f "$chk"; rm -rf "$out"
-    git -C "$MINE" add -A mod/patches
+    # The Arc version these patches are made on: builds use it, and updates merge from it.
+    cp "$ROOT/arc-tag" "$MINE/mod/arc-base"
+    git -C "$MINE" add -A mod/patches mod/arc-base
     if git -C "$MINE" diff --cached --quiet; then echo "No change to the patch files."; else
       git -C "$MINE" diff --cached --stat | tail -1
       git -C "$MINE" commit -q -m "$msg"
@@ -262,6 +244,47 @@ then: bash ~/nuvio-try save"
   fi
 }
 
+# Moves my changes onto another Arc release (the newest by default). Arc's own changes and mine are merged
+# file by file; where both changed the same lines the file is left for Claude to merge by hand.
+update_arc() {
+  local want="${1:-}" base bad="" p
+  base=$(tr -d '[:space:]' < "$MINE/mod/arc-base")
+  if [ -z "$want" ]; then
+    # Same rule as the app's updater and the release build: drafts ignored, highest version code wins.
+    want=$(\
+      curl -fsSL "https://api.github.com/repos/$UPSTREAM_REPO/releases?per_page=30" 2>/dev/null \
+      | python3 -c 'import json,sys,re
+best=max((r for r in json.load(sys.stdin) if not r.get("draft")), key=lambda r: int((re.findall(r"nuvio-fork-version-code: (\d+)", r.get("body") or "") or ["0"])[0]), default=None)
+print(best["tag_name"] if best else "")' 2>/dev/null || true)
+    [ -n "$want" ] || fail "Could not find the newest Arc release (no internet?)."
+  fi
+  if [ "$want" = "$base" ]; then echo "My changes are already on Arc $base."; return 0; fi
+  step "Moving my changes from Arc $base to Arc $want"
+  [ -d "$ARC/.git" ] || fail "Start with: bash ~/nuvio-try edit"
+  git -C "$ARC" fetch -q --depth 1 origin "refs/tags/$base"     # the old version: needed to merge
+  git -C "$ARC" fetch -q --depth 1 origin "refs/tags/$want" || fail "Arc has no release called $want."
+  git -C "$ARC" checkout -q -f --detach FETCH_HEAD
+  git -C "$ARC" reset -q --hard; git -C "$ARC" clean -fdq
+  echo "$want" > "$ROOT/arc-tag"
+  for p in "$MINE"/mod/patches/*.patch; do
+    if git -C "$ARC" apply --3way --whitespace=nowarn "$p" >/dev/null 2>&1; then echo "  fits:     $(basename "$p")"
+    else echo "  by hand:  $(basename "$p")"; bad="$bad    $(basename "$p") (whole patch)
+"; fi
+  done
+  # Files where both sides changed the same lines now carry <<<<<<< / >>>>>>> marks.
+  p=$(git -C "$ARC" diff --name-only --diff-filter=U | sed 's/^/    /')
+  [ -z "$p" ] || bad="$p
+"
+  git -C "$ARC" reset -q
+  printf 'updating\n%s\n' "$(git -C "$MINE" rev-parse HEAD)" > "$MARK"
+  if [ -n "$bad" ]; then
+    printf '\n\033[1;31mArc %s changed the same lines as my changes in:\033[0m\n%s' "$want" "$bad"
+    echo "Tell Claude: \"finish the update to Arc $want\". To go back to Arc $base instead: bash ~/nuvio-try discard"
+    exit 1
+  fi
+  printf '\n\033[1;32mAll my changes fit Arc %s.\033[0m Try it: bash ~/nuvio-try keep fast   then: bash ~/nuvio-try save "Arc %s"\n' "$want" "$want"
+}
+
 case "$CMD" in
   build)   guard_edits; prepare; build_install "${1:-}" ;;
   edit)    guard_edits; prepare
@@ -270,4 +293,5 @@ case "$CMD" in
   keep)    [ -f "$MARK" ] || fail "Start with: bash ~/nuvio-try edit"; build_install "${1:-}" ;;
   save)    save_edits "${1:-}" ;;
   discard) prepare; echo "Your unsaved edits are gone; the folder is a fresh copy." ;;
+  update)  guard_edits; update_arc "${1:-}" ;;
 esac
