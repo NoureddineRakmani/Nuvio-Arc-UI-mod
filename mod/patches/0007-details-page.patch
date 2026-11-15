@@ -519,7 +519,7 @@ index e634514..14cd035 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
-index aae1ea2..33cb3b4 100644
+index aae1ea2..e0f2b01 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/MetaDetailsScreen.kt
 @@ -1,5 +1,6 @@
@@ -545,15 +545,12 @@ index aae1ea2..33cb3b4 100644
      returnFocusSeason: Int? = null,
      returnFocusEpisode: Int? = null,
      heroRestoreToken: Int = 0,
-@@ -720,6 +723,18 @@ fun MetaDetailsScreen(
+@@ -720,6 +723,15 @@ fun MetaDetailsScreen(
                  true
              }
      ) {
 +        // Nuvio Mod: Home's picture of this title, from the first frame until the page's own backdrop is in.
-+        com.nuvio.tv.core.performance.DetailEntryTrace.mark(if (uiState.isLoading) "mod_first_state_loading" else "mod_first_state_ready", once = true)
-+        com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_backdrop_url_" + (if (detailBackdrop.url != null) "known" else "none"), once = true)
 +        if (modSeedImage != null && settledBackdropUrl == null) {
-+            com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_seed_drawn", once = true)
 +            val seedContext = LocalContext.current
 +            val seedPainter = remember(modSeedImage) { modSeedImage.asPainter(seedContext) }
 +            androidx.compose.foundation.Image(
@@ -564,7 +561,7 @@ index aae1ea2..33cb3b4 100644
          PersistentDetailBackdrop(
              url = detailBackdrop.url,
              owner = uiState.meta?.let { "${it.apiType}:${it.id}" },
-@@ -738,6 +753,8 @@ fun MetaDetailsScreen(
+@@ -738,6 +750,8 @@ fun MetaDetailsScreen(
              uiState.isLoading -> {
                  if (playOnLoad && !playOnLoadReturnContentRevealed) {
                      PlaybackHandoffBackdrop(backdropUrl = heroBackdropUrl)
@@ -573,7 +570,7 @@ index aae1ea2..33cb3b4 100644
                  } else {
                      MetaDetailsSkeleton(backdropAware = detailBackdrop.url != null)
                  }
-@@ -1375,7 +1392,13 @@ private fun MetaDetailsContent(
+@@ -1375,7 +1389,13 @@ private fun MetaDetailsContent(
  ) {
      val playbackAvailability = LocalPlaybackAvailability.current
      // Restored secondary focus must remain immediately reachable.
@@ -588,21 +585,7 @@ index aae1ea2..33cb3b4 100644
      var pendingDown by remember { mutableStateOf(false) }
      var secondaryDemanded by rememberSaveable(meta.id) { mutableStateOf(false) }
      val detailFocusManager = LocalFocusManager.current
-@@ -3528,6 +3551,13 @@ private fun PersistentDetailBackdrop(
-     val artworkAccent = com.nuvio.tv.ui.v2.appearance.LocalArtworkAccent.current
-     if (owner != null) com.nuvio.tv.ui.v2.appearance.ObserveArtworkAccent(owner, url)
-     val request = remember(context, url) {
-+        url?.let { u ->
-+            val key = com.nuvio.tv.ui.screens.home.HeroImageRequests.backdropKey(u)
-+            com.nuvio.tv.core.performance.DetailEntryTrace.mark(
-+                if (key == null) "mod_arc_placeholder_nokey" else if (context.imageLoader.memoryCache?.get(MemoryCache.Key(key)) != null) "mod_arc_placeholder_hit" else "mod_arc_placeholder_miss",
-+                once = true
-+            )
-+        }
-         ImageRequest.Builder(context).data(url).crossfade(false)
-             .apply { url?.let(com.nuvio.tv.ui.screens.home.HeroImageRequests::backdropKey)?.let { placeholderMemoryCacheKey(it) } }
-             .size(context.resources.displayMetrics.widthPixels.coerceAtLeast(1),
-@@ -3598,6 +3628,8 @@ private fun BackdropLayer(
+@@ -3598,6 +3618,8 @@ private fun BackdropLayer(
          animationSpec = tween(durationMillis = if (isScrolledPastHero) 300 else 800),
          label = "gradientFade"
      )
@@ -611,7 +594,7 @@ index aae1ea2..33cb3b4 100644
      Box(modifier = Modifier.fillMaxSize()) {
          TrailerPlayer(
              trailerUrl = trailerUrl,
-@@ -3623,6 +3655,7 @@ private fun BackdropLayer(
+@@ -3623,6 +3645,7 @@ private fun BackdropLayer(
                  .fillMaxSize()
                  .drawWithCache {
                      onDrawBehind {
@@ -619,7 +602,7 @@ index aae1ea2..33cb3b4 100644
                          if (pureDark && !isTrailerPlaying) drawRect(Color(0xFF03080D), alpha = 0.08f)
                          if (gradientAlphaState.value > 0f) {
                              drawImage(
-@@ -3724,18 +3757,21 @@ private fun PeopleSectionTabButton(
+@@ -3724,18 +3747,21 @@ private fun PeopleSectionTabButton(
              .semantics {
                  role = Role.Tab
                  this.selected = selected
@@ -645,7 +628,7 @@ index aae1ea2..33cb3b4 100644
      ) {
          Text(
              text = label,
-@@ -3745,7 +3781,8 @@ private fun PeopleSectionTabButton(
+@@ -3745,7 +3771,8 @@ private fun PeopleSectionTabButton(
                  selected -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.92f)
                  else -> NuvioTheme.colors.TextPrimary.copy(alpha = 0.55f)
              },

@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt b/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt
-index 044b67a..c364b4d 100644
+index 044b67a..c1c1625 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/appearance/V2Palette.kt
 @@ -23,11 +23,18 @@ fun v2Palette(accent: ThemeColorPalette, appearance: V2AppearancePreferences, th
@@ -14,7 +14,7 @@ index 044b67a..c364b4d 100644
          field = Color(0xFF202020), menu = Color(0xFF181818), modal = Color(0xFF1B1B1B),
          focusBackground = Color.Black.copy(alpha = .04f)
      ) else palette
-+    // Nuvio Mod: neutral focus colours, no accent: focused text and icons white, focus fill 7% white
++    // Nuvio Mod: neutral focus colours, no accent: focused text and icons white, focus fill = ModLook.FILL
 +    // (the soft highlight's strength), focus rings a faint light edge instead of the accent colour.
 +    return styled.copy(
 +        focusRing = Color.White,
@@ -24,10 +24,10 @@ index 044b67a..c364b4d 100644
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
 new file mode 100644
-index 0000000..5d230d1
+index 0000000..037f095
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
-@@ -0,0 +1,115 @@
+@@ -0,0 +1,120 @@
 +package com.nuvio.tv.ui.v2.components
 +
 +import androidx.compose.foundation.BorderStroke
@@ -69,6 +69,11 @@ index 0000000..5d230d1
 +    const val SELECTED = 0.03f
 +    /** How much posters, photos and other picture cards grow on focus. */
 +    const val GROW = 1.06f
++
++    /** Glass: the dark tint, and how solid it is over a blurred page / with nothing to blur. */
++    val GlassTint = Color(0xFF161618)
++    const val GLASS_FROSTED = 0.65f
++    const val GLASS_PLAIN = 0.94f
 +
 +    val Selected: Color = Color.White.copy(alpha = SELECTED)
 +    val FocusFill: Color = Color.White.copy(alpha = FILL)
@@ -288,22 +293,10 @@ index d55c84d..264089a 100644
      // Do not create per-card animation jobs, draw caches and glint state for an invisible edge.
      // This also keeps idle cards out of the artwork/theme observation path.
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
-index d8fd359..e35ca40 100644
+index d8fd359..bcecba4 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
-@@ -81,6 +81,11 @@ fun NuvioGlassSurface(
-     Box(modifier.nuvioGlass(role, focused, shape, hazeState), content = content)
- }
- 
-+// Nuvio Mod: one glass for the whole app, the same as the top menu bar.
-+private val MOD_GLASS_TINT = Color(0xFF161618)
-+private const val MOD_GLASS_FROSTED_ALPHA = 0.65f   // over a blurred background (same as the menu bar)
-+private const val MOD_GLASS_PLAIN_ALPHA = 0.94f     // when there is nothing to blur
-+
- @Composable
- fun Modifier.nuvioGlass(
-     role: GlassRole,
-@@ -89,6 +94,78 @@ fun Modifier.nuvioGlass(
+@@ -89,6 +89,78 @@ fun Modifier.nuvioGlass(
      hazeState: HazeState? = null,
      trailingEdgeOnly: Boolean = false,
      neutralBackdrop: Boolean = false
@@ -353,16 +346,16 @@ index d8fd359..e35ca40 100644
 +        inputScale = HazeInputScale.Fixed(0.66f)
 +        forceInvalidateOnPreDraw = refreshVideo
 +    } else Modifier
-+    val bodyAlpha = if (source != null) MOD_GLASS_FROSTED_ALPHA else MOD_GLASS_PLAIN_ALPHA
++    val bodyAlpha = if (source != null) ModLook.GLASS_FROSTED else ModLook.GLASS_PLAIN // Nuvio Mod: one glass for the whole app (ModLook)
 +    return clip(shape)
 +        .then(blur)
-+        .background(MOD_GLASS_TINT.copy(alpha = bodyAlpha), shape)
++        .background(ModLook.GlassTint.copy(alpha = bodyAlpha), shape)
 +        .drawWithCache {
 +            val outline = shape.createOutline(size, layoutDirection, this)
 +            onDrawWithContent {
 +                val smokeAmount = smoke?.value ?: 0f
-+                if (smokeAmount > 0f && bodyAlpha < MOD_GLASS_PLAIN_ALPHA) {
-+                    drawOutline(outline, MOD_GLASS_TINT, alpha = 0.8f * smokeAmount)
++                if (smokeAmount > 0f && bodyAlpha < ModLook.GLASS_PLAIN) {
++                    drawOutline(outline, ModLook.GlassTint, alpha = 0.8f * smokeAmount)
 +                }
 +                if (focused) drawModSoftHighlight(outline) // Nuvio Mod: same soft highlight as settings
 +                drawContent()

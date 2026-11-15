@@ -1,105 +1,119 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt
+new file mode 100644
+index 0000000..4f7d4d6
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt
+@@ -0,0 +1,76 @@
++package com.nuvio.tv.ui.navigation
++
++import androidx.navigation.NavController
++import com.nuvio.tv.core.performance.DetailEntryTrace
++import com.nuvio.tv.ui.screens.calendar.openCalendarWatchTarget
++import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
++import com.nuvio.tv.ui.screens.home.HeroBackdropState
++import com.nuvio.tv.ui.screens.home.HomeViewModel
++import com.nuvio.tv.ui.screens.home.ModDetailSeed
++import com.nuvio.tv.ui.screens.home.ModStreamSeed
++import com.nuvio.tv.ui.screens.home.modOpenComingUp
++import com.nuvio.tv.ui.screens.home.modShownHeroFor
++
++/*
++ * Nuvio Mod: what the mod adds to the way Home opens other pages. Kept here, out of NuvioNavHost.kt,
++ * so Arc's own navigation file only carries one-line calls to these.
++ */
++
++/**
++ * Nuvio Mod: if Home's big picture is this title's, hand it to the details page (the decoded picture
++ * itself, so the page never opens on a dark screen). Returns the picture's address, for the page to
++ * know its backdrop at once.
++ */
++internal fun modOfferHeroToDetail(itemId: String, itemType: String): String? {
++    val hero = modShownHeroFor(itemId)
++    ModDetailSeed.offer(itemId, itemType, hero?.second)
++    return hero?.first
++}
++
++/** Nuvio Mod: Home's way into a details page (as in NuvioNavHost), opened on one episode. */
++private fun NavController.modOpenDetailOnEpisode(itemId: String, itemType: String, season: Int?, episode: Int?) {
++    DetailEntryTrace.begin()
++    val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
++    val modHeroUrl = modOfferHeroToDetail(itemId, itemType)
++    navigate(
++        Screen.Detail.createRoute(
++            itemId = itemId,
++            itemType = itemType,
++            addonBaseUrl = "",
++            heroBackdropUrl = heroArtwork?.backdropUrl ?: modHeroUrl,
++            heroLogoUrl = heroArtwork?.logoUrl,
++            returnFocusSeason = season,
++            returnFocusEpisode = episode
++        )
++    )
++}
++
++/**
++ * Nuvio Mod: a Home "Coming up" card carries no episode id. Look the episode up and open its streams
++ * (out or not by its air date: premium sources can have episodes early); if no episode id is found,
++ * open the show's page on that episode. Returns false for any other card, which Arc then handles.
++ * Trace marks: mod_comingup_S<s>E<e>_out_<bool>, then mod_comingup_streams / mod_comingup_no_episode_id.
++ */
++internal fun NavController.modOpenComingUpCard(item: ContinueWatchingItem, homeViewModel: HomeViewModel): Boolean {
++    val info = (item as? ContinueWatchingItem.NextUp)?.info?.takeIf { it.comingUpKey != null && it.videoId.isBlank() }
++        ?: return false
++    DetailEntryTrace.begin()
++    DetailEntryTrace.mark("mod_comingup_S${info.season}E${info.episode}_out_${info.hasAired}")
++    val series = info.contentType.equals("series", ignoreCase = true)
++    homeViewModel.modOpenComingUp(info) { target ->
++        if (currentDestination?.route != Screen.Home.route) return@modOpenComingUp
++        if (target?.videoId != null) {
++            DetailEntryTrace.mark("mod_comingup_streams")
++            ModStreamSeed.offerFromHome(target.contentId)
++            openCalendarWatchTarget(target)
++        } else {
++            DetailEntryTrace.mark("mod_comingup_no_episode_id")
++            modOpenDetailOnEpisode(
++                info.contentId, info.contentType,
++                season = info.season.takeIf { series && it > 0 },
++                episode = info.episode.takeIf { series && info.season > 0 }
++            )
++        }
++    }
++    return true
++}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index 1f76052..2e4dc18 100644
+index 1f76052..4b73013 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -57,6 +57,7 @@ import com.nuvio.tv.ui.screens.party.PartyScreen
- import com.nuvio.tv.ui.screens.settings.TmdbSettingsScreen
- import com.nuvio.tv.ui.screens.stream.StreamScreen
- import com.nuvio.tv.ui.screens.home.ContinueWatchingItem
-+import com.nuvio.tv.ui.screens.home.modOpenComingUp
- import com.nuvio.tv.ui.screens.account.AuthQrSignInScreen
- import com.nuvio.tv.ui.screens.cast.CastDetailScreen
- import com.nuvio.tv.ui.screens.profile.ProfileSelectionMode
-@@ -186,6 +187,7 @@ private fun PlaybackNavHost(
+@@ -186,6 +186,7 @@ private fun PlaybackNavHost(
          }
  
          composable(Screen.Home.route) {
-+            val modHomeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel = androidx.hilt.navigation.compose.hiltViewModel()
++            val modHomeViewModel: com.nuvio.tv.ui.screens.home.HomeViewModel = androidx.hilt.navigation.compose.hiltViewModel() // Nuvio Mod
              fun createContinueWatchingRoute(
                  item: ContinueWatchingItem,
                  manualSelection: Boolean = false,
-@@ -249,25 +251,76 @@ private fun PlaybackNavHost(
-                 }
+@@ -250,24 +251,28 @@ private fun PlaybackNavHost(
              }
  
--            HomeScreen(
--                onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
--                    com.nuvio.tv.core.performance.DetailEntryTrace.begin()
--                    val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
--                    navController.navigate(
--                        Screen.Detail.createRoute(
--                            itemId = itemId,
--                            itemType = itemType,
--                            addonBaseUrl = addonBaseUrl,
+             HomeScreen(
++                viewModel = modHomeViewModel, // Nuvio Mod: the same one the Coming up cards use below
+                 onNavigateToDetail = { itemId, itemType, addonBaseUrl ->
+                     com.nuvio.tv.core.performance.DetailEntryTrace.begin()
+                     val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
++                    val modHeroUrl = modOfferHeroToDetail(itemId, itemType) // Nuvio Mod: Home's picture goes with it
+                     navController.navigate(
+                         Screen.Detail.createRoute(
+                             itemId = itemId,
+                             itemType = itemType,
+                             addonBaseUrl = addonBaseUrl,
 -                            heroBackdropUrl = heroArtwork?.backdropUrl,
--                            heroLogoUrl = heroArtwork?.logoUrl
--                        )
-+            // Nuvio Mod: Home's way into a details page (with the hero picture handed over), optionally
-+            // opened on one episode.
-+            fun modOpenDetail(itemId: String, itemType: String, addonBaseUrl: String?, focusSeason: Int? = null, focusEpisode: Int? = null) {
-+                com.nuvio.tv.core.performance.DetailEntryTrace.begin()
-+                val heroArtwork = HeroBackdropState.consumeArtworkForTitle(itemId, itemType)
-+                // Nuvio Mod: if Home's big picture is this title's, the details page opens on it
-+                // (the decoded picture itself, and its address so the page knows its backdrop at once).
-+                val modHero = com.nuvio.tv.ui.screens.home.modShownHeroFor(itemId)
-+                com.nuvio.tv.ui.screens.home.ModDetailSeed.offer(
-+                    itemId, itemType, modHero?.second,
-+                    "nav_" + (if (com.nuvio.tv.ui.screens.home.modShownHeroOwner == null) "noowner" else if (modHero != null) "match" else "other") +
-+                        "_ids_" + (if (com.nuvio.tv.ui.screens.home.modShownHeroIdsKnown()) "known" else "unknown") +
-+                        "_from_" + com.nuvio.tv.ui.screens.home.ModDetailSeed.caller + "_hero_" + com.nuvio.tv.ui.screens.home.modShownHeroShape() +
-+                        "_arcurl_" + (if (heroArtwork?.backdropUrl != null) "yes" else "no")
-+                )
-+                com.nuvio.tv.ui.screens.home.ModDetailSeed.caller = "unknown"
-+                navController.navigate(
-+                    Screen.Detail.createRoute(
-+                        itemId = itemId,
-+                        itemType = itemType,
-+                        addonBaseUrl = addonBaseUrl,
-+                        heroBackdropUrl = heroArtwork?.backdropUrl ?: modHero?.first,
-+                        heroLogoUrl = heroArtwork?.logoUrl,
-+                        returnFocusSeason = focusSeason,
-+                        returnFocusEpisode = focusEpisode
++                            heroBackdropUrl = heroArtwork?.backdropUrl ?: modHeroUrl,
+                             heroLogoUrl = heroArtwork?.logoUrl
+                         )
                      )
--                },
-+                )
-+            }
-+
-+            HomeScreen(
-+                viewModel = modHomeViewModel,
-+                onNavigateToDetail = { itemId, itemType, addonBaseUrl -> modOpenDetail(itemId, itemType, addonBaseUrl) },
+                 },
                  onContinueWatchingClick = onContinueWatchingClick@{ item ->
-+                    // Nuvio Mod: a Coming up card carries no episode id: look it up and open its streams; if it is not
-+                    // found, the show's page, on that episode.
-+                    val modComingUp = (item as? ContinueWatchingItem.NextUp)?.info?.takeIf { it.comingUpKey != null && it.videoId.isBlank() }
-+                    if (modComingUp != null) {
-+                        com.nuvio.tv.core.performance.DetailEntryTrace.begin()
-+                        com.nuvio.tv.core.performance.DetailEntryTrace.mark(
-+                            "mod_comingup_S${modComingUp.season}E${modComingUp.episode}_out_${modComingUp.hasAired}"
-+                        )
-+                        val series = modComingUp.contentType.equals("series", ignoreCase = true)
-+                        val openPage = {
-+                            com.nuvio.tv.ui.screens.home.ModDetailSeed.caller = "comingup"
-+                            modOpenDetail(
-+                                modComingUp.contentId, modComingUp.contentType, "",
-+                                focusSeason = modComingUp.season.takeIf { series && it > 0 },
-+                                focusEpisode = modComingUp.episode.takeIf { series && modComingUp.season > 0 }
-+                            )
-+                        }
-+                        // Nuvio Mod: out or not by its air date, the card opens the episode's streams (premium sources can
-+                        // have episodes before they air publicly); the show's page only when no episode id is found.
-+                        modHomeViewModel.modOpenComingUp(modComingUp) { target ->
-+                            if (navController.currentDestination?.route != Screen.Home.route) return@modOpenComingUp
-+                            if (target?.videoId != null) {
-+                                com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_streams")
-+                                com.nuvio.tv.ui.screens.home.ModStreamSeed.offerFromHome(target.contentId) // Nuvio Mod
-+                                navController.openCalendarWatchTarget(target)
-+                            } else {
-+                                com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_comingup_no_episode_id")
-+                                openPage()
-+                            }
-+                        }
-+                        return@onContinueWatchingClick
-+                    }
++                    if (navController.modOpenComingUpCard(item, modHomeViewModel)) return@onContinueWatchingClick // Nuvio Mod
                      if (!playbackAvailability.canStream(item)) {
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingClick
@@ -108,7 +122,7 @@ index 1f76052..2e4dc18 100644
                      navController.navigate(createContinueWatchingRoute(item))
                  },
                  onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning@{ item ->
-@@ -275,6 +328,7 @@ private fun PlaybackNavHost(
+@@ -275,6 +280,7 @@ private fun PlaybackNavHost(
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingStartFromBeginning
                      }
@@ -116,7 +130,7 @@ index 1f76052..2e4dc18 100644
                      navController.navigate(
                          createContinueWatchingRoute(item, startFromBeginning = true)
                      )
-@@ -284,6 +338,7 @@ private fun PlaybackNavHost(
+@@ -284,6 +290,7 @@ private fun PlaybackNavHost(
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingPlayManually
                      }
@@ -124,15 +138,13 @@ index 1f76052..2e4dc18 100644
                      navController.navigate(
                          createContinueWatchingRoute(item, manualSelection = true)
                      )
-@@ -381,8 +436,15 @@ private fun PlaybackNavHost(
+@@ -381,8 +388,13 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
 +            // Nuvio Mod: the picture Home was showing for this title, drawn until the page's own backdrop loads.
 +            val modSeedImage = androidx.compose.runtime.remember(detailArgs) {
-+                com.nuvio.tv.ui.screens.home.ModDetailSeed.take(detailArgs?.getString("itemId"), detailArgs?.getString("itemType")).also {
-+                    com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_seed_" + (if (it != null) "ready" else "missing") + "_" + com.nuvio.tv.ui.screens.home.ModDetailSeed.lastReason)
-+                }
++                com.nuvio.tv.ui.screens.home.ModDetailSeed.take(detailArgs?.getString("itemId"), detailArgs?.getString("itemType"))
 +            }
              DetailChildHost(parentNavController = navController) { childNav ->
              MetaDetailsScreen(
@@ -140,7 +152,7 @@ index 1f76052..2e4dc18 100644
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -609,7 +671,12 @@ private fun PlaybackNavHost(
+@@ -609,7 +621,12 @@ private fun PlaybackNavHost(
              val startFromBeginning = streamArgs
                  ?.getString("startFromBeginning")
                  ?.toBooleanStrictOrNull() == true
@@ -153,7 +165,7 @@ index 1f76052..2e4dc18 100644
                  startFromBeginning = startFromBeginning,
                  restoreSourceSelection = restoreSourceSelection,
                  onSourceSelectionRestoreHandled = {
-@@ -1333,7 +1400,11 @@ private fun PlaybackNavHost(
+@@ -1333,7 +1350,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },

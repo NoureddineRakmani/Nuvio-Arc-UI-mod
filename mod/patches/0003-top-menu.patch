@@ -13,7 +13,7 @@ index 359b982..ea754ad 100644
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..cdf7f38 100644
+index b771237..a9c7369 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 @@ -1,6 +1,15 @@
@@ -64,7 +64,7 @@ index b771237..cdf7f38 100644
  import androidx.compose.ui.focus.FocusRequester
  import androidx.compose.ui.focus.focusProperties
  import androidx.compose.ui.focus.focusRequester
-@@ -55,6 +75,15 @@ import com.nuvio.tv.ui.v2.components.NuvioAvatar
+@@ -55,6 +75,17 @@ import com.nuvio.tv.ui.v2.components.NuvioAvatar
  import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
  
  val LocalV2TopChrome = staticCompositionLocalOf { false }
@@ -76,11 +76,13 @@ index b771237..cdf7f38 100644
 +private val MOD_NAV_ITEM_HEIGHT = 32.dp
 +// Nuvio Mod: avatar size in the profile pill; the pill has the same side padding as the other items.
 +private val MOD_NAV_AVATAR_SIZE = 20.dp
++// Nuvio Mod: how long after an Up press focus arriving in the menu counts as "entered with Up".
++private const val MOD_MENU_UP_WINDOW_MS = 500L
 +
  
  /** Alternative chrome around the same navigation controller and destination graph. */
  @Composable
-@@ -71,13 +100,34 @@ fun V2TopNavigation(
+@@ -71,13 +102,38 @@ fun V2TopNavigation(
      onExit: () -> Unit
  ) {
      val visible = currentRoute in rootRoutes
@@ -92,6 +94,10 @@ index b771237..cdf7f38 100644
 +    // (when the page opens) is sent back to the page.
 +    var modBarEnterable by remember { mutableStateOf(false) }
 +    var modLastUpMs by remember { mutableStateOf(0L) }
++    // Nuvio Mod: on the details page the menu can't take focus by itself (page opening, coming back from the
++    // player); only Up from the top of the page enters it. "Entered with Up" = Up was pressed just before.
++    val modUpJustPressed = { android.os.SystemClock.uptimeMillis() - modLastUpMs < MOD_MENU_UP_WINDOW_MS }
++    val modMenuCanFocus = { !modOnDetail || modBarEnterable || modUpJustPressed() }
      val contentFocus = remember { FocusRequester() }
 +    // Nuvio Mod: the bar uses the original Nuvio frosted glass (blurred page behind a dark tint).
 +    val navHazeState = remember { HazeState() }
@@ -115,7 +121,7 @@ index b771237..cdf7f38 100644
  
      // Destination BackHandlers are composed later and retain priority for sheets/settings.
      BackHandler(enabled = visible) {
-@@ -91,46 +141,94 @@ fun V2TopNavigation(
+@@ -91,46 +147,94 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
@@ -174,7 +180,7 @@ index b771237..cdf7f38 100644
 +                    noiseFactor = 0f // Nuvio Mod: no grain in the frosted glass
 +                    inputScale = HazeInputScale.Fixed(0.66f)
 +                } else Modifier)
-+                .background(Color(0xFF161618).copy(alpha = 0.65f))) {
++                .background(ModLook.GlassTint.copy(alpha = ModLook.GLASS_FROSTED))) {
 +                // Nuvio Mod: same 3dp gap on every side, so the item pills sit evenly inside the bar.
 +                Row(Modifier.padding(3.dp)
 +                    .onFocusChanged {
@@ -183,7 +189,7 @@ index b771237..cdf7f38 100644
 +                        else if (modOnDetail && !modBarEnterable) {
 +                            // Nuvio Mod: on the details page, focus that arrives right after Up enters the menu;
 +                            // focus that lands here by itself (page opening) goes back to the page.
-+                            if (android.os.SystemClock.uptimeMillis() - modLastUpMs < 500) modBarEnterable = true
++                            if (modUpJustPressed()) modBarEnterable = true
 +                            else contentFocus.requestFocus()
 +                        }
 +                    }
@@ -209,7 +215,7 @@ index b771237..cdf7f38 100644
                                  returnToContent = true
                              }, modifier = Modifier.focusRequester(routeFocus.getValue(item.route))
 -                                .focusProperties { down = contentFocus }
-+                                .focusProperties { down = contentFocus}
++                                .focusProperties { down = contentFocus; canFocus = modMenuCanFocus() }
                                  .onFocusChanged { itemFocused = it.isFocused; if (it.isFocused) lastRoute = item.route }
 -                                .nuvioV2Focus(itemFocused, RoundedCornerShape(7.dp))
 -                                .semantics { selected = isSelected },
@@ -231,7 +237,7 @@ index b771237..cdf7f38 100644
                                      contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
                                      focusedContentColor = Color.White)) {
                                  when {
-@@ -143,21 +241,24 @@ fun V2TopNavigation(
+@@ -143,21 +247,24 @@ fun V2TopNavigation(
                          }
                      }
                      if (profile != null) {
@@ -239,7 +245,7 @@ index b771237..cdf7f38 100644
 +                        Spacer(Modifier.width(4.dp))
                          var profileFocused by remember { mutableStateOf(false) }
 -                        Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus }
-+                        Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus}
++                        Button(onSwitchProfile, Modifier.focusProperties { down = contentFocus; canFocus = modMenuCanFocus() }
                              .onFocusChanged { profileFocused = it.isFocused }
 -                            .nuvioV2Focus(profileFocused, RoundedCornerShape(7.dp)),
 -                            shape = ButtonDefaults.shape(RoundedCornerShape(7.dp)),
