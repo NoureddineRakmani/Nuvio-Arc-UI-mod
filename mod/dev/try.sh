@@ -48,8 +48,9 @@ prepare() {
 
 # 1. Which Arc version: the one my published Nuvio Mod is built from.
 step "Checking which Arc version to use"
-tag=$(curl -fsSL "https://api.github.com/repos/$FORK/releases?per_page=1" 2>/dev/null \
-  | python3 -c 'import json,sys,re; print(re.sub(r"[.-]mod\.\d+$","",json.load(sys.stdin)[0]["tag_name"]))' 2>/dev/null || true)
+# (releases/latest = the newest published release; "releases?per_page=1" sorted by creation and gave an old one)
+tag=$(curl -fsSL "https://api.github.com/repos/$FORK/releases/latest" 2>/dev/null \
+  | python3 -c 'import json,sys,re; print(re.sub(r"[.-]mod\.\d+$","",json.load(sys.stdin)["tag_name"]))' 2>/dev/null || true)
 if [ -z "$tag" ] && [ -f "$ROOT/arc-tag" ]; then tag=$(cat "$ROOT/arc-tag"); fi
 [ -n "$tag" ] || fail "Could not find the Arc version (no internet?)."
 echo "Arc $tag"
