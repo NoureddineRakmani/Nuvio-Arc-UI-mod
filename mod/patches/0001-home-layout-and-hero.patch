@@ -217,10 +217,10 @@ index 5ecf3c4..c44060e 100644
      val artwork: HeroArtworkSelection,
      val preview: HeroPreview?,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt
-index 6871bed..f57d639 100644
+index b2e0ab5..0fe86c8 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeComingUp.kt
-@@ -270,7 +270,9 @@ class CalendarComingUpSource @Inject constructor(
+@@ -271,7 +271,9 @@ class CalendarComingUpSource @Inject constructor(
      private val zoneProvider: CalendarZoneProvider,
      private val refresher: dagger.Lazy<CalendarRefresher>,
      private val metaRepository: MetaRepository,
@@ -231,7 +231,7 @@ index 6871bed..f57d639 100644
  ) {
      private var localized: Pair<String, Context>? = null
  
-@@ -369,6 +371,17 @@ class CalendarComingUpSource @Inject constructor(
+@@ -370,6 +372,17 @@ class CalendarComingUpSource @Inject constructor(
          return context.withAppLocale().also { localized = tag to it }
      }
  
@@ -249,7 +249,7 @@ index 6871bed..f57d639 100644
      private fun cachedArt(type: String, ids: List<String>): Pair<String?, String?> {
          val meta = ids.firstNotNullOfOrNull { metaRepository.getCachedMeta(type, it) } ?: return null to null
          return meta.background to meta.logo
-@@ -414,6 +427,40 @@ internal fun HomeViewModel.hideFromComingUp(card: ContinueWatchingItem) {
+@@ -421,6 +434,40 @@ internal fun HomeViewModel.hideFromComingUp(card: ContinueWatchingItem) {
      viewModelScope.launch { source.hide(card) }
  }
  
@@ -303,7 +303,7 @@ index 8bfec61..8ca8bbf 100644
                  posterOptionsTarget = null
              },
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
-index 5455a55..e5e0b77 100644
+index 68ce29b..a75da74 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
 @@ -79,6 +79,7 @@ class HomeViewModel @Inject constructor(
@@ -315,10 +315,10 @@ index 5455a55..e5e0b77 100644
      internal val playerSettingsDataStore: PlayerSettingsDataStore,
      internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
-index b013ce9..ca1b6d0 100644
+index 068813b..5776b3a 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
-@@ -54,8 +54,18 @@ private data class CatalogUpdateResult(
+@@ -55,8 +55,18 @@ private data class CatalogUpdateResult(
  
  @OptIn(FlowPreview::class)
  internal fun HomeViewModel.observeCollectionsPipeline() {
@@ -339,7 +339,7 @@ index b013ce9..ca1b6d0 100644
              .debounce(300)
              .collectLatest { collections ->
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 647f0e4..dd4ea73 100644
+index d4d93fe..8425101 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 @@ -250,6 +250,7 @@ fun ModernHomeContent(
@@ -375,18 +375,19 @@ index 647f0e4..dd4ea73 100644
                          if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
                          return distance
                      }
-@@ -1059,6 +1065,10 @@ fun ModernHomeContent(
+@@ -1057,6 +1063,11 @@ fun ModernHomeContent(
+                 }.coerceAtLeast(1)
+             }
  
-             val preparedHeroScene = rememberPreparedHeroScene(liveHeroSceneState, heroMediaWidthPx, heroMediaHeightPx)
-             val heroSceneStateLambda = remember(preparedHeroScene) { { preparedHeroScene.value } }
 +            // Nuvio Mod: remember which title each hero card is, so a details page can open on its picture.
 +            LaunchedEffect(settledCarouselItemState) {
 +                snapshotFlow { settledCarouselItemState.value }.collect { modRecordHeroCard(it) }
 +            }
-             LaunchedEffect(artworkAccent, preparedHeroScene) {
-                 snapshotFlow { preparedHeroScene.value.artwork.ownerKey to preparedHeroScene.value.heroBackdrop }
-                     .collect { (owner, url) -> artworkAccent?.select(owner.orEmpty(), url) }
-@@ -1110,7 +1120,8 @@ fun ModernHomeContent(
++
+             val isFullScreenState = remember(liveHeroSceneState) {
+                 derivedStateOf { liveHeroSceneState.value.fullScreenBackdrop }
+             }
+@@ -1092,7 +1103,8 @@ fun ModernHomeContent(
              // Fade content rows when ANY hero media (catalog trailer or collection
              // hero video) is playing in fullscreen — not just catalog trailers.
              val trailerContentAlphaState = animateFloatAsState(
@@ -396,7 +397,7 @@ index 647f0e4..dd4ea73 100644
                  animationSpec = tween(durationMillis = 480),
                  label = "trailerContentFade"
              )
-@@ -1119,9 +1130,26 @@ fun ModernHomeContent(
+@@ -1101,9 +1113,26 @@ fun ModernHomeContent(
              val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
  
              val foregroundModifier = Modifier.sidebarPageContent()
@@ -424,7 +425,7 @@ index 647f0e4..dd4ea73 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1135,9 +1163,10 @@ fun ModernHomeContent(
+@@ -1117,9 +1146,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -436,25 +437,19 @@ index 647f0e4..dd4ea73 100644
 +                heroDescriptionScalePercent <= 100 -> 8
 +                else -> 6
              }
-             HeroTitleBlock(
-                 previewProvider = { heroSceneStateLambda().preview },
-@@ -1147,13 +1176,8 @@ fun ModernHomeContent(
+             val heroTrailerShowing = remember {
+                 { !isRapidHorizontalNav.value && shouldPlayTrailerLambda() && heroTrailerRenderedLambda() }
+@@ -1138,7 +1168,8 @@ fun ModernHomeContent(
                  showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                  mdbListShowOnHero = uiState.mdbListShowOnHero,
                  mdbListRatingOrder = uiState.mdbListRatingOrder,
--                trailerPlaying = {
--                    if (isRapidHorizontalNav.value) false
--                    else {
--                        val state = heroSceneStateLambda()
--                        !state.featheredTrailer && state.fullScreenBackdrop && shouldPlayTrailerLambda() && heroTrailerRenderedLambda()
--                    }
--                },
+-                trailerShowing = heroTrailerShowing,
 +                // Nuvio Mod: trailers play in the background; title and description stay visible.
-+                trailerPlaying = { false },
++                trailerShowing = { false },
                  descriptionMaxLines = heroDescriptionMaxLines,
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
-                 modifier = heroMetadataModifier
-@@ -1323,6 +1347,7 @@ fun ModernHomeContent(
+                 titleModifier = heroMetadataModifier
+@@ -1308,6 +1339,7 @@ fun ModernHomeContent(
                  optionsItem.value = null
              },
              onDetails = {
@@ -588,17 +583,24 @@ index b23ef0d..3183a8a 100644
          }
      }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-index 2342509..0562ca6 100644
+index b768c74..c13e85e 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-@@ -34,16 +34,16 @@ internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
+@@ -34,7 +34,7 @@ internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
  internal const val MODERN_HERO_TEXT_WIDTH_FRACTION = 0.42f
  internal const val MODERN_HERO_MEDIA_WIDTH_FRACTION = 0.72f
  internal const val MODERN_TRAILER_OVERSCAN_ZOOM = 1.0f
 -internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 300L
++internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 120L // Nuvio Mod: snappier background (was 300)
+ internal const val MODERN_HERO_QUICK_KEYS_GAP_MS = 450L
+ internal const val MODERN_HERO_QUICK_KEYS_SETTLE_MS = 550L
+ 
+@@ -42,15 +42,15 @@ internal const val MODERN_HERO_QUICK_KEYS_SETTLE_MS = 550L
+ internal fun heroSettleDelayMs(gapSinceLastMoveMs: Long): Long =
+     if (gapSinceLastMoveMs in 0 until MODERN_HERO_QUICK_KEYS_GAP_MS) MODERN_HERO_QUICK_KEYS_SETTLE_MS
+     else MODERN_HERO_FOCUS_DEBOUNCE_MS
 -internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
 -private val MODERN_ROW_CARD_BOTTOM_ROOM = 8.dp
-+internal const val MODERN_HERO_FOCUS_DEBOUNCE_MS = 120L // Nuvio Mod: snappier background (was 300)
 +internal val MODERN_ROW_HEADER_FOCUS_INSET = 48.dp // Nuvio Mod: room for the bigger title gap
 +// Nuvio Mod: margin between the cards and the bottom edge of the screen.
 +internal val MODERN_ROW_CARD_BOTTOM_ROOM = 28.dp
@@ -615,7 +617,7 @@ index 2342509..0562ca6 100644
  /** Height the hero text block may take: the space above the rows, less a thin margin at the screen edge. */
  internal fun modernHeroTextMaxHeight(screenHeight: Dp, rowsViewportHeight: Dp): Dp =
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
-index 1d0abdc..edbf08e 100644
+index be315a6..6a7dd84 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 @@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -628,10 +630,10 @@ index 1d0abdc..edbf08e 100644
  import androidx.compose.foundation.layout.padding
  import androidx.compose.foundation.lazy.LazyColumn
  import androidx.compose.foundation.lazy.LazyListItemInfo
-@@ -81,6 +83,10 @@ import kotlinx.coroutines.flow.distinctUntilChanged
- private const val VERTICAL_POSTER_PREFETCH_AHEAD_ROWS = 2
- private const val VERTICAL_POSTER_PREFETCH_ITEMS_PER_ROW = 8
- private const val VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT = 32
+@@ -89,6 +91,10 @@ private const val VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT_SCROLLING = 8
+ /** Poster requests the vertical pre-load may have running; the rest start when the list stops. */
+ internal fun verticalPosterPrefetchInFlightLimit(scrolling: Boolean): Int =
+     if (scrolling) VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT_SCROLLING else VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT
 +// Nuvio Mod: presses closer together than this count as a held D-pad.
 +private const val MOD_HELD_DPAD_WINDOW_MS = 300L
 +// Nuvio Mod: while the D-pad is held, the hero waits this long after the last move.
@@ -639,7 +641,7 @@ index 1d0abdc..edbf08e 100644
  
  @OptIn(
      ExperimentalFoundationApi::class,
-@@ -88,6 +94,7 @@ private const val VERTICAL_POSTER_PREFETCH_MAX_IN_FLIGHT = 32
+@@ -96,6 +102,7 @@ internal fun verticalPosterPrefetchInFlightLimit(scrolling: Boolean): Int =
      ExperimentalComposeUiApi::class,
      kotlinx.coroutines.FlowPreview::class
  )
@@ -647,7 +649,7 @@ index 1d0abdc..edbf08e 100644
  @Composable
  internal fun ModernHomeRowsList(
      isVerticalRowsScrollingState: State<Boolean>,
-@@ -582,7 +589,9 @@ internal fun ModernHomeRowsList(
+@@ -629,7 +636,9 @@ internal fun ModernHomeRowsList(
                      },
                  ),
              contentPadding = PaddingValues(bottom = rowsViewportHeight),
@@ -658,20 +660,20 @@ index 1d0abdc..edbf08e 100644
          ) {
              itemsIndexed(
                  items = carouselRows.list,
-@@ -599,7 +608,11 @@ internal fun ModernHomeRowsList(
+@@ -646,7 +655,11 @@ internal fun ModernHomeRowsList(
                          
                          if (rowBecameActive || itemChanged) {
                              val now = System.currentTimeMillis()
--                            onHeroFocusSettleDelayChange(MODERN_HERO_FOCUS_DEBOUNCE_MS)
+-                            onHeroFocusSettleDelayChange(heroSettleDelayMs(now - lastHeroNavigationAtMs.value))
 +                            // Nuvio Mod: a single press updates the hero straight away, together with
 +                            // the card animation (like official NuvioTV). Only a held D-pad waits, so
 +                            // titles skipped past are not loaded one by one.
 +                            val dpadHeld = now - lastHeroNavigationAtMs.value in 0..MOD_HELD_DPAD_WINDOW_MS
 +                            onHeroFocusSettleDelayChange(if (dpadHeld) MOD_HELD_DPAD_SETTLE_MS else 0L)
+                             imageViewport.lastFocusMoveAtMs = android.os.SystemClock.uptimeMillis()
                              onLastHeroNavigationAtMsChange(now)
                              onActiveRowKeyChange(rowKey)
-                             onActiveItemIndexChange(index)
-@@ -638,6 +651,12 @@ internal fun ModernHomeRowsList(
+@@ -686,6 +699,12 @@ internal fun ModernHomeRowsList(
                          }
                      }
                  }
@@ -684,7 +686,7 @@ index 1d0abdc..edbf08e 100644
                  androidx.compose.runtime.CompositionLocalProvider(
                      com.nuvio.tv.core.image.LocalHomePosterPriority provides
                          com.nuvio.tv.core.image.HomePosterPriority(imageViewport, rowIndex)
-@@ -646,7 +665,7 @@ internal fun ModernHomeRowsList(
+@@ -694,7 +713,7 @@ internal fun ModernHomeRowsList(
                      row = row,
                      isActiveRow = isActiveRowLambda,
                      rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
@@ -693,7 +695,7 @@ index 1d0abdc..edbf08e 100644
                      defaultBringIntoViewSpec = defaultBringIntoViewSpec,
                      focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
                      focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
-@@ -701,6 +720,7 @@ internal fun ModernHomeRowsList(
+@@ -749,6 +768,7 @@ internal fun ModernHomeRowsList(
                      }
                  )
                  }
@@ -702,7 +704,7 @@ index 1d0abdc..edbf08e 100644
          }
      }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
-index c8fb715..a67a95f 100644
+index cc5c445..99734f3 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
 @@ -47,11 +47,9 @@ internal fun rememberPreparedHeroScene(

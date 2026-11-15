@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index c97c2b1..045c188 100644
+index 1f76052..2e4dc18 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 @@ -57,6 +57,7 @@ import com.nuvio.tv.ui.screens.party.PartyScreen
@@ -124,7 +124,7 @@ index c97c2b1..045c188 100644
                      navController.navigate(
                          createContinueWatchingRoute(item, manualSelection = true)
                      )
-@@ -378,8 +433,15 @@ private fun PlaybackNavHost(
+@@ -381,8 +436,15 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
@@ -140,7 +140,7 @@ index c97c2b1..045c188 100644
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -601,7 +663,12 @@ private fun PlaybackNavHost(
+@@ -609,7 +671,12 @@ private fun PlaybackNavHost(
              val startFromBeginning = streamArgs
                  ?.getString("startFromBeginning")
                  ?.toBooleanStrictOrNull() == true
@@ -153,7 +153,7 @@ index c97c2b1..045c188 100644
                  startFromBeginning = startFromBeginning,
                  restoreSourceSelection = restoreSourceSelection,
                  onSourceSelectionRestoreHandled = {
-@@ -1310,7 +1377,11 @@ private fun PlaybackNavHost(
+@@ -1333,7 +1400,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },
@@ -167,10 +167,10 @@ index c97c2b1..045c188 100644
          }
  
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
-index a5e46cc..f9d2478 100644
+index 50dbcd8..9643b7e 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomePresentation.kt
-@@ -382,7 +382,8 @@ private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<Hom
+@@ -398,7 +398,8 @@ private fun resolveVisibleHomeRows(input: ModernHomePresentationInput): List<Hom
                      latest.takeIf { it.items.isNotEmpty() }?.let(HomeRow::Catalog)
                  }
                  is HomeRow.CollectionRow -> {
@@ -498,7 +498,7 @@ index b80f048..f07f580 100644
      val discoverLoading: Boolean = false,
      val discoverLoadingMore: Boolean = false,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
-index ba7dc2a..ed3a345 100644
+index eed1778..16bf734 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/search/SearchViewModel.kt
 @@ -44,6 +44,9 @@ import kotlinx.coroutines.flow.combine

@@ -20,10 +20,10 @@ index c941772..ed666fd 100644
              Box(
                  modifier = Modifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt b/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
-index 3130e61..41f3e58 100644
+index 5564259..72b00e5 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/components/ContinueWatchingSection.kt
-@@ -766,7 +766,7 @@ fun ContinueWatchingCard(
+@@ -763,7 +763,7 @@ fun ContinueWatchingCard(
                      )
                      .clip(cwClipShape)
                      .then(
@@ -122,10 +122,10 @@ index 6a9f831..32922b2 100644
  private class SelectKeyPress {
      var keyCode: Int? = null
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
-index 015dba5..01b66c3 100644
+index 9c7fbb7..732920d 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRows.kt
-@@ -424,6 +424,8 @@ internal val LocalRowFocusGlide = staticCompositionLocalOf<RowFocusGlide?> { nul
+@@ -445,6 +445,8 @@ internal val LocalRowFocusGlide = staticCompositionLocalOf<RowFocusGlide?> { nul
  /** A card's V2 focus ring: drawn by its row when it sits in one, otherwise by the card itself. */
  @Composable
  internal fun Modifier.rowFocusRing(focused: Boolean, shape: Shape): Modifier {
@@ -134,7 +134,7 @@ index 015dba5..01b66c3 100644
      val glide = LocalRowFocusGlide.current
      if (glide == null || v2FocusDrawsOwnEdge()) return nuvioV2Focus(focused, shape, stationary = true)
      if (!focused) return this
-@@ -435,6 +437,7 @@ internal fun Modifier.rowFocusRing(focused: Boolean, shape: Shape): Modifier {
+@@ -456,6 +458,7 @@ internal fun Modifier.rowFocusRing(focused: Boolean, shape: Shape): Modifier {
  /** The row's focus ring, over all of its cards. */
  @Composable
  private fun RowFocusRing(glide: RowFocusGlide, startPaddingPx: Int) {
@@ -142,7 +142,7 @@ index 015dba5..01b66c3 100644
      if (!glide.showing || v2FocusDrawsOwnEdge()) return
      Box(
          Modifier
-@@ -703,6 +706,7 @@ private fun ModernCatalogRowItem(
+@@ -724,6 +727,7 @@ private fun ModernCatalogRowItem(
                              enrichedBackdropUrl ?: item.metaPreview?.backdropUrl,
                              enrichedLogoUrl ?: item.metaPreview?.logo
                          )
@@ -150,7 +150,7 @@ index 015dba5..01b66c3 100644
                          onNavigateToDetail(
                              payload.itemId,
                              payload.itemType,
-@@ -1249,7 +1253,8 @@ internal fun ModernRowSection(
+@@ -1295,7 +1299,8 @@ internal fun ModernRowSection(
                      }
                      .focusGroup(),
                  contentPadding = PaddingValues(start = rowStartPadding, end = ROW_END_PADDING),
@@ -160,7 +160,7 @@ index 015dba5..01b66c3 100644
              ) {
                  itemsIndexed(
                      items = row.items.list,
-@@ -1316,9 +1321,12 @@ internal fun ModernRowSection(
+@@ -1362,9 +1367,12 @@ internal fun ModernRowSection(
                      when (val payload = item.payload) {
                          is ModernPayload.ContinueWatching -> {
                              val comingUp = row.key == MODERN_COMING_UP_ROW_KEY

@@ -461,7 +461,7 @@ index 7de7ddb..d34128b 100644
          Text(
              text = stringResource(R.string.layout_reset_default),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LicensesAttributionsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LicensesAttributionsScreen.kt
-index f3ad653..37319b7 100644
+index 44e82f1..be0d8f3 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LicensesAttributionsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LicensesAttributionsScreen.kt
 @@ -2,6 +2,7 @@
@@ -472,7 +472,7 @@ index f3ad653..37319b7 100644
  import com.nuvio.tv.ui.theme.NuvioTheme
  
  import android.content.Intent
-@@ -269,16 +270,16 @@ private fun AttributionDetailRow(
+@@ -270,16 +271,16 @@ private fun AttributionDetailRow(
          onClick = {
              context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(item.url)))
          },
@@ -954,18 +954,18 @@ index c93bf6e..1fe2417 100644
  /** Standalone settings cards need their own material, unlike rows nested in a group panel. */
  @Composable
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt
-index 93354d2..1cb9146 100644
+index 12425df..f858e33 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsValueRows.kt
-@@ -168,6 +168,7 @@ private fun SliderSettingsItemLayout(
-         onClick = { },
+@@ -169,6 +169,7 @@ private fun SliderSettingsItemLayout(
          modifier = modifier
              .fillMaxWidth()
+             .settingsJumpAnchor(title, shape)
 +            .settingsItemFocus(isFocused, shape) // Nuvio Mod
              .onFocusChanged { state ->
                  val nowFocused = state.isFocused
                  if (isFocused != nowFocused) {
-@@ -297,7 +298,7 @@ private fun SliderStepButton(
+@@ -298,7 +299,7 @@ private fun SliderStepButton(
  
      Card(
          onClick = { if (enabled) onClick() },
@@ -974,7 +974,7 @@ index 93354d2..1cb9146 100644
              val nowFocused = state.isFocused
              if (isFocused != nowFocused) {
                  isFocused = nowFocused
-@@ -352,6 +353,7 @@ internal fun ColorSettingsItem(
+@@ -353,6 +354,7 @@ internal fun ColorSettingsItem(
          onClick = { if (enabled) onClick() },
          modifier = Modifier
              .fillMaxWidth()
@@ -983,7 +983,7 @@ index 93354d2..1cb9146 100644
                  val nowFocused = state.isFocused
                  if (isFocused != nowFocused) {
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsScreen.kt
-index e35277f..493b206 100644
+index 1f76978..eb7621a 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/ThemeSettingsScreen.kt
 @@ -2,6 +2,7 @@
@@ -994,7 +994,7 @@ index e35277f..493b206 100644
  import com.nuvio.tv.ui.v2.appearance.LocalV2Appearance
  import com.nuvio.tv.ui.screens.ambient.AMBIENT_BEFORE_OLED_DIM
  import com.nuvio.tv.ui.theme.NuvioTheme
-@@ -683,7 +684,7 @@ private fun SettingsStyleOptionCard(
+@@ -692,7 +693,7 @@ private fun SettingsStyleOptionCard(
  
      Card(
          onClick = onClick,
@@ -1003,7 +1003,7 @@ index e35277f..493b206 100644
              .onFocusChanged { state ->
                  val nowFocused = state.isFocused
                  if (isFocused != nowFocused) {
-@@ -693,7 +694,7 @@ private fun SettingsStyleOptionCard(
+@@ -702,7 +703,7 @@ private fun SettingsStyleOptionCard(
              .semantics {
                  role = Role.RadioButton
                  this.selected = isSelected
@@ -1012,7 +1012,7 @@ index e35277f..493b206 100644
          colors = CardDefaults.colors(
              containerColor = NuvioTheme.colors.Background,
              focusedContainerColor = NuvioTheme.colors.Background
-@@ -704,7 +705,7 @@ private fun SettingsStyleOptionCard(
+@@ -713,7 +714,7 @@ private fun SettingsStyleOptionCard(
                  shape = cardShape
              ) else Border.None,
              focusedBorder = Border(
