@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt b/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
-index f805e92..40b4ed3 100644
+index 0819857..673bf38 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/components/TrailerPlayer.kt
 @@ -74,6 +74,9 @@ fun TrailerPlayer(
@@ -21,7 +21,7 @@ index f805e92..40b4ed3 100644
          animationSpec = tween(durationMillis = 400),
          label = "trailerLetterboxZoom"
      )
-@@ -182,9 +185,9 @@ fun TrailerPlayer(
+@@ -183,9 +186,9 @@ fun TrailerPlayer(
          player.playWhenReady = !isPaused
      }
  
@@ -33,7 +33,7 @@ index f805e92..40b4ed3 100644
          val player = trailerPlayer ?: return@LaunchedEffect
          val tracker = LetterboxTracker()
          val sampler = LetterboxSampler()
-@@ -324,8 +327,16 @@ fun TrailerPlayer(
+@@ -325,8 +328,16 @@ fun TrailerPlayer(
                      .clipToBounds()
                      .graphicsLayer {
                          alpha = playerAlphaState.value
@@ -272,7 +272,7 @@ index b2e0ab5..0fe86c8 100644
  private const val WATCH_PROGRESS_SETTLE_MS = 2_000L
  private const val COMING_UP_START_DELAY_MS = 1_500L
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
-index 5f6e30a..896a0e4 100644
+index 5c6d8ac..c78c6ed 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
 @@ -79,6 +79,7 @@ class HomeViewModel @Inject constructor(
@@ -308,10 +308,10 @@ index 593d008..82f8ba1 100644
              .debounce(300)
              .collectLatest { collections ->
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index 6d9e68a..7d553f9 100644
+index c353a5a..26352d1 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-@@ -1042,15 +1042,20 @@ fun ModernHomeContent(
+@@ -1043,13 +1043,23 @@ fun ModernHomeContent(
                  (normalHeight * if (trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW) 1.12f else 1f)
                      .coerceAtMost(screenHeight)
              }
@@ -324,19 +324,21 @@ index 6d9e68a..7d553f9 100644
                  @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
                  object : BringIntoViewSpec {
                      override val scrollAnimationSpec: AnimationSpec<Float> = defaultBringIntoViewSpec.scrollAnimationSpec
-                     override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
--                        val currentLeadingEdge = offset
--                        if (abs(currentLeadingEdge - topInsetPx) < 1f) return 0f
--                        val distance = currentLeadingEdge - topInsetPx
-+                        if (size > 0f && abs(heroFocusedCardHeightPx.floatValue - size) > 1f) {
+-                    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
+-                        verticalRowScrollDistance(offset, topInsetPx, verticalRowListState.canScrollBackward)
++                    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
++                        if (size > 0f && kotlin.math.abs(heroFocusedCardHeightPx.floatValue - size) > 1f) {
 +                            heroFocusedCardHeightPx.floatValue = size
 +                        }
 +                        val distance = (offset + size) - (containerSize - bottomRoomPx)
-+                        if (abs(distance) < 1f) return 0f
-                         if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
-                         return distance
-                     }
-@@ -1069,6 +1074,11 @@ fun ModernHomeContent(
++                        if (kotlin.math.abs(distance) < 1f) return 0f
++                        if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
++                        return distance
++                    }
+                 }
+             }
+             val contentFocusRequester = LocalContentFocusRequester.current
+@@ -1065,6 +1075,11 @@ fun ModernHomeContent(
                  }.coerceAtLeast(1)
              }
  
@@ -348,7 +350,7 @@ index 6d9e68a..7d553f9 100644
              val isFullScreenState = remember(liveHeroSceneState) {
                  derivedStateOf { liveHeroSceneState.value.fullScreenBackdrop }
              }
-@@ -1104,7 +1114,8 @@ fun ModernHomeContent(
+@@ -1100,7 +1115,8 @@ fun ModernHomeContent(
              // Fade content rows when ANY hero media (catalog trailer or collection
              // hero video) is playing in fullscreen — not just catalog trailers.
              val trailerContentAlphaState = animateFloatAsState(
@@ -358,10 +360,10 @@ index 6d9e68a..7d553f9 100644
                  animationSpec = tween(durationMillis = 480),
                  label = "trailerContentFade"
              )
-@@ -1113,9 +1124,26 @@ fun ModernHomeContent(
-             val heroTrailerRenderedLambda = remember { { heroTrailerFirstFrameRenderedUpdated } }
- 
-             val foregroundModifier = Modifier.sidebarPageContent()
+@@ -1113,9 +1129,26 @@ fun ModernHomeContent(
+             val foregroundModifier = remember(sidebarPageLayout, heroLayoutDirection) {
+                 Modifier.sidebarPageContent(sidebarPageLayout, heroLayoutDirection)
+             }
 -            val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight, screenHeight, foregroundModifier) {
 +            // Nuvio Mod: the title/description block sits just above the current row. Rows with
 +            // shorter cards (continue watching, landscape) leave room, so the block slides down.
@@ -386,7 +388,7 @@ index 6d9e68a..7d553f9 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1129,9 +1157,10 @@ fun ModernHomeContent(
+@@ -1129,9 +1162,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -400,7 +402,7 @@ index 6d9e68a..7d553f9 100644
              }
              val heroTrailerShowing = remember {
                  { !isRapidHorizontalNav.value && shouldPlayTrailerLambda() && heroTrailerRenderedLambda() }
-@@ -1150,7 +1179,8 @@ fun ModernHomeContent(
+@@ -1150,7 +1184,8 @@ fun ModernHomeContent(
                  showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                  mdbListShowOnHero = uiState.mdbListShowOnHero,
                  mdbListRatingOrder = uiState.mdbListRatingOrder,
@@ -411,10 +413,10 @@ index 6d9e68a..7d553f9 100644
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                  titleModifier = heroMetadataModifier
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index a8e319b..56e4f36 100644
+index ef918a3..3f5e705 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-@@ -181,6 +181,7 @@ internal fun ModernHeroMediaLayer(
+@@ -182,6 +182,7 @@ internal fun ModernHeroMediaLayer(
          val page = HeroBackdropState.selectPageArtwork(artwork.ownerKey, displayedUrl)
          if (preparedImage != null && displayedUrl != null) {
              shownHeroImage.keep(displayedUrl, requestWidthPx, requestHeightPx, preparedImage)
@@ -422,7 +424,7 @@ index a8e319b..56e4f36 100644
              HeroBackdropState.recordDisplayedArtwork(page, displayedUrl)
              artworkAccent?.imageLoaded(displayedUrl)
          }
-@@ -188,6 +189,16 @@ internal fun ModernHeroMediaLayer(
+@@ -189,6 +190,16 @@ internal fun ModernHeroMediaLayer(
          else if (menuBackdrop?.artworkUrl == publishedMenuUrl[0]) menuBackdrop?.artworkUrl = null
          publishedMenuUrl[0] = if (fullScreenBackdrop) displayedUrl else null
      }
@@ -439,7 +441,7 @@ index a8e319b..56e4f36 100644
      val cinematic = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current?.visualStyle ==
          com.nuvio.tv.domain.model.VisualStyle.CINEMATIC_GLASS
      val liveTrailerGlass = cinematic && com.nuvio.tv.ui.v2.quality.LocalGlassTokens.current.liveBlur &&
-@@ -216,7 +227,7 @@ internal fun ModernHeroMediaLayer(
+@@ -217,7 +228,7 @@ internal fun ModernHeroMediaLayer(
      } else modifier) {
        BoxWithConstraints(Modifier.fillMaxSize()) {
          HeroBackdropImages(
@@ -448,7 +450,7 @@ index a8e319b..56e4f36 100644
              modifier = Modifier.fillMaxSize().graphicsLayer {
                  alpha = if (featheredTrailer) 1f else 1f - transitionProgressState.value
              }.then(if (liveTrailerGlass) Modifier else Modifier.v2GlassSource())
-@@ -276,6 +287,7 @@ internal fun ModernHeroMediaLayer(
+@@ -277,6 +288,7 @@ internal fun ModernHeroMediaLayer(
                      transparentVideoBackground = featheredTrailer,
                      onVideoAspectRatioChanged = { videoAspect = it },
                      overscanZoom = MODERN_TRAILER_OVERSCAN_ZOOM,
@@ -456,7 +458,7 @@ index a8e319b..56e4f36 100644
                      modifier = Modifier.fillMaxSize()
                  )
                }
-@@ -300,11 +312,13 @@ internal fun ModernHeroGradientLayer(
+@@ -301,11 +313,13 @@ internal fun ModernHeroGradientLayer(
      val pureDark = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current?.visualStyle ==
          com.nuvio.tv.domain.model.VisualStyle.PURE_LIQUID_DARK
      val menuLayout = com.nuvio.tv.ui.v2.components.LocalSidebarPageLayout.current.takeIf { !pureDark }
@@ -471,7 +473,7 @@ index a8e319b..56e4f36 100644
              }
              .drawWithCache {
                  val fullScreen = isFullScreen()
-@@ -363,6 +377,8 @@ internal fun ModernHeroGradientLayer(
+@@ -364,6 +378,8 @@ internal fun ModernHeroGradientLayer(
                  )
  
                  onDrawBehind {
@@ -480,7 +482,7 @@ index a8e319b..56e4f36 100644
                      if (pureDark) drawRect(Color(0xFF03080D).copy(alpha = 0.12f))
                      // 1. Horizontal fade (reversed in RTL)
                      val rectLeft = if (isRtl) size.width - horizontalFadeEndX else 0f
-@@ -372,8 +388,8 @@ internal fun ModernHeroGradientLayer(
+@@ -373,8 +389,8 @@ internal fun ModernHeroGradientLayer(
                          size = Size(horizontalFadeEndX, size.height)
                      )
                      
@@ -491,7 +493,7 @@ index a8e319b..56e4f36 100644
                          brush = verticalGradient,
                          topLeft = Offset(0f, bottomStripStartY),
                          size = Size(size.width, size.height - bottomStripStartY)
-@@ -923,7 +939,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+@@ -931,7 +947,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
              outgoing = current
              current = image
              alpha.snapTo(0f)
@@ -501,7 +503,7 @@ index a8e319b..56e4f36 100644
          }
      }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-index 3679321..1a59446 100644
+index 6d3f3c2..0aca446 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
 @@ -34,7 +34,7 @@ internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
@@ -535,7 +537,7 @@ index 3679321..1a59446 100644
  /** Height the hero text block may take: the space above the rows, less a thin margin at the screen edge. */
  internal fun modernHeroTextMaxHeight(screenHeight: Dp, rowsViewportHeight: Dp): Dp =
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
-index 906949c..5b969be 100644
+index 67c06a3..b4d1a90 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 @@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -567,7 +569,7 @@ index 906949c..5b969be 100644
  @Composable
  internal fun ModernHomeRowsList(
      isVerticalRowsScrollingState: State<Boolean>,
-@@ -635,7 +642,9 @@ internal fun ModernHomeRowsList(
+@@ -647,7 +654,9 @@ internal fun ModernHomeRowsList(
                      },
                  ),
              contentPadding = PaddingValues(bottom = rowsViewportHeight),
@@ -578,7 +580,7 @@ index 906949c..5b969be 100644
          ) {
              itemsIndexed(
                  items = carouselRows.list,
-@@ -652,7 +661,11 @@ internal fun ModernHomeRowsList(
+@@ -664,7 +673,11 @@ internal fun ModernHomeRowsList(
                          
                          if (rowBecameActive || itemChanged) {
                              val now = System.currentTimeMillis()
@@ -591,7 +593,7 @@ index 906949c..5b969be 100644
                              imageViewport.lastFocusMoveAtMs = android.os.SystemClock.uptimeMillis()
                              onLastHeroNavigationAtMsChange(now)
                              onActiveRowKeyChange(rowKey)
-@@ -692,6 +705,12 @@ internal fun ModernHomeRowsList(
+@@ -704,6 +717,12 @@ internal fun ModernHomeRowsList(
                          }
                      }
                  }
@@ -604,7 +606,7 @@ index 906949c..5b969be 100644
                  androidx.compose.runtime.CompositionLocalProvider(
                      com.nuvio.tv.core.image.LocalHomePosterPriority provides
                          com.nuvio.tv.core.image.HomePosterPriority(imageViewport, rowIndex)
-@@ -700,7 +719,7 @@ internal fun ModernHomeRowsList(
+@@ -712,7 +731,7 @@ internal fun ModernHomeRowsList(
                      row = row,
                      isActiveRow = isActiveRowLambda,
                      rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
@@ -613,7 +615,7 @@ index 906949c..5b969be 100644
                      defaultBringIntoViewSpec = defaultBringIntoViewSpec,
                      focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
                      focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
-@@ -757,6 +776,7 @@ internal fun ModernHomeRowsList(
+@@ -769,6 +788,7 @@ internal fun ModernHomeRowsList(
                      }
                  )
                  }
@@ -622,10 +624,10 @@ index 906949c..5b969be 100644
          }
      }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
-index 84cf6f1..d41a611 100644
+index dbfef17..d458461 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/PreparedHeroScene.kt
-@@ -47,11 +47,9 @@ internal fun rememberPreparedHeroScene(
+@@ -65,11 +65,9 @@ private fun PreparedHeroSceneJobs(
                  // Fetch immediately after focus settles, overlapping core metadata resolution.
                  val initialBackdrop = async { decodeHeroBackdrop(context, initial, width, height) }
                  // Allow core metadata to settle, but an unavailable provider cannot block the UI.
@@ -640,7 +642,7 @@ index 84cf6f1..d41a611 100644
                      HeroSceneTrace.event("core-selected", owner, "enriching=${target.enrichmentActive}")
                      val logo = async {
                          target.preview?.logo?.takeIf(String::isNotBlank)?.let { url ->
-@@ -67,7 +65,7 @@ internal fun rememberPreparedHeroScene(
+@@ -85,7 +83,7 @@ private fun PreparedHeroSceneJobs(
                          }
                      val decoded = first.image
                      val displayedUrl = first.url

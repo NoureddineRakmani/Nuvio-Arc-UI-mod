@@ -370,7 +370,7 @@ index c8ca94f..0696940 100644
                  enabled = !isSwitching,
                  modifier = Modifier.weight(1f),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/addon/AddonManagerScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/addon/AddonManagerScreen.kt
-index 54275bd..288d4a3 100644
+index b06e0ac..404f966 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/addon/AddonManagerScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/addon/AddonManagerScreen.kt
 @@ -1,5 +1,6 @@
@@ -380,7 +380,7 @@ index 54275bd..288d4a3 100644
  import com.nuvio.tv.ui.screens.detail.requestFocusAfterFrames
  import com.nuvio.tv.ui.screens.settings.SettingsDialogActionButton
  import com.nuvio.tv.ui.screens.settings.SettingsDialogActionRow
-@@ -395,9 +396,9 @@ fun AddonManagerScreen(
+@@ -433,9 +434,9 @@ fun AddonManagerScreen(
                                  // Surface always stays in the tree for stable D-pad focus
                                  Surface(
                                      onClick = { isEditing = true },
@@ -392,7 +392,7 @@ index 54275bd..288d4a3 100644
                                      colors = ClickableSurfaceDefaults.colors(
                                          containerColor = settingsItemColor(NuvioTheme.colors.BackgroundElevated),
                                          focusedContainerColor = NuvioTheme.colors.BackgroundElevated
-@@ -408,7 +409,7 @@ fun AddonManagerScreen(
+@@ -446,7 +447,7 @@ fun AddonManagerScreen(
                                              shape = settingsItemShape(NuvioTheme.radii.md)
                                          ),
                                          focusedBorder = Border(
@@ -401,7 +401,7 @@ index 54275bd..288d4a3 100644
                                              shape = settingsItemShape(NuvioTheme.radii.md)
                                          )
                                      ),
-@@ -720,7 +721,7 @@ fun AddonManagerScreen(
+@@ -767,7 +768,7 @@ fun AddonManagerScreen(
                      modifier = Modifier.fillMaxWidth(),
                      horizontalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.md, Alignment.End)
                  ) {
@@ -410,7 +410,7 @@ index 54275bd..288d4a3 100644
                          onClick = { addonUrlPendingDeletion = null },
                          modifier = Modifier
                              .focusRequester(deleteDialogFocusRequester)
-@@ -728,7 +729,7 @@ fun AddonManagerScreen(
+@@ -775,7 +776,7 @@ fun AddonManagerScreen(
                      ) {
                          Text(stringResource(R.string.addon_delete_no))
                      }
@@ -419,7 +419,7 @@ index 54275bd..288d4a3 100644
                          onClick = {
                              viewModel.removeAddon(addonUrl)
                              addonUrlPendingDeletion = null
-@@ -810,21 +811,21 @@ private fun ManageFromPhoneCard(
+@@ -857,21 +858,21 @@ private fun ManageFromPhoneCard(
  
      Surface(
          onClick = onClick,
@@ -444,7 +444,7 @@ index 54275bd..288d4a3 100644
                  shape = settingsItemShape(18.dp)
              )
          ),
-@@ -879,18 +880,18 @@ private fun CatalogOrderEntryCard(
+@@ -926,18 +927,18 @@ private fun CatalogOrderEntryCard(
  
      Surface(
          onClick = onClick,
@@ -466,7 +466,7 @@ index 54275bd..288d4a3 100644
                  shape = settingsItemShape(18.dp)
              )
          ),
-@@ -945,18 +946,18 @@ private fun CollectionsEntryCard(
+@@ -992,18 +993,18 @@ private fun CollectionsEntryCard(
  
      Surface(
          onClick = onClick,
@@ -488,7 +488,7 @@ index 54275bd..288d4a3 100644
                  shape = settingsItemShape(18.dp)
              )
          ),
-@@ -1012,17 +1013,17 @@ private fun RefreshAddonsEntryCard(
+@@ -1059,17 +1060,17 @@ private fun RefreshAddonsEntryCard(
  
      Surface(
          onClick = onClick,
@@ -509,7 +509,7 @@ index 54275bd..288d4a3 100644
                  shape = settingsItemShape(18.dp)
              )
          ),
-@@ -1130,16 +1131,16 @@ internal fun QrCodeOverlay(
+@@ -1177,16 +1178,16 @@ internal fun QrCodeOverlay(
  
              Surface(
                  onClick = onClose,
@@ -529,7 +529,7 @@ index 54275bd..288d4a3 100644
                          shape = RoundedCornerShape(50)
                      )
                  ),
-@@ -1388,16 +1389,16 @@ private fun AddonCard(
+@@ -1437,16 +1438,16 @@ private fun AddonCard(
      if (isReadOnly) {
          Surface(
              onClick = { },
@@ -549,7 +549,7 @@ index 54275bd..288d4a3 100644
                      shape = settingsItemShape(NuvioTheme.radii.md)
                  )
              ),
-@@ -1511,20 +1512,20 @@ private fun AddonCardContent(
+@@ -1560,20 +1561,20 @@ private fun AddonCardContent(
                  ) {
                      Surface(
                          onClick = { onEnabledChange(!addon.enabled) },
@@ -574,7 +574,7 @@ index 54275bd..288d4a3 100644
                              )
                          ),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt
-index 951f87a..b472037 100644
+index 9c311f3..fb729bf 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarMonthView.kt
 @@ -238,7 +238,7 @@ private fun CalendarMonthCell(
@@ -609,10 +609,10 @@ index 4445834..fdda6e2 100644
              colors = CardDefaults.colors(
                  containerColor = Color.Transparent,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
-index 28476ca..25f1d10 100644
+index 956b3fe..5b8b9f9 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/calendar/CalendarScreen.kt
-@@ -645,7 +645,7 @@ internal fun CalendarRowItem(
+@@ -647,7 +647,7 @@ internal fun CalendarRowItem(
                  }
                  .calendarOptionsKeys(press) { onOptions(row) }
                  .nuvioV2Focus(focused, shape, stationary = true)
@@ -621,7 +621,7 @@ index 28476ca..25f1d10 100644
              shape = CardDefaults.shape(shape),
              colors = CardDefaults.colors(
                  containerColor = Color.Transparent,
-@@ -797,7 +797,7 @@ private fun CalendarStatus(row: CalendarRow, size: Dp, showBellOff: Boolean, onB
+@@ -803,7 +803,7 @@ private fun CalendarStatus(row: CalendarRow, size: Dp, showBellOff: Boolean, onB
                      .size(size)
                      .onFocusChanged { focused = it.isFocused }
                      .nuvioV2Focus(focused, CircleShape, stationary = true)
@@ -743,7 +743,7 @@ index 3bfac44..2472d37 100644
  }
  
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionEditorFolderContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionEditorFolderContent.kt
-index d4fd5a6..cd21098 100644
+index 5d07733..e75cc31 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionEditorFolderContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionEditorFolderContent.kt
 @@ -1,5 +1,6 @@
@@ -854,7 +854,7 @@ index d4fd5a6..cd21098 100644
                              shape = RoundedCornerShape(NuvioTheme.radii.md)
                          )
                      ),
-@@ -544,12 +545,12 @@ fun FolderEditorContent(
+@@ -550,12 +551,12 @@ fun FolderEditorContent(
                          val isSelected = folder.tileShape == shape
                          Button(
                              onClick = { viewModel.updateFolderTileShape(shape) },
@@ -869,7 +869,7 @@ index d4fd5a6..cd21098 100644
                              colors = ButtonDefaults.colors(
                                  containerColor = if (isSelected) NuvioTheme.colors.Secondary.copy(alpha = 0.3f) else NuvioTheme.colors.BackgroundCard,
                                  contentColor = if (isSelected) NuvioTheme.colors.Secondary else NuvioTheme.colors.TextSecondary,
-@@ -562,11 +563,11 @@ fun FolderEditorContent(
+@@ -568,11 +569,11 @@ fun FolderEditorContent(
                                      shape = RoundedCornerShape(NuvioTheme.radii.md)
                                  ) else Border.None,
                                  focusedBorder = Border(
@@ -883,7 +883,7 @@ index d4fd5a6..cd21098 100644
                          ) {
                              Text(label)
                          }
-@@ -577,24 +578,24 @@ fun FolderEditorContent(
+@@ -583,24 +584,24 @@ fun FolderEditorContent(
              item {
                  Card(
                      onClick = { viewModel.updateFolderHideTitle(!folder.hideTitle) },
@@ -912,7 +912,7 @@ index d4fd5a6..cd21098 100644
                  ) {
                      Row(
                          modifier = Modifier
-@@ -752,11 +753,11 @@ fun FolderEditorContent(
+@@ -758,11 +759,11 @@ fun FolderEditorContent(
                                          ),
                                          border = ButtonDefaults.border(
                                              focusedBorder = Border(
@@ -926,7 +926,7 @@ index d4fd5a6..cd21098 100644
                                      ) {
                                          Text(stringResource(R.string.collections_editor_choose_genre))
                                      }
-@@ -775,11 +776,11 @@ fun FolderEditorContent(
+@@ -781,11 +782,11 @@ fun FolderEditorContent(
                                      ),
                                      border = ButtonDefaults.border(
                                          focusedBorder = Border(
@@ -940,7 +940,7 @@ index d4fd5a6..cd21098 100644
                                  ) {
                                      Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                                  }
-@@ -795,11 +796,11 @@ fun FolderEditorContent(
+@@ -801,11 +802,11 @@ fun FolderEditorContent(
                                      ),
                                      border = ButtonDefaults.border(
                                          focusedBorder = Border(
@@ -954,7 +954,7 @@ index d4fd5a6..cd21098 100644
                                  ) {
                                      Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                                  }
-@@ -814,11 +815,11 @@ fun FolderEditorContent(
+@@ -820,11 +821,11 @@ fun FolderEditorContent(
                                  ),
                                  border = ButtonDefaults.border(
                                      focusedBorder = Border(
@@ -968,7 +968,7 @@ index d4fd5a6..cd21098 100644
                              ) {
                                  Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up), tint = if (index > 0) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary)
                              }
-@@ -832,11 +833,11 @@ fun FolderEditorContent(
+@@ -838,11 +839,11 @@ fun FolderEditorContent(
                                  ),
                                  border = ButtonDefaults.border(
                                      focusedBorder = Border(
@@ -982,7 +982,7 @@ index d4fd5a6..cd21098 100644
                              ) {
                                  Icon(Icons.Default.KeyboardArrowDown, stringResource(R.string.cd_move_down), tint = if (index < folder.sources.size - 1) NuvioTheme.colors.TextSecondary else NuvioTheme.colors.TextTertiary)
                              }
-@@ -845,7 +846,7 @@ fun FolderEditorContent(
+@@ -851,7 +852,7 @@ fun FolderEditorContent(
                                      pendingFocusIndex = index
                                      viewModel.removeCatalogSource(index)
                                  },
@@ -991,7 +991,7 @@ index d4fd5a6..cd21098 100644
                                  colors = ButtonDefaults.colors(
                                      containerColor = NuvioTheme.colors.BackgroundCard,
                                      contentColor = NuvioTheme.colors.TextSecondary,
-@@ -854,11 +855,11 @@ fun FolderEditorContent(
+@@ -860,11 +861,11 @@ fun FolderEditorContent(
                                  ),
                                  border = ButtonDefaults.border(
                                      focusedBorder = Border(
@@ -1233,7 +1233,7 @@ index 0d0cbd6..3b3015b 100644
              )
          ),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionManagementScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionManagementScreen.kt
-index 3cd5a0a..20c456c 100644
+index 4e2f699..c20736a 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionManagementScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/collection/CollectionManagementScreen.kt
 @@ -1,5 +1,6 @@
@@ -1267,7 +1267,7 @@ index 3cd5a0a..20c456c 100644
      )
  }
  
-@@ -647,11 +648,11 @@ private fun CollectionListItem(
+@@ -658,11 +659,11 @@ private fun CollectionListItem(
                      ),
                      border = ButtonDefaults.border(
                          focusedBorder = Border(
@@ -1281,7 +1281,7 @@ index 3cd5a0a..20c456c 100644
                  ) {
                      Icon(Icons.Default.KeyboardArrowUp, stringResource(R.string.cd_move_up))
                  }
-@@ -667,18 +668,18 @@ private fun CollectionListItem(
+@@ -678,18 +679,18 @@ private fun CollectionListItem(
                      ),
                      border = ButtonDefaults.border(
                          focusedBorder = Border(
@@ -1303,7 +1303,7 @@ index 3cd5a0a..20c456c 100644
                      colors = ButtonDefaults.colors(
                          containerColor = NuvioTheme.colors.BackgroundCard,
                          contentColor = NuvioTheme.colors.TextSecondary,
-@@ -687,11 +688,11 @@ private fun CollectionListItem(
+@@ -698,11 +699,11 @@ private fun CollectionListItem(
                      ),
                      border = ButtonDefaults.border(
                          focusedBorder = Border(
@@ -1317,7 +1317,7 @@ index 3cd5a0a..20c456c 100644
                  ) {
                      Icon(Icons.Default.Edit, stringResource(R.string.cd_edit))
                  }
-@@ -706,11 +707,11 @@ private fun CollectionListItem(
+@@ -717,11 +718,11 @@ private fun CollectionListItem(
                      ),
                      border = ButtonDefaults.border(
                          focusedBorder = Border(
@@ -1440,10 +1440,10 @@ index f1b8161..acfb777 100644
                      model = backdropRequest,
                      contentDescription = stringResource(R.string.cd_loading_backdrop),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
-index 8df5639..982aec2 100644
+index a21d65d..9bb9351 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
-@@ -2707,7 +2707,7 @@ private fun ProfileNameField(
+@@ -2784,7 +2784,7 @@ private fun ProfileNameField(
                      focusManager.moveFocus(FocusDirection.Down)
                  }
              ),
@@ -1453,10 +1453,10 @@ index 8df5639..982aec2 100644
      }
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
-index 0e7d256..a7af2fe 100644
+index 59753ef..256c1f5 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/scout/ScoutPageParts.kt
-@@ -238,7 +238,7 @@ private fun ScoutTab(item: ScoutTabItem, modifier: Modifier, onFocused: () -> Un
+@@ -242,7 +242,7 @@ private fun ScoutTab(item: ScoutTabItem, modifier: Modifier, onFocused: () -> Un
                  if (it.isFocused) onFocused()
              }
              .nuvioV2Focus(focused, shape, stationary = true)
@@ -1465,7 +1465,7 @@ index 0e7d256..a7af2fe 100644
              .then(
                  if (v2 && item.selected && !focused) {
                      Modifier.drawWithContent {
-@@ -380,7 +380,7 @@ internal fun ScoutOptionRow(
+@@ -384,7 +384,7 @@ internal fun ScoutOptionRow(
          modifier = modifier
              .fillMaxWidth()
              .onFocusChanged { focused = it.isFocused }

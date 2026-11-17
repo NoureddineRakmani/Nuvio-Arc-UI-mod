@@ -1,8 +1,8 @@
 diff --git a/app/src/main/java/com/nuvio/tv/MainActivity.kt b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-index 8c9727b..954be40 100644
+index 29aeec8..5981765 100644
 --- a/app/src/main/java/com/nuvio/tv/MainActivity.kt
 +++ b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-@@ -1404,7 +1404,8 @@ open class MainActivity : ComponentActivity() {
+@@ -1437,7 +1437,8 @@ open class MainActivity : ComponentActivity() {
                              Box(Modifier.fillMaxSize().graphicsLayer {
                                  alpha = if (profileEntry.pending && !profileEntry.revealing) 0f else 1f
                              }) {
