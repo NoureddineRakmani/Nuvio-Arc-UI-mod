@@ -1,9 +1,9 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt
 new file mode 100644
-index 0000000..4f7d4d6
+index 0000000..4128ee2
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt
-@@ -0,0 +1,76 @@
+@@ -0,0 +1,79 @@
 +package com.nuvio.tv.ui.navigation
 +
 +import androidx.navigation.NavController
@@ -13,6 +13,7 @@ index 0000000..4f7d4d6
 +import com.nuvio.tv.ui.screens.home.HeroBackdropState
 +import com.nuvio.tv.ui.screens.home.HomeViewModel
 +import com.nuvio.tv.ui.screens.home.ModDetailSeed
++import com.nuvio.tv.ui.screens.home.ModHeroFlight
 +import com.nuvio.tv.ui.screens.home.ModStreamSeed
 +import com.nuvio.tv.ui.screens.home.modOpenComingUp
 +import com.nuvio.tv.ui.screens.home.modShownHeroFor
@@ -30,6 +31,8 @@ index 0000000..4f7d4d6
 +internal fun modOfferHeroToDetail(itemId: String, itemType: String): String? {
 +    val hero = modShownHeroFor(itemId)
 +    ModDetailSeed.offer(itemId, itemType, hero?.second)
++    if (hero != null) ModHeroFlight.arm(itemId) // the logo and text block glide to their place on the page
++    else com.nuvio.tv.core.performance.DetailEntryTrace.mark("mod_flight_skip_hero_not_this_title")
 +    return hero?.first
 +}
 +
@@ -81,10 +84,18 @@ index 0000000..4f7d4d6
 +    return true
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index 318cea2..ec07ee3 100644
+index 318cea2..92fcb6d 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-@@ -271,25 +271,31 @@ private fun PlaybackNavHost(
+@@ -152,6 +152,7 @@ private fun PlaybackNavHost(
+             val isAutoPlayNav = targetState.arguments
+                 ?.getString("autoPlayNav")
+                 ?.toBooleanStrictOrNull() == true
++            com.nuvio.tv.ui.screens.home.ModHeroFlight.homeHold(from, to, Screen.Home.route) ?: // Nuvio Mod: Home stays under an opening title page
+             if ((isStreamToPlayer(from, to) && isAutoPlayNav) ||
+                 (v2 && (from.startsWith("detail/") || to.startsWith("detail/")))) {
+                 ExitTransition.None
+@@ -271,25 +272,31 @@ private fun PlaybackNavHost(
                  }
              }
  
@@ -117,7 +128,7 @@ index 318cea2..ec07ee3 100644
                      navController.navigate(createContinueWatchingRoute(item))
                  },
                  onContinueWatchingStartFromBeginning = onContinueWatchingStartFromBeginning@{ item ->
-@@ -297,6 +303,7 @@ private fun PlaybackNavHost(
+@@ -297,6 +304,7 @@ private fun PlaybackNavHost(
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingStartFromBeginning
                      }
@@ -125,7 +136,7 @@ index 318cea2..ec07ee3 100644
                      navController.navigate(
                          createContinueWatchingRoute(item, startFromBeginning = true)
                      )
-@@ -306,6 +313,7 @@ private fun PlaybackNavHost(
+@@ -306,6 +314,7 @@ private fun PlaybackNavHost(
                          Toast.makeText(context, R.string.playback_unavailable_message, Toast.LENGTH_SHORT).show()
                          return@onContinueWatchingPlayManually
                      }
@@ -133,7 +144,7 @@ index 318cea2..ec07ee3 100644
                      navController.navigate(
                          createContinueWatchingRoute(item, manualSelection = true)
                      )
-@@ -403,8 +411,13 @@ private fun PlaybackNavHost(
+@@ -403,8 +412,14 @@ private fun PlaybackNavHost(
              val heroBackdropUrl = detailArgs?.getString("heroBackdropUrl")?.takeIf { it.isNotBlank() }
              val playOnLoad = detailArgs?.getString("playOnLoad")?.toBooleanStrictOrNull() == true
              val manualSelection = detailArgs?.getString("manualSelection")?.toBooleanStrictOrNull() == true
@@ -141,13 +152,14 @@ index 318cea2..ec07ee3 100644
 +            val modSeedImage = androidx.compose.runtime.remember(detailArgs) {
 +                com.nuvio.tv.ui.screens.home.ModDetailSeed.take(detailArgs?.getString("itemId"), detailArgs?.getString("itemType"))
 +            }
++            com.nuvio.tv.ui.screens.home.ModHeroFlight.Host(detailArgs?.getString("itemId")) // Nuvio Mod: logo and text glide in from Home
              DetailChildHost(parentNavController = navController) { childNav ->
              MetaDetailsScreen(
 +                modSeedImage = modSeedImage,
                  returnFocusSeason = returnFocusSeason,
                  returnFocusEpisode = returnFocusEpisode,
                  heroRestoreToken = heroRestoreToken,
-@@ -631,7 +644,12 @@ private fun PlaybackNavHost(
+@@ -631,7 +646,12 @@ private fun PlaybackNavHost(
              val startFromBeginning = streamArgs
                  ?.getString("startFromBeginning")
                  ?.toBooleanStrictOrNull() == true
@@ -160,7 +172,7 @@ index 318cea2..ec07ee3 100644
                  startFromBeginning = startFromBeginning,
                  restoreSourceSelection = restoreSourceSelection,
                  onSourceSelectionRestoreHandled = {
-@@ -1361,7 +1379,11 @@ private fun PlaybackNavHost(
+@@ -1361,7 +1381,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },
