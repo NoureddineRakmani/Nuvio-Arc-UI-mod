@@ -13,6 +13,19 @@ index 7e52405..23600ee 100644
          state.value = SourcePrefetchSignal(key, SourcePrefetchPhase.SEARCHING, null)
          return generation
      }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/brand/ArcBrandArt.kt b/app/src/main/java/com/nuvio/tv/ui/brand/ArcBrandArt.kt
+index 19210b3..bb0ed4e 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/brand/ArcBrandArt.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/brand/ArcBrandArt.kt
+@@ -29,7 +29,7 @@ object ArcBrandArt {
+     const val LockupWidth = 1209
+     const val LockupHeight = 314
+     /** The symbol on its own is the left part of the lockup. */
+-    const val MarkWidth = 318
++    const val MarkWidth = 150 // Nuvio Mod: PG Prime's pigeon is smaller (about 1.15x the text), the text starts at 165
+     const val LockupAspect = LockupWidth.toFloat() / LockupHeight
+     const val MarkAspect = MarkWidth.toFloat() / LockupHeight
+ 
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/CatalogRowSection.kt b/app/src/main/java/com/nuvio/tv/ui/components/CatalogRowSection.kt
 index 9fd0ad3..bb6f0a7 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/CatalogRowSection.kt
