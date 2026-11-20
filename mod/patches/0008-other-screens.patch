@@ -1455,10 +1455,10 @@ index f1b8161..acfb777 100644
                      model = backdropRequest,
                      contentDescription = stringResource(R.string.cd_loading_backdrop),
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
-index a21d65d..9bb9351 100644
+index e110039..67bcfa4 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
-@@ -2784,7 +2784,7 @@ private fun ProfileNameField(
+@@ -2783,7 +2783,7 @@ private fun ProfileNameField(
                      focusManager.moveFocus(FocusDirection.Down)
                  }
              ),
