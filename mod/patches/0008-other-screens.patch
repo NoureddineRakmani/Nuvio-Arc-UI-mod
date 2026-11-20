@@ -1,3 +1,12 @@
+diff --git a/app/src/main/baselineProfiles/mod-compile-all.txt b/app/src/main/baselineProfiles/mod-compile-all.txt
+new file mode 100644
+index 0000000..96f14e1
+--- /dev/null
++++ b/app/src/main/baselineProfiles/mod-compile-all.txt
+@@ -0,0 +1,3 @@
++# Nuvio Mod: Android pre-compiles ALL of the app's code when it installs or updates (like `cmd package compile -m speed`),
++# not only the parts in Arc's own list (generated/baselineProfiles). Without it about 30% was compiled (35 vs 122 MB).
++HSPL**->**(**)**
 diff --git a/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt b/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt
 index 7e52405..23600ee 100644
 --- a/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt
