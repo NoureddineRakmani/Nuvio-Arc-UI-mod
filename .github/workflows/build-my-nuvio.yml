@@ -172,6 +172,8 @@ jobs:
           fi
           printf '%s' "$MOD_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/nuvio-mod.p12"
           printf '%s\n' "$MOD_LOCAL_PROPERTIES" > local.properties
+          # Scout (Arc's assistant, "Ask") is on unless the secret says otherwise.
+          grep -q '^SCOUT_ENABLED=' local.properties || echo "SCOUT_ENABLED=true" >> local.properties
           touch local.dev.properties
           {
             echo "NUVIO_RELEASE_STORE_FILE=$RUNNER_TEMP/nuvio-mod.p12"

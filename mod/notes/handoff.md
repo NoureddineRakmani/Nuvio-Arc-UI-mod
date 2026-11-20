@@ -18,5 +18,5 @@ Secrets (set by Flora): `MOD_KEYSTORE_BASE64`, `MOD_KEYSTORE_PASSWORD`, `MOD_LOC
 
 ## App settings (local.properties keys)
 Set: NUVIO_SUPABASE_URL, NUVIO_SUPABASE_ANON_KEY, AVATAR_PUBLIC_BASE_URL, TRAKT_CLIENT_ID, TRAKT_CLIENT_SECRET, TMDB_API_KEY, TVDB_API_KEY, SIMKL_CLIENT_ID, MDBLIST_CLIENT_ID, WETRAKR_CLIENT_ID, INTRODB_API_URL, IMDB_RATINGS_API_BASE_URL, IMDB_TAPFRAME_API_BASE_URL.
-Deliberately empty: PLAYBACK_REPORTS_BASE_URL + REPORTS_SIGNING_KEY (don't send signed reports from a modified build). SCOUT_ENABLED left default false.
+Deliberately empty: PLAYBACK_REPORTS_BASE_URL + REPORTS_SIGNING_KEY (don't send signed reports from a modified build). SCOUT_ENABLED=true since 2026-11-20 (her request: Arc's assistant "Ask"), added by `try.sh` and the workflow unless the settings file/secret sets it; Ask uses the AI key each person enters in the app.
 Values were extracted from Arc's APK; if Arc adds new keys, they must be extracted again.

@@ -94,7 +94,9 @@ if [ ! -f "$SETTINGS" ]; then
 fi
 SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-$HOME/Android/Sdk}}"
 [ -d "$SDK/platforms" ] || fail "Android SDK not found at $SDK."
-{ echo "sdk.dir=$SDK"; [ -f "$SETTINGS" ] && cat "$SETTINGS"; } > "$ROOT/local.properties.new"
+{ echo "sdk.dir=$SDK"; [ -f "$SETTINGS" ] && cat "$SETTINGS"
+  # Scout (Arc's assistant, "Ask") is on unless the settings file says otherwise.
+  [ -f "$SETTINGS" ] && grep -q '^SCOUT_ENABLED=' "$SETTINGS" || echo "SCOUT_ENABLED=true"; } > "$ROOT/local.properties.new"
 cmp -s "$ROOT/local.properties.new" "$ARC/local.properties" || cp "$ROOT/local.properties.new" "$ARC/local.properties"
 [ -f "$ARC/local.dev.properties" ] || : > "$ARC/local.dev.properties"
 [ -f "$SETTINGS" ] || echo "NOTE: $SETTINGS not found - login, Trakt and ratings will be off in the test app."
