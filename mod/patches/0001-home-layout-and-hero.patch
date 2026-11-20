@@ -309,10 +309,10 @@ index 593d008..82f8ba1 100644
              .collectLatest { collections ->
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt
 new file mode 100644
-index 0000000..bb04f20
+index 0000000..35852b4
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt
-@@ -0,0 +1,564 @@
+@@ -0,0 +1,816 @@
 +package com.nuvio.tv.ui.screens.home
 +
 +import androidx.compose.animation.core.Animatable
@@ -332,6 +332,9 @@ index 0000000..bb04f20
 +import androidx.compose.runtime.withFrameNanos
 +import androidx.compose.ui.Modifier
 +import androidx.compose.ui.draw.drawBehind
++import androidx.compose.ui.draw.drawWithContent
++import androidx.compose.ui.graphics.drawscope.clipRect
++import androidx.compose.ui.graphics.drawscope.translate
 +import androidx.compose.ui.geometry.Offset
 +import androidx.compose.ui.geometry.Rect
 +import androidx.compose.ui.geometry.Size
@@ -348,6 +351,8 @@ index 0000000..bb04f20
 +import androidx.compose.ui.platform.LocalDensity
 +import androidx.compose.ui.text.TextMeasurer
 +import androidx.compose.ui.text.TextStyle
++import androidx.compose.ui.layout.layout
++import androidx.compose.runtime.remember
 +import androidx.compose.ui.text.rememberTextMeasurer
 +import androidx.compose.ui.text.style.TextOverflow
 +import androidx.compose.ui.unit.Constraints
@@ -387,9 +392,24 @@ index 0000000..bb04f20
 +    /** How long after the press the page's top block may take before the move is called off. */
 +    private const val WAIT_MS = 1200L
 +    /** How long the move lasts. */
-+    private const val FLIGHT_MS = 400
++    private const val FLIGHT_MS = 500
 +    /** Home's texts and rows are gone by this point of the move (they leave with the logo, from the press). */
 +    private const val HOME_GONE_AT = 0.5f
++    /** Home's lines under the title (genre, age rating...) are gone by this point, before the description glides over them. */
++    private const val HOME_LINES_GONE_AT = 0.3f
++    /** The page's buttons and lines appear from this point, once the description has nearly reached its place. */
++    private const val PAGE_LINES_FROM = 0.8f
++    /** Each of the page's lines rises into place over this, one after the other ([LATE_STAGGER_MS] apart). */
++    private const val LATE_MS = 380
++    private const val LATE_STAGGER_MS = 60
++    private const val LATE_LINES = 5
++    private const val LATE_TOTAL_MS = LATE_MS + LATE_STAGGER_MS * (LATE_LINES - 1)
++    private val lateIn = Animatable(0f)
++    /** The move's time (0..1, linear), beside [progress] (eased): what ends exactly as the move lands follows this. */
++    private val glideTime = Animatable(0f)
++    /** Ratings and genres opening out (time, 0..1 linear): from the moment the page's copies can be seen, over [REVEAL_MS]. */
++    private val revealT = Animatable(0f)
++    private const val REVEAL_MS = 450
 +    /** Once the page is there, Home's texts hand over to the page's (cross-fade) over this. */
 +    private const val HANDOFF_MS = 260
 +    /** How long a shift of the page's layout takes to be glided out. */
@@ -428,7 +448,10 @@ index 0000000..bb04f20
 +     * on the page, from the press; when the page is there, Home's copy cross-fades into the page's at the
 +     * same moving spot (the page's description wraps to its own width, its ratings row shows all ratings).
 +     */
-+    enum class Piece { DESCRIPTION, RATINGS }
++    /** [belowDescription]: laid out under the page's description, so its place depends on the description's height. */
++    enum class Piece(val belowDescription: Boolean) { DESCRIPTION(false), RATINGS(true), DATE(true), GENRE(true) }
++    /** Learned places are kept under these names (the description moved to just under the buttons). */
++    private val Piece.key get() = name + "_v2"
 +
 +    private class PieceState {
 +        var homeCoords: LayoutCoordinates? = null
@@ -441,6 +464,17 @@ index 0000000..bb04f20
 +        var pageInsetY = 0f
 +        val drift = Animatable(Offset.Zero, Offset.VectorConverter)
 +        var driftJob: Job? = null
++        /** How much bigger the page's copy is than Home's (both copies are scaled alike as they glide). */
++        var growX = 1f
++        var growY = 1f
++        /** Home's text and style, and the page's style, for pieces whose size is measured. */
++        var homeText: String? = null
++        var homeStyle: TextStyle? = null
++        var pageStyle: TextStyle? = null
++        /** Home's copy's width when the move started (px): the part of the page's copy shown before it opens out. */
++        var homeWidth = 0f
++        /** Home's whole genre list, as the page writes it (the genre piece only). */
++        var homeFullText: String? = null
 +    }
 +    private val pieces = Piece.entries.associateWith { PieceState() }
 +    /** Home's description when the card was pressed (to know the page's description size before it opens). */
@@ -485,7 +519,10 @@ index 0000000..bb04f20
 +        appContext = LocalContext.current.applicationContext
 +        measurer = rememberTextMeasurer()
 +        descStyle = androidx.tv.material3.MaterialTheme.typography.bodyMedium
++        pieces.getValue(Piece.DATE).pageStyle = androidx.tv.material3.MaterialTheme.typography.labelLarge // the page's date line
++        pieces.getValue(Piece.GENRE).pageStyle = androidx.tv.material3.MaterialTheme.typography.labelLarge // and its genres
 +        density = LocalDensity.current
++        genreGapPx = with(LocalDensity.current) { com.nuvio.tv.ui.theme.NuvioTheme.spacing.md.toPx() } // the page's gap after its genres
 +        DisposableEffect(Unit) { onDispose { homeLogo = null; homeNode = null } }
 +        return onGloballyPositioned { c ->
 +            val pos = c.positionInRoot()
@@ -529,11 +566,19 @@ index 0000000..bb04f20
 +        translationY = shift.y
 +    }
 +
++    /** On Home's lines under the title, except the gliding pieces: gone before the description glides over them. */
++    fun Modifier.modFlightHomeLeaving(): Modifier = graphicsLayer {
++        if (phase == Phase.Flying) alpha = (1f - progress.value / HOME_LINES_GONE_AT).coerceIn(0f, 1f)
++    }
++
 +    /** On Home's copy of a [piece]; [movesWithLogo] when it sits inside [modFlightHomeText]; [text]: the description's. */
-+    fun Modifier.modFlightHomePiece(piece: Piece, movesWithLogo: Boolean, text: String? = null): Modifier {
++    fun Modifier.modFlightHomePiece(piece: Piece, movesWithLogo: Boolean, text: String? = null, style: TextStyle? = null, fullText: String? = null): Modifier {
 +        val st = pieces.getValue(piece)
 +        return onGloballyPositioned {
 +            st.homeCoords = it
++            st.homeText = text
++            st.homeFullText = fullText
++            st.homeStyle = style
 +            if (piece == Piece.DESCRIPTION) homeDescription = text
 +        }.graphicsLayer {
 +            if (phase != Phase.Flying) return@graphicsLayer
@@ -543,6 +588,11 @@ index 0000000..bb04f20
 +            val parent = if (movesWithLogo) homeTextShift() ?: Offset.Zero else Offset.Zero
 +            translationX = pos.x - start.x - parent.x
 +            translationY = pos.y - start.y - parent.y + st.pageInsetY * progress.value
++            if (st.growX != 1f || st.growY != 1f) { // grows to the page's text size as it glides
++                transformOrigin = TransformOrigin(0f, 0f)
++                scaleX = 1f + (st.growX - 1f) * progress.value
++                scaleY = 1f + (st.growY - 1f) * progress.value
++            }
 +        }
 +    }
 +
@@ -550,8 +600,55 @@ index 0000000..bb04f20
 +    private fun piecePos(st: PieceState): Offset? {
 +        val start = st.from ?: return null
 +        val aim = st.aim ?: return null
-+        return lerp(start, aim + st.drift.value, progress.value)
++        val pos = lerp(start, aim + st.drift.value, progress.value)
++        // The date keeps Home's distance from the first genre, then moves out as the other genres open between them.
++        if (st === pieces.getValue(Piece.DATE) && doorsOn()) {
++            // Placed from the first genre with Home's genres, not from the page's line, which changes as the page fills in.
++            val g = pieces.getValue(Piece.GENRE)
++            val genre = piecePos(g) ?: return pos
++            val scale = (1f + (g.growX - 1f) * progress.value) / g.growX
++            return Offset(genre.x + scale * (g.homeWidth * g.growX + doorsGap()), pos.y)
++        }
++        return pos
 +    }
++
++    // ---- The genre line opening: the first genre and the date are its doors ----------------
++
++    /** How wide the page's genres are past the first one, with the dot before the date (px, page size), from Home's list (the page's own line changes while it fills in). */
++    private var doorsHidden = 0f
++    /** The page's gap between its genres and its date (px). */
++    private var genreGapPx = 0f
++    private fun doorsOn(): Boolean = phase == Phase.Flying && doorsHidden > 0f && pieces.getValue(Piece.GENRE).from != null && pieces.getValue(Piece.DATE).from != null
++
++    /** How far the genre line has opened (0..1): from when the page shows. */
++    private fun doorsOpen(): Float = FastOutSlowInEasing.transform(revealT.value.coerceIn(0f, 1f))
++
++    /** On Home, from the first genre's end to the date (px, at the page's text size). */
++    private fun doorsHomeGap(): Float {
++        val g = pieces.getValue(Piece.GENRE)
++        val gf = g.from ?: return 0f
++        val df = pieces.getValue(Piece.DATE).from ?: return 0f
++        return ((df.x - gf.x - g.homeWidth) * g.growX).coerceAtLeast(0f)
++    }
++
++    /** From the first genre's end to the date now (px, the genre line's own size): Home's distance, widening to the page's. */
++    private fun doorsGap(): Float {
++        val home = doorsHomeGap()
++        return home + (doorsHidden + genreGapPx - home) * doorsOpen()
++    }
++
++    /** Home's genres as the page will write them, measured in the page's style. */
++    private fun predictDoorsHidden() {
++        doorsHidden = 0f
++        val st = pieces.getValue(Piece.GENRE)
++        val m = measurer ?: return
++        val ps = st.pageStyle ?: return
++        val first = st.homeText?.takeIf { it.isNotBlank() } ?: return
++        val full = st.homeFullText?.takeIf { it.isNotBlank() } ?: first
++        doorsHidden = (m.measure(full, ps).size.width - m.measure(first, ps).size.width + genreGapPx + m.measure("•", ps).size.width).coerceAtLeast(0f)
++        DetailEntryTrace.mark("mod_doors_guess_${doorsHidden.toInt()}_from_${full.count { it == '•' } + 1}_genres")
++    }
++
 +
 +    /** Called when a Home card opens [id]'s page and Home's big picture is that title's: the move starts now. */
 +    fun arm(id: String) {
@@ -566,6 +663,7 @@ index 0000000..bb04f20
 +        val ctx = appContext
 +        pageDescHeight = 0f // a page without a description reports none
 +        val desc = pieces.getValue(Piece.DESCRIPTION).homeCoords?.takeIf { it.isAttached }?.let { homeDescription }
++        measureGrow()
 +        val aim = (lastSlot ?: ctx?.let { ModHeroReserve.logoSlot(it) })?.let { slot -> predictLogoSlot(ctx, slot, desc) }
 +        clearDescHold()
 +        val held = if (ctx != null && !desc.isNullOrBlank() && ModHeroReserve.number(ctx, "bottom_line") != null) predictDescHeight(ctx, desc) else null
@@ -578,13 +676,17 @@ index 0000000..bb04f20
 +                descHold = null
 +            }
 +        }
++        predictDoorsHidden()
++        val descH = ctx?.let { predictDescHeight(it, desc) }
 +        for ((piece, st) in pieces) {
 +            st.driftJob?.cancel()
 +            st.driftJob = null
 +            st.from = st.homeCoords?.takeIf { it.isAttached }?.positionInRoot()
-+            // Kept as an offset from the logo box's top: the parts between them have a fixed size.
-+            val rel = st.lastAim ?: ctx?.let { ModHeroReserve.point(it, piece.name) }
-+            st.aim = st.from?.let { start -> if (rel != null && aim != null) Offset(rel.x, aim.top + rel.y) else start }
++            st.homeWidth = st.homeCoords?.takeIf { it.isAttached }?.size?.width?.toFloat() ?: 0f
++            // Kept as an offset from the logo box's top (parts under the description: from its bottom); the parts between have a fixed size.
++            val rel = st.lastAim ?: ctx?.let { ModHeroReserve.point(it, piece.key) }
++            val under = if (piece.belowDescription) descH ?: 0f else 0f
++            st.aim = st.from?.let { start -> if (rel != null && aim != null) Offset(rel.x, aim.top + under + rel.y) else start }
 +        }
 +        // No aim yet: the target is the logo's own place, so it holds still until the page is there.
 +        liveSlot = aim ?: logo
@@ -601,6 +703,9 @@ index 0000000..bb04f20
 +
 +    private suspend fun fly(waitForPage: Boolean) = coroutineScope {
 +        progress.snapTo(0f)
++        lateIn.snapTo(0f)
++        glideTime.snapTo(0f)
++        revealT.snapTo(0f)
 +        handoff.snapTo(0f)
 +        drift.snapTo(Offset.Zero)
 +        for (st in pieces.values) st.drift.snapTo(Offset.Zero)
@@ -636,31 +741,43 @@ index 0000000..bb04f20
 +        val move = launch {
 +            if (waitForPage) snapshotFlow { pageReady }.first { it }
 +            DetailEntryTrace.mark("mod_flight_start")
++            launch { glideTime.animateTo(1f, tween(FLIGHT_MS, easing = androidx.compose.animation.core.LinearEasing)) }
 +            progress.animateTo(1f, tween(FLIGHT_MS, easing = FastOutSlowInEasing))
++        }
++        // The page's lines rise in one after the other once the description has nearly landed.
++        val late = launch {
++            snapshotFlow { progress.value >= PAGE_LINES_FROM }.first { it }
++            lateIn.animateTo(1f, tween(LATE_TOTAL_MS, easing = androidx.compose.animation.core.LinearEasing))
 +        }
 +        if (withTimeoutOrNull(WAIT_MS) { snapshotFlow { pageReady }.first { it } } == null) {
 +            DetailEntryTrace.mark("mod_flight_timeout")
++            late.cancel()
 +            follow.cancel()
 +            move.cancel()
 +            track.cancel()
 +            return@coroutineScope
 +        }
 +        DetailEntryTrace.mark("mod_flight_page_ready")
++        // The page's copies can't be seen before the page is built (~0.2 s in), so the opening starts then.
++        val reveal = launch { revealT.animateTo(1f, tween(REVEAL_MS, easing = androidx.compose.animation.core.LinearEasing)) }
 +        val hand = launch { handoff.animateTo(1f, tween(HANDOFF_MS, easing = FastOutSlowInEasing)) }
 +        move.join()
 +        hand.join()
 +        // A late shift finishes gliding before the page takes over.
 +        snapshotFlow { drift.isRunning || drift.value != Offset.Zero }.first { !it }
 +        for (st in pieces.values) st.driftJob?.join()
++        late.join()
++        reveal.join()
 +        follow.cancel()
 +        track.cancel()
 +        val top = liveSlot?.top
 +        for ((piece, st) in pieces) {
 +            val aim = st.aim ?: continue
 +            if (st.from == null || top == null) continue
-+            val rel = Offset(aim.x, aim.y - top)
++            val under = if (piece.belowDescription) pageDescHeight ?: 0f else 0f
++            val rel = Offset(aim.x, aim.y - top - under)
 +            st.lastAim = rel
-+            appContext?.let { ModHeroReserve.savePoint(it, piece.name, rel) }
++            appContext?.let { ModHeroReserve.savePoint(it, piece.key, rel) }
 +        }
 +        lastSlot = liveSlot
 +        val ctx = appContext
@@ -779,6 +896,56 @@ index 0000000..bb04f20
 +        translationY = shift.y
 +    }.onGloballyPositioned { pageBlockInner = it }
 +
++    /** On the page's buttons and lines (not the gliding pieces): they appear as the description lands, not under it. */
++    fun Modifier.modFlightPageLate(order: Int = 0, fromAbove: Boolean = false): Modifier = graphicsLayer {
++        if (phase != Phase.Flying) return@graphicsLayer
++        val t = lateT(order)
++        alpha = t
++        translationY = (1f - t) * LATE_RISE.toPx() * (if (fromAbove) -1f else 1f) // Nuvio Mod: [fromAbove] comes down instead
++    }
++
++    /** How far the [order]th late line is into its entrance (0..1, eased). */
++    private fun lateT(order: Int): Float {
++        val ms = lateIn.value * LATE_TOTAL_MS - order.coerceIn(0, LATE_LINES - 1) * LATE_STAGGER_MS
++        return FastOutSlowInEasing.transform((ms / LATE_MS).coerceIn(0f, 1f))
++    }
++
++    /**
++     * On the page's copy of a [piece] that shows more than Home's (all ratings, all genres): only the part Home
++     * showed is visible while it glides; the rest then opens out from left to right, as if from behind a window.
++     */
++    fun Modifier.modFlightPageReveal(piece: Piece, order: Int, duringGlide: Boolean = false, fromMiddle: Boolean = false, ms: Int = REVEAL_MS): Modifier = drawWithContent {
++        val st = pieces.getValue(piece)
++        if (phase != Phase.Flying || st.from == null || st.homeWidth <= 0f) { drawContent(); return@drawWithContent }
++        val start = (st.homeWidth * st.growX).coerceAtMost(size.width)
++        // [duringGlide]: opens while it glides, from when the page shows, over [ms] (at most [REVEAL_MS]); otherwise after, in its turn.
++        val t = if (duringGlide) FastOutSlowInEasing.transform((revealT.value * REVEAL_MS / ms.coerceIn(1, REVEAL_MS)).coerceIn(0f, 1f)) else lateT(order)
++        val hidden = size.width - start
++        if (piece == Piece.GENRE && doorsOn()) {
++            // The first genre and the date are doors: the other genres open out from the middle between them and move with it.
++            val half = doorsHidden / 2f * doorsOpen() // Home's genres: the page's line may still be another one
++            val mid = start + doorsHidden / 2f
++            clipRect(right = start) { this@drawWithContent.drawContent() }
++            if (half > 0f) translate(left = (doorsGap() - doorsHidden - genreGapPx) / 2f) {
++                clipRect(left = mid - half, right = (mid + half).coerceAtMost(size.width)) { this@drawWithContent.drawContent() }
++            }
++            return@drawWithContent
++        }
++        if (!fromMiddle) {
++            clipRect(right = start + hidden * t) { this@drawWithContent.drawContent() }
++        } else {
++            // [fromMiddle]: the hidden part opens from its middle outwards.
++            val mid = start + hidden / 2f
++            val half = hidden / 2f * t
++            clipRect(right = start) { this@drawWithContent.drawContent() }
++            if (half > 0f) clipRect(left = mid - half, right = mid + half) { this@drawWithContent.drawContent() }
++        }
++    }
++
++
++    /** How far below its place a late line starts its rise. */
++    val LATE_RISE = 10.dp
++
 +    /** Where the page's copy of a piece is laid out (root px), leaving out the block's own move. */
 +    private fun pagePieceLayoutPos(st: PieceState): Offset? {
 +        val outer = pageBlockOuter?.takeIf { it.isAttached } ?: return null
@@ -802,7 +969,48 @@ index 0000000..bb04f20
 +            val parent = pageBlockShift() ?: Offset.Zero
 +            translationX = pos.x - live.x - parent.x
 +            translationY = pos.y - live.y - parent.y - st.pageInsetY * (1f - progress.value)
++            if (st.growX != 1f || st.growY != 1f) { // starts at Home's text size and grows with Home's copy
++                transformOrigin = TransformOrigin(0f, 0f)
++                scaleX = (1f + (st.growX - 1f) * progress.value) / st.growX
++                scaleY = (1f + (st.growY - 1f) * progress.value) / st.growY
++            }
 +        }
++    }
++
++    /**
++     * How much bigger the page's description is than Home's (across: its longest line; down: its line height).
++     * Both copies have the same lines, so scaled alike they cover each other while they cross-fade.
++     */
++    private fun measureGrow() {
++        for (st in pieces.values) { st.growX = 1f; st.growY = 1f }
++        measureDescGrow(pieces.getValue(Piece.DESCRIPTION).homeCoords?.takeIf { it.isAttached }?.let { homeDescription })
++        // One-line pieces: their text in Home's style against the page's.
++        val m = measurer ?: return
++        for (piece in listOf(Piece.DATE, Piece.GENRE)) {
++            val st = pieces.getValue(piece)
++            val text = st.homeText?.takeIf { it.isNotBlank() } ?: continue
++            val hs = st.homeStyle ?: continue
++            val ps = st.pageStyle ?: continue
++            val h = m.measure(text, hs).size
++            val p = m.measure(text, ps).size
++            if (h.width <= 0 || h.height <= 0) continue
++            st.growX = (p.width.toFloat() / h.width).coerceIn(0.5f, 2f)
++            st.growY = (p.height.toFloat() / h.height).coerceIn(0.5f, 2f)
++        }
++    }
++
++    private fun measureDescGrow(text: String?) {
++        val st = pieces.getValue(Piece.DESCRIPTION)
++        if (text.isNullOrBlank()) return
++        val m = measurer ?: return
++        val page = descStyle ?: return
++        val home = homeDescStyle ?: return
++        val shaped = homeShaped(text) ?: return
++        val h = m.measure(shaped, home)
++        val p = m.measure(shaped, page)
++        if (h.size.width <= 0 || h.lineCount == 0 || p.lineCount != h.lineCount) return
++        st.growX = (p.size.width.toFloat() / h.size.width).coerceIn(0.5f, 2f)
++        st.growY = ((p.size.height.toFloat() / p.lineCount) / (h.size.height.toFloat() / h.lineCount)).coerceIn(0.5f, 2f)
 +    }
 +
 +    // ---- The page's description size, known before the page opens ------------------------------
@@ -830,16 +1038,60 @@ index 0000000..bb04f20
 +        return h + extra
 +    }
 +
-+    /** The description's text height (px) at [width], and whether it is cut off (then laid out 24 dp narrower). */
++    /** The description's text height (px) in a box [width] wide (its text is 24 dp narrower, cut off or not), and whether it is cut off. */
 +    private fun measureDescription(text: String, width: Int, lines: Int): Pair<Float, Boolean>? {
 +        val m = measurer ?: return null
 +        val style = descStyle ?: return null
 +        val d = density ?: return null
-+        val full = m.measure(text, style, TextOverflow.Ellipsis, maxLines = lines, constraints = Constraints(maxWidth = width.coerceAtLeast(1)))
-+        if (!full.hasVisualOverflow) return full.size.height.toFloat() to false
-+        val narrow = (width - with(d) { 24.dp.roundToPx() }).coerceAtLeast(1)
-+        val cut = m.measure(text, style, TextOverflow.Ellipsis, maxLines = lines, constraints = Constraints(maxWidth = narrow))
-+        return cut.size.height.toFloat() to true
++        // Shaped like Home's, the page's lines are set by the text itself and the box fits the longest one.
++        val shaped = homeShaped(text)
++        val r = if (shaped != null) m.measure(shaped, style, TextOverflow.Ellipsis, maxLines = lines)
++        else m.measure(text, style, TextOverflow.Ellipsis, maxLines = lines,
++            constraints = Constraints(maxWidth = (width - with(d) { DESC_FRAME.roundToPx() }).coerceAtLeast(1)))
++        return r.size.height.toFloat() to r.hasVisualOverflow
++    }
++
++    /** What the page's description box adds around its text, left and right (the frame of a cut-off one). */
++    val DESC_FRAME = 24.dp
++
++    /** Home's description style and the width it wraps at (px), as Home lays it out. */
++    private var homeDescStyle: TextStyle? = null
++    private var homeDescMaxWidth = 0
++    private val shapedCache = object : java.util.LinkedHashMap<String, String>(16, 0.75f, true) {
++        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, String>?) = size > 24
++    }
++
++    /** On Home's description: remembers its style and the width it wraps at. */
++    fun Modifier.modFlightHomeDescShape(style: TextStyle): Modifier = layout { measurable, constraints ->
++        if (homeDescStyle != style || (constraints.hasBoundedWidth && constraints.maxWidth != homeDescMaxWidth)) shapedCache.clear()
++        homeDescStyle = style
++        if (constraints.hasBoundedWidth) homeDescMaxWidth = constraints.maxWidth
++        val p = measurable.measure(constraints)
++        layout(p.width, p.height) { p.place(0, 0) }
++    }
++
++    /**
++     * [text] broken into lines at the very words Home breaks it (Home's text is smaller, and letters don't scale
++     * evenly between sizes, so a scaled width alone can't match), or null before Home has shown a description.
++     */
++    fun homeShaped(text: String): String? {
++        shapedCache[text]?.let { return it }
++        val m = measurer ?: return null
++        val style = homeDescStyle ?: return null
++        val w = homeDescMaxWidth.takeIf { it > 0 } ?: return null
++        val r = m.measure(text, style, constraints = Constraints(maxWidth = w))
++        val shaped = (0 until r.lineCount).joinToString("\n") { text.substring(r.getLineStart(it), r.getLineEnd(it, visibleEnd = true)).trimEnd() }
++        shapedCache[text] = shaped
++        return shaped
++    }
++
++    /** The page's description box width for [shaped] text: its longest line plus the frame. */
++    @Composable
++    fun pageDescBoxWidth(shaped: String): androidx.compose.ui.unit.Dp {
++        val m = androidx.compose.ui.text.rememberTextMeasurer()
++        val style = androidx.tv.material3.MaterialTheme.typography.bodyMedium
++        val px = remember(shaped, style) { m.measure(shaped, style).size.width }
++        return with(LocalDensity.current) { px.toDp() } + 2.dp + DESC_FRAME // 2 dp: rounding room, so no line wraps again
 +    }
 +
 +    /** On the page's description box: learns its width, line limit and what the box adds around the text. */
@@ -877,11 +1129,143 @@ index 0000000..bb04f20
 +        return Rect(Offset(0f, (box.height - dh) / 2f), Size(dw, dh))
 +    }
 +}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt
+new file mode 100644
+index 0000000..73982e6
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt
+@@ -0,0 +1,117 @@
++package com.nuvio.tv.ui.screens.home
++
++import androidx.compose.animation.core.AnimationState
++import androidx.compose.animation.core.CubicBezierEasing
++import androidx.compose.animation.core.Easing
++import androidx.compose.animation.core.animateTo
++import androidx.compose.animation.core.tween
++import androidx.compose.foundation.gestures.scrollBy
++import androidx.compose.foundation.lazy.LazyListState
++import java.util.WeakHashMap
++import kotlinx.coroutines.CoroutineScope
++import kotlinx.coroutines.launch
++
++/**
++ * Nuvio Mod: Up/Down on Home slides the rows by the exact distance to the next row, so the move is the same
++ * smooth slide both ways (like Apple TV). Arc's own slide (animateScrollToItem) has to guess how far a row it
++ * hasn't laid out yet is, rushes, then corrects once the row shows: the old row vanished in one frame going
++ * down, the new one popped in going up.
++ *
++ * Every row ends its move where the focused row was resting (rows hold their cards at their bottom, so the
++ * item's bottom edge is where the cards are). The slide has a fixed length and no slow tail (a spring's last
++ * pixels kept the list "scrolling" ~0.5 s after it looked still, and Home's picture waits for still rows).
++ */
++internal object ModHomeRowGlide {
++    /**
++     * Space between Home rows. Each row fills the rows area, with its cards at its bottom and the area's last
++     * [MODERN_ROW_CARD_BOTTOM_ROOM] left for the focused card to grow into; a gap of that room puts the next
++     * row's top exactly at the area's bottom edge, and the row above is already out at the top.
++     */
++    val ROW_GAP = MODERN_ROW_CARD_BOTTOM_ROOM
++    private const val GLIDE_MS = 280
++    /** Soft start, long soft landing (the usual "ease" curve). */
++    private val GLIDE_EASING = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
++
++    private class Glide {
++        /** Where a resting row's bottom edge is (px from the top of the rows area). */
++        var restBottom: Float? = null
++        /** A slide is under way or was cut short by the next press (its row never came to rest). */
++        var unfinished = false
++    }
++    private val glides = WeakHashMap<LazyListState, Glide>()
++
++    /** One of these slides is moving the rows: Arc's bring-into-view leaves the list alone meanwhile. */
++    var gliding = false
++        private set
++
++    // ---- Letting go of a held Up/Down -----------------------------------------------------------
++
++    /**
++     * After a held Up/Down: the row to land on, the next one in the direction of travel (Arc's choice could
++     * be the row behind, so the rows went back). [restFallback]: where a row rests if no press taught it yet.
++     */
++    fun LazyListState.modHoldLandingRow(sign: Int, restFallback: Float): Int? {
++        val rest = glides[this]?.restBottom ?: restFallback
++        val items = layoutInfo.visibleItemsInfo
++        return if (sign > 0) items.firstOrNull { it.offset + it.size >= rest - 1f }?.index
++        else items.lastOrNull { it.offset + it.size <= rest + 1f }?.index
++    }
++
++    /** Slides the row at [targetIndex] to its resting place, starting at the held drag's [speedPxPerSec]. */
++    fun CoroutineScope.modLandAfterHold(state: LazyListState, targetIndex: Int, speedPxPerSec: Float, restFallback: Float) {
++        val g = glides.getOrPut(state) { Glide() }
++        val rest = g.restBottom ?: restFallback
++        val item = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == targetIndex } ?: return
++        val distance = (item.offset + item.size) - rest
++        if (kotlin.math.abs(distance) < 1f) return
++        // Starts at the drag's speed and slows evenly to a stop: x = d(1 - (1 - t)^2) starts at 2d/T.
++        val ms = (2000f * kotlin.math.abs(distance) / speedPxPerSec).toInt().coerceIn(120, 450)
++        launch {
++            var done = 0f
++            gliding = true
++            try {
++                state.scroll {
++                    AnimationState(0f).animateTo(distance, tween(ms, easing = EASE_OUT_FROM_SPEED), sequentialAnimation = true) {
++                        scrollBy(value - done)
++                        done = value
++                    }
++                }
++            } finally {
++                gliding = false
++            }
++        }
++    }
++    private val EASE_OUT_FROM_SPEED = Easing { t -> 1f - (1f - t) * (1f - t) }
++
++    /** Slides [this] list so the row at [targetIndex] rests where the row at [fromIndex] rests (or was heading to). */
++    suspend fun LazyListState.modGlideToRow(fromIndex: Int, targetIndex: Int, gapPx: Float) {
++        val g = glides.getOrPut(this) { Glide() }
++        val items = layoutInfo.visibleItemsInfo
++        val from = items.firstOrNull { it.index == fromIndex }
++        if (!g.unfinished && from != null) g.restBottom = (from.offset + from.size).toFloat()
++        val rest = g.restBottom ?: return animateScrollToItem(targetIndex)
++        val target = items.firstOrNull { it.index == targetIndex }
++        val targetBottom = when {
++            target != null -> (target.offset + target.size).toFloat()
++            // Not laid out yet: rows in between are the same height as this one.
++            from != null -> from.offset + from.size + (targetIndex - fromIndex) * (from.size + gapPx)
++            else -> return animateScrollToItem(targetIndex)
++        }
++        val distance = targetBottom - rest
++        if (kotlin.math.abs(distance) < 1f) { g.unfinished = false; return }
++        var done = 0f
++        g.unfinished = true
++        gliding = true
++        try {
++            scroll {
++                AnimationState(0f).animateTo(distance, tween(GLIDE_MS, easing = GLIDE_EASING), sequentialAnimation = true) {
++                    scrollBy(value - done)
++                    done = value
++                }
++            }
++        } finally {
++            gliding = false
++        }
++        g.unfinished = false
++    }
++}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index c353a5a..19c8d2c 100644
+index c353a5a..e4b8316 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-@@ -1043,13 +1043,23 @@ fun ModernHomeContent(
+@@ -668,7 +668,7 @@ fun ModernHomeContent(
+                 activeRowState.value?.heroSelectionAt(clampedActiveItemIndexState.value),
+                 heroFocusSettleDelayMs.longValue
+             )
+-        }.settledModernHeroSelections(snapshotFlow { homeRowsMoving(verticalRowListState.isScrollInProgress, verticalMoveInFlight) })
++        }.settledModernHeroSelections(snapshotFlow { heroFocusSettleDelayMs.longValue > 0L && homeRowsMoving(verticalRowListState.isScrollInProgress, verticalMoveInFlight) }) // Nuvio Mod: a single press doesn't wait for still rows
+             .collect { selection ->
+                 // Publish artwork/text and request enrichment from the same settled identity.
+                 settledHeroSelection.value = selection
+@@ -1043,13 +1043,24 @@ fun ModernHomeContent(
                  (normalHeight * if (trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW) 1.12f else 1f)
                      .coerceAtMost(screenHeight)
              }
@@ -900,6 +1284,7 @@ index c353a5a..19c8d2c 100644
 +                        if (size > 0f && kotlin.math.abs(heroFocusedCardHeightPx.floatValue - size) > 1f) {
 +                            heroFocusedCardHeightPx.floatValue = size
 +                        }
++                        if (ModHomeRowGlide.gliding) return 0f // Nuvio Mod: a row slide is already taking it there
 +                        val distance = (offset + size) - (containerSize - bottomRoomPx)
 +                        if (kotlin.math.abs(distance) < 1f) return 0f
 +                        if (distance < 0f && !verticalRowListState.canScrollBackward) return 0f
@@ -908,7 +1293,7 @@ index c353a5a..19c8d2c 100644
                  }
              }
              val contentFocusRequester = LocalContentFocusRequester.current
-@@ -1065,6 +1075,11 @@ fun ModernHomeContent(
+@@ -1065,6 +1076,11 @@ fun ModernHomeContent(
                  }.coerceAtLeast(1)
              }
  
@@ -920,7 +1305,7 @@ index c353a5a..19c8d2c 100644
              val isFullScreenState = remember(liveHeroSceneState) {
                  derivedStateOf { liveHeroSceneState.value.fullScreenBackdrop }
              }
-@@ -1100,7 +1115,8 @@ fun ModernHomeContent(
+@@ -1100,7 +1116,8 @@ fun ModernHomeContent(
              // Fade content rows when ANY hero media (catalog trailer or collection
              // hero video) is playing in fullscreen — not just catalog trailers.
              val trailerContentAlphaState = animateFloatAsState(
@@ -930,7 +1315,7 @@ index c353a5a..19c8d2c 100644
                  animationSpec = tween(durationMillis = 480),
                  label = "trailerContentFade"
              )
-@@ -1113,9 +1129,26 @@ fun ModernHomeContent(
+@@ -1113,9 +1130,26 @@ fun ModernHomeContent(
              val foregroundModifier = remember(sidebarPageLayout, heroLayoutDirection) {
                  Modifier.sidebarPageContent(sidebarPageLayout, heroLayoutDirection)
              }
@@ -958,7 +1343,7 @@ index c353a5a..19c8d2c 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1129,9 +1162,10 @@ fun ModernHomeContent(
+@@ -1129,9 +1163,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -972,7 +1357,7 @@ index c353a5a..19c8d2c 100644
              }
              val heroTrailerShowing = remember {
                  { !isRapidHorizontalNav.value && shouldPlayTrailerLambda() && heroTrailerRenderedLambda() }
-@@ -1150,7 +1184,8 @@ fun ModernHomeContent(
+@@ -1150,7 +1185,8 @@ fun ModernHomeContent(
                  showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                  mdbListShowOnHero = uiState.mdbListShowOnHero,
                  mdbListRatingOrder = uiState.mdbListRatingOrder,
@@ -982,7 +1367,7 @@ index c353a5a..19c8d2c 100644
                  descriptionMaxLines = heroDescriptionMaxLines,
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                  titleModifier = heroMetadataModifier
-@@ -1286,7 +1321,7 @@ fun ModernHomeContent(
+@@ -1286,7 +1322,7 @@ fun ModernHomeContent(
                  blockLeftOnFirstExpandedItem = blockLeftOnFirstExpandedItem,
                  isVerticalRowsScrollingState = isVerticalRowsScrollingState,
                  verticalMoveInFlight = verticalMoveInFlight,
@@ -992,7 +1377,7 @@ index c353a5a..19c8d2c 100644
                      .align(Alignment.BottomStart)
                      .onFocusChanged { contentHasFocus.value = it.hasFocus }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index ef918a3..d475f3c 100644
+index ef918a3..4d0c57b 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -182,6 +182,7 @@ internal fun ModernHeroMediaLayer(
@@ -1081,26 +1466,329 @@ index ef918a3..d475f3c 100644
                      contentScale = ContentScale.Fit, alignment = Alignment.CenterStart
                  )
              } else if (!logoPending) {
-@@ -535,7 +551,7 @@ private fun HeroTitleContent(
+@@ -535,7 +551,24 @@ private fun HeroTitleContent(
              }
          }
  
 -        Column(verticalArrangement = Arrangement.spacedBy(titleSpacing)) {
++        // Nuvio Mod: the description sits right under the title (Arc puts it under the other lines).
++        // The block sits on the rows and grows upwards, so a short description leaves no gap above them.
++        // Weighted, the description is measured last and gives up lines first when the hero is short.
++        preview.description?.takeIf { it.isNotBlank() }?.let { description ->
++            AutoScrollingText(
++                text = description,
++                style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
++                color = NuvioTheme.colors.TextPrimary,
++                maxLines = descriptionMaxLines,
++                autoScrollEnabled = descriptionAutoScrollEnabled,
++                paused = trailerPlaying,
++                modifier = Modifier.weight(1f, fill = false).graphicsLayer { alpha = metaAlpha }
++                    .then(with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.DESCRIPTION, movesWithLogo = false, text = description)
++                        .modFlightHomeDescShape(scaledDescriptionStyle.copy(textDirection = description.contentTextDirection())) }) // Nuvio Mod: glides to the page's description, which keeps its line breaks
++            )
++        }
++
 +        Column(with(ModHeroFlight) { Modifier.modFlightHomeText() }, verticalArrangement = Arrangement.spacedBy(titleSpacing)) { // Nuvio Mod: leaves with the logo
          // Read with the configuration as a key, so a language change still shows the new words.
          val configuration = LocalConfiguration.current
          val secondaryMeta = remember(
-@@ -744,7 +760,8 @@ private fun HeroTitleContent(
-                     com.nuvio.tv.ui.components.MDBListRatingsRow(
-                         ratings = preview.mdbListRatings!!,
-                         maxItems = 3,
--                        order = mdbListRatingOrder
+@@ -572,6 +605,110 @@ private fun HeroTitleContent(
+         val showImdbInPrimaryWithHighlight = showImdbRatings && reserveImdbInPrimaryWithHighlight
+         val showImdbInSecondary = showImdbRatings && reserveImdbInSecondary
+ 
++        // Nuvio Mod: the rating line comes before the genre line (her choice).
++        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty() || hasMdbListRatings) {
++            Row(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .graphicsLayer { alpha = metaAlpha },
++                verticalAlignment = Alignment.CenterVertically,
++                horizontalArrangement = Arrangement.spacedBy(metaSpacing)
++            ) {
++                // Nuvio Mod: everything but the ratings leaves at the start of a glide; the ratings glide to the page's.
++                if (secondaryHighlightText != null || ageRatingBadge != null || statusBadge != null || reserveImdbInSecondary || secondaryDetails.isNotEmpty()) Row(
++                    modifier = Modifier.weight(1f, fill = false).then(with(ModHeroFlight) { Modifier.modFlightHomeLeaving() }),
++                    verticalAlignment = Alignment.CenterVertically,
++                    horizontalArrangement = Arrangement.spacedBy(metaSpacing)
++                ) {
++                    val semiBoldLabelMedium = remember(labelMedium) { labelMedium.copy(fontWeight = FontWeight.SemiBold) }
++            secondaryHighlightText?.let { text ->
++                        Text(
++                            text = text,
++                            modifier = Modifier.weight(1f, fill = false),
++                            style = semiBoldLabelMedium,
++                            color = NuvioTheme.colors.TextPrimary,
++                            maxLines = 1,
++                            overflow = TextOverflow.Ellipsis
++                        )
++                    }
++                    if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
++                        HeroMetaDivider(
++                            scale = metaScale,
++                            visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
++                        )
++                    }
++                    if (ageRatingBadge != null && statusBadge != null) {
++                        HeroCombinedMetaBadge(
++                            leftText = ageRatingBadge,
++                            rightText = statusBadge,
++                            textStyle = labelMedium,
++                            contentColor = NuvioTheme.colors.TextPrimary
++                        )
++                    } else {
++                        ageRatingBadge?.let { badge ->
++                            HeroMetaBadge(
++                                text = badge,
++                                textStyle = labelMedium,
++                                contentColor = NuvioTheme.colors.TextPrimary
++                            )
++                        }
++                        statusBadge?.let { badge ->
++                            HeroMetaBadge(
++                                text = badge,
++                                textStyle = labelMedium,
++                                contentColor = NuvioTheme.colors.TextPrimary
++                            )
++                        }
++                    }
++                    if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
++                        HeroMetaDivider(
++                            scale = metaScale,
++                            visible = showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
++                        )
++                    }
++                    if (reserveImdbInSecondary) {
++                        HeroImdbMeta(
++                            imdbText = preview.imdbText.orEmpty(),
++                            textStyle = labelMedium,
++                            textColor = NuvioTheme.colors.TextSecondary,
++                            logoSize = NuvioTheme.spacing.xl * metaScale,
++                            spacing = imdbMetaSpacing,
++                            visible = showImdbInSecondary
++                        )
++                    }
++                    if (reserveImdbInSecondary && secondaryDetails.isNotEmpty()) {
++                        HeroMetaDivider(
++                            scale = metaScale,
++                            visible = showImdbInSecondary
++                        )
++                    }
++                    secondaryDetails.forEachIndexed { index, value ->
++                        Text(
++                            text = value,
++                            style = labelMedium,
++                            color = NuvioTheme.colors.TextTertiary,
++                            maxLines = 1,
++                            overflow = TextOverflow.Ellipsis
++                        )
++                        if (index < secondaryDetails.lastIndex) {
++                            HeroMetaDivider(metaScale)
++                        }
++                    }
++                    if (showImdbRatings && hasMdbListRatings && (showImdbInSecondary || secondaryDetails.isNotEmpty())) {
++                        HeroMetaDivider(metaScale)
++                    }
++                }
++                if (showImdbRatings && hasMdbListRatings) {
++                    com.nuvio.tv.ui.components.MDBListRatingsRow(
++                        ratings = preview.mdbListRatings!!,
++                        maxItems = 3,
 +                        order = mdbListRatingOrder,
 +                        modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.RATINGS, movesWithLogo = true) } // Nuvio Mod: glides to the page's ratings
-                     )
-                 }
++                    )
++                }
++            }
++        }
++
+         Row(
+             modifier = Modifier
+                 .fillMaxWidth()
+@@ -579,6 +716,8 @@ private fun HeroTitleContent(
+             verticalAlignment = Alignment.CenterVertically,
+             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
+         ) {
++            // Nuvio Mod: this line leaves at the start of a glide, except the date, which glides to the page's.
++            val modLeaving = with(ModHeroFlight) { Modifier.modFlightHomeLeaving() }
+             val leadingMetaText = remember(preview.contentTypeText, preview.genres, context) {
+                 buildList {
+                     preview.contentTypeText?.takeIf { it.isNotBlank() }?.let(::add)
+@@ -596,23 +735,32 @@ private fun HeroTitleContent(
+                 reserveImdbInPrimaryWithHighlight
+ 
+             if (hasLeadingMeta) {
+-                Text(
+-                    text = leadingMetaText,
+-                    style = labelMedium,
+-                    color = NuvioTheme.colors.TextSecondary,
+-                    maxLines = 1,
+-                    overflow = TextOverflow.Ellipsis,
+-                    modifier = if (hasTrailingMeta) {
+-                        Modifier.weight(1f, fill = false)
+-                    } else {
+-                        Modifier
+-                    }
+-                )
++                // Nuvio Mod: the type and the genre are separate, so the genre can glide to the page's genres.
++                val modType = preview.contentTypeText?.takeIf { it.isNotBlank() }
++                val modGenre = preview.genres.firstOrNull()?.takeIf { it.isNotBlank() }?.let { com.nuvio.tv.ui.util.localizedGenreLabel(context, it) }
++                Row(modifier = if (hasTrailingMeta) Modifier.weight(1f, fill = false) else Modifier) {
++                    if (modType != null) Text(
++                        text = if (modGenre != null) "$modType • " else modType,
++                        style = labelMedium,
++                        color = NuvioTheme.colors.TextSecondary,
++                        maxLines = 1,
++                        modifier = modLeaving
++                    )
++                    if (modGenre != null) Text(
++                        text = modGenre,
++                        style = labelMedium,
++                        color = NuvioTheme.colors.TextSecondary,
++                        maxLines = 1,
++                        overflow = TextOverflow.Ellipsis,
++                        modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.GENRE, movesWithLogo = true, text = modGenre, style = labelMedium,
++                            fullText = preview.genres.filter { it.isNotBlank() }.take(6).joinToString(" • ") { com.nuvio.tv.ui.util.localizedGenreLabel(context, it) }) } // as the page writes them, to know how far its genres open
++                    )
++                }
              }
-@@ -753,7 +770,7 @@ private fun HeroTitleContent(
+ 
+             if (hasTrailingMeta) {
+                 if (hasLeadingMeta) {
+-                    HeroMetaDivider(metaScale)
++                    Box(modLeaving) { HeroMetaDivider(metaScale) }
+                 }
+                 Row(
+                     verticalAlignment = Alignment.CenterVertically,
+@@ -623,21 +771,23 @@ private fun HeroTitleContent(
+                             text = runtimeText,
+                             style = labelMedium,
+                             color = NuvioTheme.colors.TextSecondary,
+-                            maxLines = 1
++                            maxLines = 1,
++                            modifier = modLeaving
+                         )
+                     }
+                     if (!runtimeText.isNullOrBlank() && !yearText.isNullOrBlank()) {
+-                        HeroMetaDivider(metaScale)
++                        Box(modLeaving) { HeroMetaDivider(metaScale) }
+                     }
+                     if (!yearText.isNullOrBlank()) {
+                         Text(
+                             text = yearText,
+                             style = labelMedium,
+                             color = NuvioTheme.colors.TextSecondary,
+-                            maxLines = 1
++                            maxLines = 1,
++                            modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.DATE, movesWithLogo = true, text = yearText, style = labelMedium) }
+                         )
+                     }
+-                    if (reserveImdbInPrimaryWithHighlight) {
++                    if (reserveImdbInPrimaryWithHighlight) Box(modLeaving) {
+                         HeroImdbMeta(
+                             imdbText = preview.imdbText.orEmpty(),
+                             textStyle = labelMedium,
+@@ -651,124 +801,12 @@ private fun HeroTitleContent(
+             }
+         }
+ 
+-        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty() || hasMdbListRatings) {
+-            Row(
+-                modifier = Modifier
+-                    .fillMaxWidth()
+-                    .graphicsLayer { alpha = metaAlpha },
+-                verticalAlignment = Alignment.CenterVertically,
+-                horizontalArrangement = Arrangement.spacedBy(metaSpacing)
+-            ) {
+-                val semiBoldLabelMedium = remember(labelMedium) { labelMedium.copy(fontWeight = FontWeight.SemiBold) }
+-        secondaryHighlightText?.let { text ->
+-                    Text(
+-                        text = text,
+-                        modifier = Modifier.weight(1f, fill = false),
+-                        style = semiBoldLabelMedium,
+-                        color = NuvioTheme.colors.TextPrimary,
+-                        maxLines = 1,
+-                        overflow = TextOverflow.Ellipsis
+-                    )
+-                }
+-                if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
+-                    HeroMetaDivider(
+-                        scale = metaScale,
+-                        visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
+-                    )
+-                }
+-                if (ageRatingBadge != null && statusBadge != null) {
+-                    HeroCombinedMetaBadge(
+-                        leftText = ageRatingBadge,
+-                        rightText = statusBadge,
+-                        textStyle = labelMedium,
+-                        contentColor = NuvioTheme.colors.TextPrimary
+-                    )
+-                } else {
+-                    ageRatingBadge?.let { badge ->
+-                        HeroMetaBadge(
+-                            text = badge,
+-                            textStyle = labelMedium,
+-                            contentColor = NuvioTheme.colors.TextPrimary
+-                        )
+-                    }
+-                    statusBadge?.let { badge ->
+-                        HeroMetaBadge(
+-                            text = badge,
+-                            textStyle = labelMedium,
+-                            contentColor = NuvioTheme.colors.TextPrimary
+-                        )
+-                    }
+-                }
+-                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
+-                    HeroMetaDivider(
+-                        scale = metaScale,
+-                        visible = showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
+-                    )
+-                }
+-                if (reserveImdbInSecondary) {
+-                    HeroImdbMeta(
+-                        imdbText = preview.imdbText.orEmpty(),
+-                        textStyle = labelMedium,
+-                        textColor = NuvioTheme.colors.TextSecondary,
+-                        logoSize = NuvioTheme.spacing.xl * metaScale,
+-                        spacing = imdbMetaSpacing,
+-                        visible = showImdbInSecondary
+-                    )
+-                }
+-                if (reserveImdbInSecondary && secondaryDetails.isNotEmpty()) {
+-                    HeroMetaDivider(
+-                        scale = metaScale,
+-                        visible = showImdbInSecondary
+-                    )
+-                }
+-                secondaryDetails.forEachIndexed { index, value ->
+-                    Text(
+-                        text = value,
+-                        style = labelMedium,
+-                        color = NuvioTheme.colors.TextTertiary,
+-                        maxLines = 1,
+-                        overflow = TextOverflow.Ellipsis
+-                    )
+-                    if (index < secondaryDetails.lastIndex) {
+-                        HeroMetaDivider(metaScale)
+-                    }
+-                }
+-                // MDBList ratings inline after other secondary meta.
+-                if (showImdbRatings && hasMdbListRatings) {
+-                    // Divider before MDBList ratings is already handled by the
+-                    // badge/IMDb/details divider logic above — only add one
+-                    // when IMDb or details were the last visible element.
+-                    if (showImdbInSecondary || secondaryDetails.isNotEmpty()) {
+-                        HeroMetaDivider(metaScale)
+-                    }
+-                    com.nuvio.tv.ui.components.MDBListRatingsRow(
+-                        ratings = preview.mdbListRatings!!,
+-                        maxItems = 3,
+-                        order = mdbListRatingOrder
+-                    )
+-                }
+-            }
+-        }
+-
          }
  
          if (preview.logos.isNotEmpty()) {
@@ -1108,16 +1796,23 @@ index ef918a3..d475f3c 100644
 +            HeroLogoRow(logos = preview.logos, scale = metaScale, modifier = Modifier.graphicsLayer { alpha = metaAlpha }.then(with(ModHeroFlight) { Modifier.modFlightHomeForeground() })) // Nuvio Mod: fades as a title page opens
          }
  
-         // The block sits on the rows and grows upwards, so a short description leaves no gap above them.
-@@ -767,6 +784,7 @@ private fun HeroTitleContent(
-                 autoScrollEnabled = descriptionAutoScrollEnabled,
-                 paused = trailerPlaying,
-                 modifier = Modifier.weight(1f, fill = false).graphicsLayer { alpha = metaAlpha }
-+                    .then(with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.DESCRIPTION, movesWithLogo = false, text = description) }) // Nuvio Mod: glides to the page's description
-             )
-         }
+-        // The block sits on the rows and grows upwards, so a short description leaves no gap above them.
+-        // Weighted, the description is measured last and gives up lines first when the hero is short.
+-        preview.description?.takeIf { it.isNotBlank() }?.let { description ->
+-            AutoScrollingText(
+-                text = description,
+-                style = scaledDescriptionStyle.copy(textDirection = description.contentTextDirection()),
+-                color = NuvioTheme.colors.TextPrimary,
+-                maxLines = descriptionMaxLines,
+-                autoScrollEnabled = descriptionAutoScrollEnabled,
+-                paused = trailerPlaying,
+-                modifier = Modifier.weight(1f, fill = false).graphicsLayer { alpha = metaAlpha }
+-            )
+-        }
      }
-@@ -931,7 +949,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+ }
+ 
+@@ -931,7 +969,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
              outgoing = current
              current = image
              alpha.snapTo(0f)
@@ -1161,7 +1856,7 @@ index 6d3f3c2..0aca446 100644
  /** Height the hero text block may take: the space above the rows, less a thin margin at the screen edge. */
  internal fun modernHeroTextMaxHeight(screenHeight: Dp, rowsViewportHeight: Dp): Dp =
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
-index 67c06a3..b4d1a90 100644
+index 67c06a3..e3a2496 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 @@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -1193,18 +1888,60 @@ index 67c06a3..b4d1a90 100644
  @Composable
  internal fun ModernHomeRowsList(
      isVerticalRowsScrollingState: State<Boolean>,
-@@ -647,7 +654,9 @@ internal fun ModernHomeRowsList(
+@@ -247,6 +254,11 @@ internal fun ModernHomeRowsList(
+ 
+     val density = LocalDensity.current
+     val rowRestInsetPx = with(density) { MODERN_ROW_HEADER_FOCUS_INSET.roundToPx() }
++    val rowGapPx = with(density) { ModHomeRowGlide.ROW_GAP.toPx() } // Nuvio Mod
++    val holdSpeedPx = with(density) { 2000.dp.toPx() } // Nuvio Mod: Arc's held Up/Down speed (verticalVelocityDpPerSec below)
++    // Nuvio Mod: where a row rests if no press taught it yet: its cards' bottom at the area's bottom less the card room.
++    fun modRestFallbackPx(): Float =
++        verticalRowListState.layoutInfo.viewportEndOffset - with(density) { MODERN_ROW_CARD_BOTTOM_ROOM.toPx() }
+     val context = LocalContext.current
+     val layoutDirection = LocalLayoutDirection.current
+     val verticalPrefetchImageLoader = context.imageLoader
+@@ -537,7 +549,10 @@ internal fun ModernHomeRowsList(
+                             verticalFocusJob = navigationScope.launch {
+                                 try {
+                                     val attached = verticalRowListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
+-                                    if (!attached) {
++                                    if (true) { // Nuvio Mod: the exact distance, the same slide both ways
++                                        with(ModHomeRowGlide) { verticalRowListState.modGlideToRow(currentIndex, targetIndex, rowGapPx) }
++                                        withFrameNanos { }
++                                    } else if (!attached) {
+                                         // Glide to where the row rests rather than jumping it to the top edge.
+                                         verticalRowListState.animateScrollToItem(targetIndex, -rowRestInsetPx)
+                                         withFrameNanos { }
+@@ -620,7 +635,9 @@ internal fun ModernHomeRowsList(
+                                 it.offset > -it.size / 2
+                             }
+                         } else null
+-                        val targetRowIndex = when {
++                        // Nuvio Mod: land on the next row in the direction of travel, slowing from the drag's speed.
++                        val modLanding = with(ModHomeRowGlide) { verticalRowListState.modHoldLandingRow(sign, modRestFallbackPx()) }
++                        val targetRowIndex = if (modLanding != null) modLanding else when {
+                             lastRowAtBottom -> lastIdx
+                             upwardTopRow != null -> upwardTopRow.index
+                             else ->
+@@ -629,6 +646,7 @@ internal fun ModernHomeRowsList(
+                                     ?: verticalRowListState.firstVisibleItemIndex
+                         }
+                         val targetRow = carouselRows.list.getOrNull(targetRowIndex)
++                        if (modLanding != null) with(ModHomeRowGlide) { navigationScope.modLandAfterHold(verticalRowListState, modLanding, holdSpeedPx, modRestFallbackPx()) } // Nuvio Mod
+                         if (targetRow == null) null
+                         else {
+                             val column = focusedCardCenter()
+@@ -647,7 +665,8 @@ internal fun ModernHomeRowsList(
                      },
                  ),
              contentPadding = PaddingValues(bottom = rowsViewportHeight),
 -            verticalArrangement = Arrangement.spacedBy(NuvioTheme.spacing.xl)
-+            // Nuvio Mod: rows are a full viewport apart, so the row above or below never peeks in,
-+            // whatever the card shape.
-+            verticalArrangement = Arrangement.spacedBy(rowsViewportHeight)
++            // Nuvio Mod: rows fill the rows area; this gap puts the next row just past its bottom edge.
++            verticalArrangement = Arrangement.spacedBy(ModHomeRowGlide.ROW_GAP)
          ) {
              itemsIndexed(
                  items = carouselRows.list,
-@@ -664,7 +673,11 @@ internal fun ModernHomeRowsList(
+@@ -664,7 +683,11 @@ internal fun ModernHomeRowsList(
                          
                          if (rowBecameActive || itemChanged) {
                              val now = System.currentTimeMillis()
@@ -1217,7 +1954,7 @@ index 67c06a3..b4d1a90 100644
                              imageViewport.lastFocusMoveAtMs = android.os.SystemClock.uptimeMillis()
                              onLastHeroNavigationAtMsChange(now)
                              onActiveRowKeyChange(rowKey)
-@@ -704,6 +717,12 @@ internal fun ModernHomeRowsList(
+@@ -704,6 +727,12 @@ internal fun ModernHomeRowsList(
                          }
                      }
                  }
@@ -1230,16 +1967,16 @@ index 67c06a3..b4d1a90 100644
                  androidx.compose.runtime.CompositionLocalProvider(
                      com.nuvio.tv.core.image.LocalHomePosterPriority provides
                          com.nuvio.tv.core.image.HomePosterPriority(imageViewport, rowIndex)
-@@ -712,7 +731,7 @@ internal fun ModernHomeRowsList(
+@@ -712,7 +741,7 @@ internal fun ModernHomeRowsList(
                      row = row,
                      isActiveRow = isActiveRowLambda,
                      rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
 -                    rowTitleBottom = 14.dp, // rowTitleBottom
-+                    rowTitleBottom = 22.dp, // Nuvio Mod: room for the focused card to grow under the title
++                    rowTitleBottom = 8.dp, // Nuvio Mod: title close to its posters (a focused card, 6 dp taller each way, still clears it)
                      defaultBringIntoViewSpec = defaultBringIntoViewSpec,
                      focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
                      focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
-@@ -769,6 +788,7 @@ internal fun ModernHomeRowsList(
+@@ -769,6 +798,7 @@ internal fun ModernHomeRowsList(
                      }
                  )
                  }

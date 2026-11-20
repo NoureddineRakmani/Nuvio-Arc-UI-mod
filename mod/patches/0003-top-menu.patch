@@ -1,5 +1,5 @@
 diff --git a/app/src/main/java/com/nuvio/tv/MainActivity.kt b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-index 29aeec8..5981765 100644
+index 29aeec8..1b93149 100644
 --- a/app/src/main/java/com/nuvio/tv/MainActivity.kt
 +++ b/app/src/main/java/com/nuvio/tv/MainActivity.kt
 @@ -1437,7 +1437,8 @@ open class MainActivity : ComponentActivity() {
@@ -12,6 +12,14 @@ index 29aeec8..5981765 100644
                                  com.nuvio.tv.ui.v2.navigation.V2TopNavigation(
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
+@@ -1717,6 +1718,7 @@ open class MainActivity : ComponentActivity() {
+             }
+             return true
+         }
++        if (com.nuvio.tv.ui.navigation.ModOpenOnPress.swallow(event)) return true // Nuvio Mod: rest of the OK press that opened a page
+         screensaverController.notifyInteraction()
+         if (event.keyCode == KeyEvent.KEYCODE_MENU) {
+             if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && calendarReminders.onMenuKey()) {
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 index b771237..a9c7369 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt

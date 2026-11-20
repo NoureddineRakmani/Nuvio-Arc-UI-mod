@@ -1,9 +1,9 @@
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt
 new file mode 100644
-index 0000000..4128ee2
+index 0000000..fe5f42a
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/ModHomeNavigation.kt
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,100 @@
 +package com.nuvio.tv.ui.navigation
 +
 +import androidx.navigation.NavController
@@ -82,6 +82,27 @@ index 0000000..4128ee2
 +        }
 +    }
 +    return true
++}
++
++/**
++ * Nuvio Mod: Home cards open on OK going down, not on its release (saves the time the button is held).
++ * The rest of that press (repeats while held, and the release) is swallowed, so it can't also press
++ * whatever has focus on the page that just opened (e.g. a long press on Play). Checked in MainActivity.
++ */
++internal object ModOpenOnPress {
++    @Volatile private var swallowing = false
++
++    fun opened() { swallowing = true }
++
++    /** True when [event] belongs to the press that opened a page: MainActivity drops it. */
++    fun swallow(event: android.view.KeyEvent): Boolean {
++        if (!swallowing) return false
++        val code = event.keyCode
++        if (code != android.view.KeyEvent.KEYCODE_DPAD_CENTER && code != android.view.KeyEvent.KEYCODE_ENTER &&
++            code != android.view.KeyEvent.KEYCODE_NUMPAD_ENTER) return false
++        if (event.action == android.view.KeyEvent.ACTION_UP) swallowing = false
++        return true
++    }
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 index 318cea2..92fcb6d 100644

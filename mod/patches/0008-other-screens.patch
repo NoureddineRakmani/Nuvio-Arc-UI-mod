@@ -1,3 +1,18 @@
+diff --git a/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt b/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt
+index 7e52405..23600ee 100644
+--- a/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt
++++ b/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt
+@@ -45,6 +45,10 @@ internal class SourcePrefetchSignalStore {
+ 
+     @Synchronized fun begin(key: String): Long {
+         generation++
++        // Nuvio Mod: ranking the same title again (reopened page, cached sources) keeps its shown result
++        // instead of flashing back to "searching" for a moment.
++        val shown = state.value
++        if (shown?.uiKey == key && (shown.phase == SourcePrefetchPhase.RANKED || shown.phase == SourcePrefetchPhase.READY)) return generation
+         state.value = SourcePrefetchSignal(key, SourcePrefetchPhase.SEARCHING, null)
+         return generation
+     }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/CatalogRowSection.kt b/app/src/main/java/com/nuvio/tv/ui/components/CatalogRowSection.kt
 index 9fd0ad3..bb6f0a7 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/CatalogRowSection.kt
