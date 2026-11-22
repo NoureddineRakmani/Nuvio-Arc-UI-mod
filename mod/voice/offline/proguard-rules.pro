@@ -1,0 +1,1 @@
+-keep class com.pgprime.voice.speech.WhisperNative { native <methods>; }

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">PG Voice</string>
+    <string name="listening">Listening in French… (press OK for English)</string>
+    <string name="listening_en">ENGLISH — Listening…</string>
+    <string name="thinking">…</string>
+    <string name="not_understood">Didn\'t catch that</string>
+    <string name="no_mic">Can\'t open the microphone</string>
+    <string name="no_mic_permission">PG Voice needs the microphone</string>
+    <string name="no_prime">PG Prime isn\'t installed, or is too old for voice</string>
+    <string name="cant_open">Couldn\'t open that</string>
+    <string name="try_it">Try it</string>
+    <string name="yes">yes</string>
+    <string name="no">no</string>
+    <string name="status">Opens with the mic button: %1$s\nGoogle speech recognition: %2$s\nPG Prime for searches: %3$s\nGemini key for AI search in PG Prime: %4$s\n\nWhat you say is turned into text by Google\'s speech recognition, as with PG Prime\'s mic. With a Gemini key, the words of PG Prime searches (not YouTube, not commands like \"pause\") go to Gemini, which fixes misheard words and picks Search or Scout.</string>
+    <string name="examples">Things to say (French or English):\n• \"The Matrix\", \"cherche Dune\" → PG Prime search\n• \"a movie about magic\", \"un film de magie\" → Scout\n• \"cat videos on YouTube\", \"une vidéo YouTube sur…\" → SmartTube\n• \"open Arte\", \"ouvre Eclipse\" → opens the app\n• \"pause\", \"play\", \"next\", \"volume up\", \"coupe le son\", \"home\"</string>
+    <string name="gemini_key_hint">Gemini key (from aistudio.google.com)</string>
+    <string name="save_key">Save key</string>
+    <string name="remove_key">Remove key</string>
+    <string name="key_saved">Key saved</string>
+    <string name="key_removed">Key removed</string>
+    <string name="no_app">No app called \"%1$s\"</string>
+    <string name="no_engine">Google\'s speech recognition isn\'t available</string>
+    <string name="no_network">No internet for speech recognition</string>
+</resources>

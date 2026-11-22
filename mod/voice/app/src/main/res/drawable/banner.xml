@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- PG Voice: TV banner (320 x 180). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="320dp" android:height="180dp" android:viewportWidth="320" android:viewportHeight="180">
+    <path android:fillColor="#161618" android:pathData="M0,0h320v180h-320z" />
+    <path android:fillColor="#FFFFFF" android:pathData="M160,46a14,14 0,0 1,14 14v26a14,14 0,0 1,-28 0v-26a14,14 0,0 1,14 -14z" />
+    <path android:strokeColor="#FFFFFF" android:strokeWidth="6" android:strokeLineCap="round" android:fillColor="#00000000"
+        android:pathData="M137,82a23,23 0,0 0,46 0M160,105v16M146,121h28" />
+</vector>

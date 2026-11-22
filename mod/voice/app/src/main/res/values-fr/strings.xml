@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="listening">J\'écoute en français… (appuyez sur OK pour l\'anglais)</string>
+    <string name="listening_en">ANGLAIS — J\'écoute…</string>
+    <string name="not_understood">Je n\'ai pas compris</string>
+    <string name="no_mic">Impossible d\'ouvrir le micro</string>
+    <string name="no_mic_permission">PG Voice a besoin du micro</string>
+    <string name="no_prime">PG Prime n\'est pas installé, ou trop ancien pour la voix</string>
+    <string name="cant_open">Impossible d\'ouvrir ça</string>
+    <string name="try_it">Essayer</string>
+    <string name="yes">oui</string>
+    <string name="no">non</string>
+    <string name="status">S\'ouvre avec le bouton micro : %1$s\nReconnaissance vocale Google : %2$s\nPG Prime pour les recherches : %3$s\nClé Gemini pour la recherche IA dans PG Prime : %4$s\n\nCe que vous dites est transcrit par la reconnaissance vocale de Google, comme avec le micro de PG Prime. Avec une clé Gemini, les mots des recherches PG Prime (pas YouTube, pas les commandes comme « pause ») vont à Gemini, qui corrige les mots mal compris et choisit Recherche ou Scout.</string>
+    <string name="examples">Exemples (français ou anglais) :\n• « The Matrix », « cherche Dune » → recherche PG Prime\n• « un film de magie », « a movie about magic » → Scout\n• « vidéos de chats sur YouTube », « une vidéo YouTube sur… » → SmartTube\n• « ouvre Arte », « open Eclipse » → ouvre l\'appli\n• « pause », « lecture », « suivant », « monte le son », « coupe le son », « accueil »</string>
+    <string name="no_app">Aucune appli « %1$s »</string>
+    <string name="gemini_key_hint">Clé Gemini (sur aistudio.google.com)</string>
+    <string name="save_key">Enregistrer la clé</string>
+    <string name="remove_key">Supprimer la clé</string>
+    <string name="key_saved">Clé enregistrée</string>
+    <string name="key_removed">Clé supprimée</string>
+    <string name="no_engine">La reconnaissance vocale de Google n\'est pas disponible</string>
+    <string name="no_network">Pas d\'internet pour la reconnaissance vocale</string>
+</resources>

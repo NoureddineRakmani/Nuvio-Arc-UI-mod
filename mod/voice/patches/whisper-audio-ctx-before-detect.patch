@@ -1,0 +1,39 @@
+diff --git a/src/whisper.cpp b/src/whisper.cpp
+index 1675f33..79439cf 100644
+--- a/src/whisper.cpp
++++ b/src/whisper.cpp
+@@ -6989,6 +6989,14 @@ int whisper_full_with_state(
+         }
+     }
+ 
++    // PG Voice: apply audio_ctx before language detection too (else detection encodes a full 30 s window)
++    if (params.audio_ctx > 0 && params.audio_ctx <= whisper_n_audio_ctx(ctx)) {
++        state->exp_n_audio_ctx = params.audio_ctx;
++    }
++
++    // PG Voice: set when language detection has just encoded the audio from its start
++    bool encoded_from_start = false;
++
+     // auto-detect language if not specified
+     if (params.language == nullptr || strlen(params.language) == 0 || strcmp(params.language, "auto") == 0 || params.detect_language) {
+         std::vector<float> probs(whisper_lang_max_id() + 1, 0.0f);
+@@ -7007,6 +7015,7 @@ int whisper_full_with_state(
+         }
+         state->lang_id = lang_id;
+         params.language = whisper_lang_str(lang_id);
++        encoded_from_start = true;
+ 
+         WHISPER_LOG_INFO("%s: auto-detected language: %s (p = %f)\n", __func__, params.language, probs[whisper_lang_id(params.language)]);
+         if (params.detect_language) {
+@@ -7212,7 +7221,10 @@ int whisper_full_with_state(
+         }
+ 
+         // encode audio features starting at offset seek
+-        if (!whisper_encode_internal(*ctx, *state, seek, params.n_threads, params.abort_callback, params.abort_callback_user_data)) {
++        // PG Voice: the encoder output from language detection (same audio, same window) is still in place
++        const bool reuse_encode = encoded_from_start && seek == 0;
++        encoded_from_start = false;
++        if (!reuse_encode && !whisper_encode_internal(*ctx, *state, seek, params.n_threads, params.abort_callback, params.abort_callback_user_data)) {
+             WHISPER_LOG_ERROR("%s: failed to encode\n", __func__);
+             return -6;
+         }

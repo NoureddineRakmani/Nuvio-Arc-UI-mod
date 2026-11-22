@@ -40,6 +40,7 @@ Read before changing anything: `mine/mod/README.md`, then the notes in `mine/mod
 | `~/nuvio-mod-dev/arc/mod-brand` | generated at each build by `mod/dev/brand.py` (name + icons); never edit, never saved |
 | `~/nuvio-mod-dev/prepared`, `unpushed` | state markers used by `try.sh` |
 | `~/nuvio-mod-dev/CLAUDE.md` | one line importing this file; keep it that way |
+| `~/nuvio-mod-dev/pg-voice` | **PG Voice** (`com.pgprime.voice`), her own mic-button assistant app (separate from PG Prime). Sources saved in the fork as `mod/voice/`; read `mod/voice/README.md` |
 
 Repos: fork `NoureddineRakmani/Nuvio-Arc-UI-mod` (branch `dev`); upstream Arc `ysosrs123/NuvioTV-Fork`.
 The Arc version the patches are made on is written in `mod/arc-base` (saved with the patches; never edit by hand).
