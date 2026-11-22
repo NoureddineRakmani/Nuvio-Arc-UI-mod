@@ -1,8 +1,16 @@
 diff --git a/app/src/main/java/com/nuvio/tv/MainActivity.kt b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-index 69307b7..11ac3b5 100644
+index 69307b7..55ca534 100644
 --- a/app/src/main/java/com/nuvio/tv/MainActivity.kt
 +++ b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-@@ -1223,6 +1223,7 @@ open class MainActivity : ComponentActivity() {
+@@ -906,6 +906,7 @@ open class MainActivity : ComponentActivity() {
+                         hasSelectedProfileThisSession, profiles.size, activeProfileHasPin, v2ProfilePickerRequested
+                     )
+ 
++                    if (shouldShowProfileSelection && com.nuvio.tv.ui.screens.profile.modHoldsProfilePicker(profileManager, hasSelectedProfileThisSession, v2ProfilePickerRequested, signedOut, profilePinStates, pinAsks) { if (!hasSelectedProfileThisSession) { hasSelectedProfileThisSession = true; if (authManager.authState.value is AuthState.FullAccount) startupSyncService.requestSyncNow() } }) { Box(modifier = Modifier.fillMaxSize().startPictureOr(startPicture, NuvioTheme.colors.Background)); return@Surface } // Nuvio Mod: no "Who's watching" while the remembered profile opens
+                     if (shouldShowProfileSelection) {
+                         SideEffect { startPicture.end() }
+                         ProfileSelectionScreen(
+@@ -1223,6 +1224,7 @@ open class MainActivity : ComponentActivity() {
                          }
                      }
  
@@ -10,7 +18,7 @@ index 69307b7..11ac3b5 100644
                      LaunchedEffect(navController, followsLaunchTargets, pendingDeepLink) {
                          val url = pendingDeepLink ?: return@LaunchedEffect
                          if (!followsLaunchTargets) return@LaunchedEffect
-@@ -1437,7 +1438,8 @@ open class MainActivity : ComponentActivity() {
+@@ -1437,7 +1439,8 @@ open class MainActivity : ComponentActivity() {
                              Box(Modifier.fillMaxSize().graphicsLayer {
                                  alpha = if (profileEntry.pending && !profileEntry.revealing) 0f else 1f
                              }) {
@@ -20,7 +28,7 @@ index 69307b7..11ac3b5 100644
                                  com.nuvio.tv.ui.v2.navigation.V2TopNavigation(
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
-@@ -1665,6 +1667,7 @@ open class MainActivity : ComponentActivity() {
+@@ -1665,6 +1668,7 @@ open class MainActivity : ComponentActivity() {
      }
  
      private fun captureDeepLinkIntent(intent: Intent?) {
@@ -28,7 +36,7 @@ index 69307b7..11ac3b5 100644
          val url = intent?.dataString?.trim()?.takeIf(String::isNotBlank) ?: return
          pendingDeepLinkUrl.value = url
      }
-@@ -1719,6 +1722,7 @@ open class MainActivity : ComponentActivity() {
+@@ -1719,6 +1723,7 @@ open class MainActivity : ComponentActivity() {
              }
              return true
          }

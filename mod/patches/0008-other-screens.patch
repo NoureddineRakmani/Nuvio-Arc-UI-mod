@@ -21,6 +21,21 @@ index 0000000..96f14e1
 +# Nuvio Mod: Android pre-compiles ALL of the app's code when it installs or updates (like `cmd package compile -m speed`),
 +# not only the parts in Arc's own list (generated/baselineProfiles). Without it about 30% was compiled (35 vs 122 MB).
 +HSPL**->**(**)**
+diff --git a/app/src/main/java/com/nuvio/tv/core/profile/ProfileManager.kt b/app/src/main/java/com/nuvio/tv/core/profile/ProfileManager.kt
+index f9a7d83..c8f4839 100644
+--- a/app/src/main/java/com/nuvio/tv/core/profile/ProfileManager.kt
++++ b/app/src/main/java/com/nuvio/tv/core/profile/ProfileManager.kt
+@@ -77,6 +77,10 @@ class ProfileManager @Inject constructor(
+ 
+     suspend fun savedActiveProfileId(): Int = profileDataStore.activeProfileId.first()
+ 
++    /** Nuvio Mod: the saved "Remember last profile" + "picked before", read from disk (the StateFlows start at false). */
++    suspend fun modRemembersStart(): Boolean =
++        profileDataStore.rememberLastProfileEnabled.first() && profileDataStore.hasEverSelectedProfile.first()
++
+     suspend fun setActiveProfile(id: Int) = snapshotStorage.lifecycleMutex.withLock {
+         val exists = profileDataStore.profilesList.first().any { it.id == id }
+         if (exists) {
 diff --git a/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt b/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt
 index 7e52405..23600ee 100644
 --- a/app/src/main/java/com/nuvio/tv/core/stream/SourcePrefetchSignal.kt
@@ -1490,6 +1505,68 @@ index f1b8161..acfb777 100644
                  AsyncImage(
                      model = backdropRequest,
                      contentDescription = stringResource(R.string.cd_loading_backdrop),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ModProfileStart.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ModProfileStart.kt
+new file mode 100644
+index 0000000..e2897a1
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ModProfileStart.kt
+@@ -0,0 +1,56 @@
++package com.nuvio.tv.ui.screens.profile
++
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.produceState
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import com.nuvio.tv.core.profile.PinAsk
++import com.nuvio.tv.core.profile.ProfileManager
++import com.nuvio.tv.core.profile.ProfileStartGate
++import kotlinx.coroutines.delay
++
++/*
++ * Nuvio Mod: with "Remember last profile" on, Arc still drew "Who's watching" for a few seconds at start (box,
++ * 2026-11-22: picker at ~3 s, then a black loader, Home at ~8 s). Its auto-select waits for the setting, "a profile
++ * was picked before" and the PIN states to load, which all read "no" until then, while the profile list (2 profiles)
++ * is already there. This keeps the start picture up instead, until Arc picks the remembered profile itself.
++ */
++
++/** How long the start picture may wait for Arc to pick the remembered profile before the list shows anyway. */
++private const val MOD_PROFILE_HOLD_MS = 4_000L
++
++/**
++ * True while "Who's watching" should not be drawn yet: the remembered profile is about to open (by [openRemembered]).
++ * False when the list is wanted (asked for, remember off, first start, a PIN asked at start, or too long).
++ */
++@Composable
++internal fun modHoldsProfilePicker(
++    profileManager: ProfileManager,
++    selectedThisSession: Boolean,
++    pickerRequested: Boolean,
++    signedOut: Boolean,
++    pinStates: Map<Int, Boolean>?,
++    pinAsks: Map<Int, PinAsk>,
++    openRemembered: () -> Unit
++): Boolean {
++    val remembered by produceState<Boolean?>(null, profileManager) { value = profileManager.modRemembersStart() }
++    val savedId by produceState<Int?>(null, profileManager) { value = profileManager.savedActiveProfileId() }
++    var tooLong by remember { mutableStateOf(false) }
++    LaunchedEffect(Unit) { delay(MOD_PROFILE_HOLD_MS); tooLong = true }
++    if (selectedThisSession || pickerRequested || tooLong) return false
++    return when (remembered) {
++        null -> true
++        false -> false
++        true -> {
++            val id = savedId ?: return true
++            val asksPin = ProfileStartGate.asksAtStart(ProfileStartGate.hasPin(signedOut, pinStates, id), pinAsks[id])
++            // No PIN asked: open it now. Arc's own check would, about 1 s later (box trace 2026-11-22: picked at
++            // +3.3 s, everything known at +2.2 s), and Home can't start before.
++            if (asksPin == false) LaunchedEffect(id) { openRemembered() }
++            asksPin != true // unknown yet: keep waiting; no PIN: opening; a PIN: show the list
++        }
++    }
++}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
 index e110039..67bcfa4 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ProfileSelectionScreen.kt
