@@ -221,8 +221,13 @@ jobs:
         working-directory: arc
         run: |
           set -euo pipefail
-          printf 'Nuvio Arc %s + my changes.\n\n<!-- nuvio-fork-version-code: %s -->\n<!-- mod-key: %s -->\n' \
-            "${{ steps.arc.outputs.tag }}" "$MOD_CODE" "${{ steps.arc.outputs.key }}" > notes.md
+          # Notes shown by PG Prime's updater: Nuvio Arc's own changelog (every Arc release since my last one)
+          # + my changes. Falls back to one line if that fails, so a release is never lost over its notes.
+          if ! bash ../mine/mod/dev/release-notes.sh "${{ steps.arc.outputs.tag }}" "$MOD_CODE" \
+               "${{ steps.arc.outputs.key }}" "$GITHUB_REPOSITORY" "$UPSTREAM_REPO" "$(git -C ../mine rev-parse HEAD)" > notes.md; then
+            printf 'Nuvio Arc %s + my changes.\n\n<!-- nuvio-fork-version-code: %s -->\n<!-- mod-key: %s -->\n' \
+              "${{ steps.arc.outputs.tag }}" "$MOD_CODE" "${{ steps.arc.outputs.key }}" > notes.md
+          fi
           gh release create "$MOD_VERSION" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
