@@ -1,8 +1,16 @@
 diff --git a/app/src/main/java/com/nuvio/tv/MainActivity.kt b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-index 69307b7..337172d 100644
+index 69307b7..11ac3b5 100644
 --- a/app/src/main/java/com/nuvio/tv/MainActivity.kt
 +++ b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-@@ -1437,7 +1437,8 @@ open class MainActivity : ComponentActivity() {
+@@ -1223,6 +1223,7 @@ open class MainActivity : ComponentActivity() {
+                         }
+                     }
+ 
++                    com.nuvio.tv.ui.navigation.ModFollowVoice(navController, followsLaunchTargets) { navigateToDrawerRoute(navController, currentRoute, Screen.Search.route) } // Nuvio Mod: searches from PG Voice
+                     LaunchedEffect(navController, followsLaunchTargets, pendingDeepLink) {
+                         val url = pendingDeepLink ?: return@LaunchedEffect
+                         if (!followsLaunchTargets) return@LaunchedEffect
+@@ -1437,7 +1438,8 @@ open class MainActivity : ComponentActivity() {
                              Box(Modifier.fillMaxSize().graphicsLayer {
                                  alpha = if (profileEntry.pending && !profileEntry.revealing) 0f else 1f
                              }) {
@@ -12,7 +20,15 @@ index 69307b7..337172d 100644
                                  com.nuvio.tv.ui.v2.navigation.V2TopNavigation(
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
-@@ -1719,6 +1720,7 @@ open class MainActivity : ComponentActivity() {
+@@ -1665,6 +1667,7 @@ open class MainActivity : ComponentActivity() {
+     }
+ 
+     private fun captureDeepLinkIntent(intent: Intent?) {
++        com.nuvio.tv.ui.voice.ModVoiceInbox.fromIntent(intent) // Nuvio Mod: a search from PG Voice
+         val url = intent?.dataString?.trim()?.takeIf(String::isNotBlank) ?: return
+         pendingDeepLinkUrl.value = url
+     }
+@@ -1719,6 +1722,7 @@ open class MainActivity : ComponentActivity() {
              }
              return true
          }

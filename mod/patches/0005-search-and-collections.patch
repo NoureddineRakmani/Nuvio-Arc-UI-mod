@@ -104,8 +104,96 @@ index 0000000..fe5f42a
 +        return true
 +    }
 +}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/ModVoiceNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/ModVoiceNavigation.kt
+new file mode 100644
+index 0000000..6e21db8
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/navigation/ModVoiceNavigation.kt
+@@ -0,0 +1,82 @@
++package com.nuvio.tv.ui.navigation
++
++import android.util.Log
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.collectAsState
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.rememberUpdatedState
++import androidx.hilt.navigation.compose.hiltViewModel
++import androidx.lifecycle.ViewModel
++import androidx.navigation.NavController
++import com.nuvio.tv.core.scout.ask.AskKeyVault
++import com.nuvio.tv.core.scout.ask.ScoutAskFeature
++import com.nuvio.tv.ui.screens.search.SearchEvent
++import com.nuvio.tv.ui.screens.search.SearchViewModel
++import com.nuvio.tv.ui.voice.MOD_VOICE_TAG
++import com.nuvio.tv.ui.voice.ModVoiceInbox
++import com.nuvio.tv.ui.voice.ModVoiceTarget
++import dagger.hilt.android.lifecycle.HiltViewModel
++import kotlinx.coroutines.Dispatchers
++import kotlinx.coroutines.flow.filterNotNull
++import kotlinx.coroutines.withContext
++import javax.inject.Inject
++
++/*
++ * Nuvio Mod: PG Voice's requests (ui/voice/ModVoiceInbox) carried out on the main page. One-line calls
++ * from MainActivity.kt (open the page) and NuvioNavHost.kt (fill Search), so Arc's files stay almost untouched.
++ */
++
++@HiltViewModel
++internal class ModVoiceViewModel @Inject constructor(private val vault: dagger.Lazy<AskKeyVault>) : ViewModel() {
++    /** True when this profile can use Scout's Ask (feature on and an AI key set). */
++    suspend fun canAsk(): Boolean = ScoutAskFeature.available &&
++        withContext(Dispatchers.IO) { runCatching { vault.get().current().activeConfig != null }.getOrDefault(false) }
++}
++
++/**
++ * Opens Search or Scout's Ask for a PG Voice request, once the app is ready for launch targets.
++ * The inbox is collected inside one effect: keying the effect on the request itself would cancel it
++ * (taking the request changes the key) while it waits for the AI-key check.
++ */
++@Composable
++internal fun ModFollowVoice(navController: NavController, ready: Boolean, openSearch: () -> Unit) {
++    val voice: ModVoiceViewModel = hiltViewModel()
++    val latestOpenSearch by rememberUpdatedState(openSearch)
++    LaunchedEffect(ready) {
++        if (!ready) return@LaunchedEffect
++        ModVoiceInbox.pending.filterNotNull().collect {
++            when (val target = ModVoiceInbox.take()) {
++                is ModVoiceTarget.Ask -> if (voice.canAsk()) {
++                    Log.d(MOD_VOICE_TAG, "open ask")
++                    // A fresh Ask screen each time: an open one only reads its question once, so reusing it shows the old answer.
++                    navController.navigate(Screen.ScoutAskQuestion.createRoute(target.question)) {
++                        popUpTo(Screen.ScoutAskQuestion.route) { inclusive = true }
++                    }
++                } else {
++                    Log.d(MOD_VOICE_TAG, "no AI key: search instead")
++                    ModVoiceInbox.offerSearch(target.question)
++                    latestOpenSearch()
++                }
++                is ModVoiceTarget.Search -> {
++                    Log.d(MOD_VOICE_TAG, "open search")
++                    ModVoiceInbox.offerSearch(target.query)
++                    latestOpenSearch()
++                }
++                null -> Unit
++            }
++        }
++    }
++}
++
++/** Search runs the words from PG Voice as soon as it is on screen. */
++@Composable
++internal fun ModVoiceFillsSearch(viewModel: SearchViewModel) {
++    val query by ModVoiceInbox.searchQuery.collectAsState()
++    LaunchedEffect(query) {
++        val words = query ?: return@LaunchedEffect
++        ModVoiceInbox.takeSearch()
++        viewModel.onEvent(SearchEvent.QueryChanged(words))
++        viewModel.onEvent(SearchEvent.SubmitSearch)
++    }
++}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
-index 318cea2..92fcb6d 100644
+index 318cea2..ae85ffc 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/navigation/NuvioNavHost.kt
 @@ -152,6 +152,7 @@ private fun PlaybackNavHost(
@@ -193,7 +281,15 @@ index 318cea2..92fcb6d 100644
                  startFromBeginning = startFromBeginning,
                  restoreSourceSelection = restoreSourceSelection,
                  onSourceSelectionRestoreHandled = {
-@@ -1361,7 +1381,11 @@ private fun PlaybackNavHost(
+@@ -1342,6 +1362,7 @@ private fun PlaybackNavHost(
+         rootComposable(Screen.Search.route) { backStackEntry ->
+             val searchViewModel: com.nuvio.tv.ui.screens.search.SearchViewModel =
+                 androidx.hilt.navigation.compose.hiltViewModel(backStackEntry)
++            ModVoiceFillsSearch(searchViewModel) // Nuvio Mod: words from PG Voice
+             SearchScreen(
+                 viewModel = searchViewModel,
+                 onAskScout = { question -> navController.navigate(Screen.ScoutAskQuestion.createRoute(question)) },
+@@ -1361,7 +1382,11 @@ private fun PlaybackNavHost(
                          Screen.CatalogSeeAll.createRoute(catalogId, addonId, type, fromSearch = true)
                      )
                  },

@@ -1,3 +1,17 @@
+diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
+index a2a4f89..0d80543 100644
+--- a/app/src/main/AndroidManifest.xml
++++ b/app/src/main/AndroidManifest.xml
+@@ -1502,6 +1502,9 @@
+             </intent-filter>
+         </activity>
+ 
++        <!-- Nuvio Mod: tells PG Voice (the box's voice assistant) that this app takes its searches. -->
++        <meta-data android:name="pgvoice.handoff" android:value="true" />
++
+         <profileable android:shell="true" />
+     </application>
+ 
 diff --git a/app/src/main/baselineProfiles/mod-compile-all.txt b/app/src/main/baselineProfiles/mod-compile-all.txt
 new file mode 100644
 index 0000000..96f14e1
@@ -1705,3 +1719,52 @@ index 5417c42..5d4d5d1 100644
                  } else {
                      Modifier
                  }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/voice/ModVoiceInbox.kt b/app/src/main/java/com/nuvio/tv/ui/voice/ModVoiceInbox.kt
+new file mode 100644
+index 0000000..1dc4225
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/voice/ModVoiceInbox.kt
+@@ -0,0 +1,43 @@
++package com.nuvio.tv.ui.voice
++
++import android.content.Intent
++import kotlinx.coroutines.flow.MutableStateFlow
++import kotlinx.coroutines.flow.StateFlow
++import kotlinx.coroutines.flow.asStateFlow
++
++/*
++ * Nuvio Mod: requests from PG Voice, the box's voice assistant (separate app, mod/voice in the fork).
++ * PG Voice opens MainActivity with "pgvoice_query" (+ "pgvoice_ask" = a description for Scout); the
++ * manifest's "pgvoice.handoff" meta-data tells PG Voice this PG Prime understands them.
++ */
++
++const val MOD_VOICE_TAG = "ModVoice"
++private const val EXTRA_QUERY = "pgvoice_query"
++private const val EXTRA_ASK = "pgvoice_ask"
++
++sealed interface ModVoiceTarget {
++    data class Search(val query: String) : ModVoiceTarget
++    data class Ask(val question: String) : ModVoiceTarget
++}
++
++object ModVoiceInbox {
++    private val _pending = MutableStateFlow<ModVoiceTarget?>(null)
++    val pending: StateFlow<ModVoiceTarget?> = _pending.asStateFlow()
++
++    /** The query Search should run once it is on screen. */
++    private val _searchQuery = MutableStateFlow<String?>(null)
++    val searchQuery: StateFlow<String?> = _searchQuery.asStateFlow()
++
++    /** Reads a PG Voice request from a launch intent; the extras are removed so a rotation/recreate doesn't repeat it. */
++    fun fromIntent(intent: Intent?) {
++        val query = intent?.getStringExtra(EXTRA_QUERY)?.trim()?.takeIf(String::isNotEmpty) ?: return
++        val ask = intent.getBooleanExtra(EXTRA_ASK, false)
++        intent.removeExtra(EXTRA_QUERY)
++        intent.removeExtra(EXTRA_ASK)
++        _pending.value = if (ask) ModVoiceTarget.Ask(query) else ModVoiceTarget.Search(query)
++    }
++
++    fun take(): ModVoiceTarget? = _pending.value.also { _pending.value = null }
++    fun offerSearch(query: String) { _searchQuery.value = query }
++    fun takeSearch(): String? = _searchQuery.value.also { _searchQuery.value = null }
++}
