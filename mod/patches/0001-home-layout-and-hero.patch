@@ -309,10 +309,10 @@ index 593d008..82f8ba1 100644
              .collectLatest { collections ->
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt
 new file mode 100644
-index 0000000..35852b4
+index 0000000..7c696af
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt
-@@ -0,0 +1,816 @@
+@@ -0,0 +1,864 @@
 +package com.nuvio.tv.ui.screens.home
 +
 +import androidx.compose.animation.core.Animatable
@@ -449,9 +449,9 @@ index 0000000..35852b4
 +     * same moving spot (the page's description wraps to its own width, its ratings row shows all ratings).
 +     */
 +    /** [belowDescription]: laid out under the page's description, so its place depends on the description's height. */
-+    enum class Piece(val belowDescription: Boolean) { DESCRIPTION(false), RATINGS(true), DATE(true), GENRE(true) }
-+    /** Learned places are kept under these names (the description moved to just under the buttons). */
-+    private val Piece.key get() = name + "_v2"
++    enum class Piece(val belowDescription: Boolean) { DESCRIPTION(false), RATINGS(true), DATE(false), GENRE(false), RUNTIME(false) } // Nuvio Mod: date/genre line above the description, ratings under it
++    /** Learned places are kept under these names (her order: buttons, genre line, badges, description, ratings). */
++    private val Piece.key get() = name + "_v4"
 +
 +    private class PieceState {
 +        var homeCoords: LayoutCoordinates? = null
@@ -521,6 +521,7 @@ index 0000000..35852b4
 +        descStyle = androidx.tv.material3.MaterialTheme.typography.bodyMedium
 +        pieces.getValue(Piece.DATE).pageStyle = androidx.tv.material3.MaterialTheme.typography.labelLarge // the page's date line
 +        pieces.getValue(Piece.GENRE).pageStyle = androidx.tv.material3.MaterialTheme.typography.labelLarge // and its genres
++        pieces.getValue(Piece.RUNTIME).pageStyle = androidx.tv.material3.MaterialTheme.typography.labelLarge // Nuvio Mod: and its duration
 +        density = LocalDensity.current
 +        genreGapPx = with(LocalDensity.current) { com.nuvio.tv.ui.theme.NuvioTheme.spacing.md.toPx() } // the page's gap after its genres
 +        DisposableEffect(Unit) { onDispose { homeLogo = null; homeNode = null } }
@@ -618,7 +619,9 @@ index 0000000..35852b4
 +    private var doorsHidden = 0f
 +    /** The page's gap between its genres and its date (px). */
 +    private var genreGapPx = 0f
-+    private fun doorsOn(): Boolean = phase == Phase.Flying && doorsHidden > 0f && pieces.getValue(Piece.GENRE).from != null && pieces.getValue(Piece.DATE).from != null
++    /** Nuvio Mod: off since the page writes the date first (date • duration • genres): the date is no longer the right-hand door. */
++    private const val DOORS = false
++    private fun doorsOn(): Boolean = DOORS && phase == Phase.Flying && doorsHidden > 0f && pieces.getValue(Piece.GENRE).from != null && pieces.getValue(Piece.DATE).from != null
 +
 +    /** How far the genre line has opened (0..1): from when the page shows. */
 +    private fun doorsOpen(): Float = FastOutSlowInEasing.transform(revealT.value.coerceIn(0f, 1f))
@@ -904,6 +907,12 @@ index 0000000..35852b4
 +        translationY = (1f - t) * LATE_RISE.toPx() * (if (fromAbove) -1f else 1f) // Nuvio Mod: [fromAbove] comes down instead
 +    }
 +
++    /** With [modFlightPageLate] of the same [order]: the line also opens from left to right as it moves in (diagonal entrance). */
++    fun Modifier.modFlightPageWipe(order: Int): Modifier = drawWithContent {
++        if (phase != Phase.Flying) { drawContent(); return@drawWithContent }
++        clipRect(right = size.width * lateT(order)) { this@drawWithContent.drawContent() }
++    }
++
 +    /** How far the [order]th late line is into its entrance (0..1, eased). */
 +    private fun lateT(order: Int): Float {
 +        val ms = lateIn.value * LATE_TOTAL_MS - order.coerceIn(0, LATE_LINES - 1) * LATE_STAGGER_MS
@@ -986,7 +995,7 @@ index 0000000..35852b4
 +        measureDescGrow(pieces.getValue(Piece.DESCRIPTION).homeCoords?.takeIf { it.isAttached }?.let { homeDescription })
 +        // One-line pieces: their text in Home's style against the page's.
 +        val m = measurer ?: return
-+        for (piece in listOf(Piece.DATE, Piece.GENRE)) {
++        for (piece in listOf(Piece.DATE, Piece.GENRE, Piece.RUNTIME)) {
 +            val st = pieces.getValue(piece)
 +            val text = st.homeText?.takeIf { it.isNotBlank() } ?: continue
 +            val hs = st.homeStyle ?: continue
@@ -1121,6 +1130,45 @@ index 0000000..35852b4
 +    }
 +
 +    /** Where a picture of [w] x [h] is drawn in a box of [box] with "fit, centred vertically, at the start". */
++    /** Details title logo: the box takes the logo's own shape (width = [widthFraction] of the space, height at most
++     *  [maxHeight] incl. [bottomPad]), so a wide logo leaves no empty band under it. Unknown shape: the full height. */
++    fun Modifier.modLogoBox(aspect: Float?, maxHeight: androidx.compose.ui.unit.Dp, widthFraction: Float, bottomPad: androidx.compose.ui.unit.Dp, emptyBottom: Float = 0f): Modifier =
++        layout { measurable, constraints ->
++            val w = (constraints.maxWidth * widthFraction).toInt()
++            val pad = bottomPad.roundToPx()
++            val maxH = maxHeight.roundToPx()
++            val known = aspect != null && aspect > 0f
++            val h = if (known) minOf(maxH, (w / aspect!!).toInt() + pad) else maxH
++            val p = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, h))
++            // The picture fills the box's height (it has the logo's shape, or is limited by height), so its
++            // transparent bottom rows are this tall on screen: the line below moves up over them.
++            val cut = if (known) ((h - pad) * emptyBottom.coerceIn(0f, 0.6f)).toInt() else 0
++            layout(w, h - cut) { p.place(0, 0) }
++        }
++
++    private val logoEmptyBottom = java.util.concurrent.ConcurrentHashMap<String, Float>()
++    fun knownLogoEmptyBottom(url: String?): Float = url?.let { logoEmptyBottom[it] } ?: 0f
++    /** Share of the logo picture's height that is fully transparent at its bottom (measured once per logo). */
++    suspend fun measureLogoEmptyBottom(url: String, image: coil3.Image?): Float? {
++        logoEmptyBottom[url]?.let { return it }
++        val bmp = (image as? coil3.BitmapImage)?.bitmap ?: return null
++        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Default) {
++            val b = if (bmp.config == android.graphics.Bitmap.Config.HARDWARE) bmp.copy(android.graphics.Bitmap.Config.ARGB_8888, false) ?: return@withContext null else bmp
++            val w = b.width; val h = b.height
++            if (w <= 0 || h <= 0) return@withContext null
++            val row = IntArray(w)
++            var empty = 0
++            for (y in h - 1 downTo 0) {
++                b.getPixels(row, 0, w, 0, y, w, 1)
++                if (row.any { (it ushr 24) > 24 }) break
++                empty++
++            }
++            if (b !== bmp) b.recycle()
++            (empty.toFloat() / h).also { logoEmptyBottom[url] = it }
++        }
++    }
++
++
 +    private fun fitStart(box: Size, w: Float, h: Float): Rect? {
 +        if (w <= 0f || h <= 0f || box.width <= 0f || box.height <= 0f) return null
 +        val scale = minOf(box.width / w, box.height / h)
@@ -1377,7 +1425,7 @@ index c353a5a..e4b8316 100644
                      .align(Alignment.BottomStart)
                      .onFocusChanged { contentHasFocus.value = it.hasFocus }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index ef918a3..4d0c57b 100644
+index ef918a3..a149059 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -182,6 +182,7 @@ internal fun ModernHeroMediaLayer(
@@ -1664,7 +1712,7 @@ index ef918a3..4d0c57b 100644
                              color = NuvioTheme.colors.TextSecondary,
 -                            maxLines = 1
 +                            maxLines = 1,
-+                            modifier = modLeaving
++                            modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.RUNTIME, movesWithLogo = true, text = runtimeText, style = labelMedium) } // Nuvio Mod: glides to the page's duration, like the date
                          )
                      }
                      if (!runtimeText.isNullOrBlank() && !yearText.isNullOrBlank()) {
@@ -1822,7 +1870,7 @@ index ef918a3..4d0c57b 100644
          }
      }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
-index 6d3f3c2..0aca446 100644
+index 6d3f3c2..cb0f03a 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeModels.kt
 @@ -34,7 +34,7 @@ internal val YEAR_REGEX = Regex("""\b(19|20)\d{2}\b""")
@@ -1840,7 +1888,7 @@ index 6d3f3c2..0aca446 100644
      else MODERN_HERO_FOCUS_DEBOUNCE_MS
 -internal val MODERN_ROW_HEADER_FOCUS_INSET = 40.dp
 -private val MODERN_ROW_CARD_BOTTOM_ROOM = 8.dp
-+internal val MODERN_ROW_HEADER_FOCUS_INSET = 48.dp // Nuvio Mod: room for the bigger title gap
++internal val MODERN_ROW_HEADER_FOCUS_INSET = 36.dp // Nuvio Mod: row title (24) + its 8 dp gap + 4 dp; the hero block sits 12 dp lower than with 48
 +// Nuvio Mod: margin between the cards and the bottom edge of the screen.
 +internal val MODERN_ROW_CARD_BOTTOM_ROOM = 28.dp
  private const val MODERN_ROWS_VIEWPORT_MAX_FRACTION = 0.6f

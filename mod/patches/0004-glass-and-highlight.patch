@@ -24,10 +24,10 @@ index 044b67a..c1c1625 100644
  }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
 new file mode 100644
-index 0000000..037f095
+index 0000000..6fb5626
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModLook.kt
-@@ -0,0 +1,120 @@
+@@ -0,0 +1,146 @@
 +package com.nuvio.tv.ui.v2.components
 +
 +import androidx.compose.foundation.BorderStroke
@@ -69,11 +69,37 @@ index 0000000..037f095
 +    const val SELECTED = 0.03f
 +    /** How much posters, photos and other picture cards grow on focus. */
 +    const val GROW = 1.06f
++    /** Details page: the genre line and the source (badge) line are drawn this much dimmer than the description, like Apple TV. */
++    const val DETAIL_LINES = 0.7f
++    /** Details page badges (Apple style): name as text in a thin outline, at the genre line's strength. */
++    const val DETAIL_BADGES = 0.7f
++    /** Dp.Hairline = exactly one screen pixel, the thinnest outline possible. */
++    val DETAIL_BADGE_OUTLINE = androidx.compose.ui.unit.Dp.Hairline
++    val DETAIL_BADGE_HEIGHT = androidx.compose.ui.unit.Dp(20f)
++    val DETAIL_BADGE_RADIUS = androidx.compose.ui.unit.Dp(4f)
++    val DETAIL_BADGE_TEXT_SIZE = androidx.compose.ui.unit.TextUnit(14f, androidx.compose.ui.unit.TextUnitType.Sp)
++    /** Details page: a faint dark glow around each letter (Apple TV style), so text reads on any picture without shading it. */
++    val READABLE_SHADOW = androidx.compose.ui.graphics.Shadow(color = Color.Black.copy(alpha = 0.55f), offset = Offset(0f, 1f), blurRadius = 8f)
++    /** True inside the details page's text block: texts there (also in shared parts) get [READABLE_SHADOW]. */
++    val LocalReadable = androidx.compose.runtime.staticCompositionLocalOf { false }
++    @Composable
++    fun readable(style: androidx.compose.ui.text.TextStyle): androidx.compose.ui.text.TextStyle =
++        if (LocalReadable.current) style.copy(shadow = READABLE_SHADOW) else style
++    /** Details page buttons (Play, icon buttons, Rate): corner radius and top/bottom padding. */
++    val DETAIL_BUTTON_RADIUS = androidx.compose.ui.unit.Dp(12f)
++    val DETAIL_BUTTON_PAD_V = androidx.compose.ui.unit.Dp(12f)
 +
 +    /** Glass: the dark tint, and how solid it is over a blurred page / with nothing to blur. */
 +    val GlassTint = Color(0xFF161618)
 +    const val GLASS_FROSTED = 0.65f
 +    const val GLASS_PLAIN = 0.94f
++    /** Blurred glass (Apple / desktop style): the blurred page is darkened by multiplying (its colours bleed through,
++     *  hue kept) to GLASS_SHADE of its brightness, then a light veil of GlassTint at GLASS_VEIL keeps text readable. */
++    const val GLASS_SHADE = 0.5f
++    const val GLASS_VEIL = 0.3f
++    fun glassTints(): List<dev.chrisbanes.haze.HazeTint> = listOf(
++        dev.chrisbanes.haze.HazeTint(Color(GLASS_SHADE, GLASS_SHADE, GLASS_SHADE), androidx.compose.ui.graphics.BlendMode.Multiply)
++    )
 +
 +    val Selected: Color = Color.White.copy(alpha = SELECTED)
 +    val FocusFill: Color = Color.White.copy(alpha = FILL)
@@ -148,20 +174,65 @@ index 0000000..037f095
 +        Button(onClick = onClick, modifier = modifier, enabled = enabled, content = content)
 +    }
 +}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/ModTrailerGlass.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModTrailerGlass.kt
+new file mode 100644
+index 0000000..2387063
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/ModTrailerGlass.kt
+@@ -0,0 +1,36 @@
++package com.nuvio.tv.ui.v2.components
++
++import androidx.compose.runtime.Composable
++import androidx.compose.runtime.DisposableEffect
++import androidx.compose.runtime.LaunchedEffect
++import androidx.compose.runtime.getValue
++import androidx.compose.runtime.mutableLongStateOf
++import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
++import androidx.compose.runtime.setValue
++import androidx.compose.runtime.withFrameNanos
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.draw.drawWithContent
++
++/**
++ * Nuvio Mod: the details page keeps its frosted glass while a trailer plays (Arc turns it plain).
++ * The trailer joins the glass source and is re-captured ~30 times a second, like Arc's Home hero at Maximum.
++ */
++object ModTrailerGlass {
++    /** True while a details trailer is part of the glass source: glass keeps blurring and refreshes with the video. */
++    var live by mutableStateOf(false)
++        private set
++
++    @Composable
++    fun Modifier.modTrailerGlassSource(playing: Boolean): Modifier {
++        val frame = remember { mutableLongStateOf(0L) }
++        val on = playing
++        LaunchedEffect(on) {
++            if (!on) return@LaunchedEffect
++            var last = 0L
++            while (true) withFrameNanos { now -> if (now - last >= 33_000_000L) { frame.longValue = now; last = now } }
++        }
++        DisposableEffect(on) { live = on; onDispose { if (on) live = false } }
++        return if (on) v2GlassSource().drawWithContent { frame.longValue; drawContent() } else this
++    }
++}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
-index b0043f1..63e022c 100644
+index b0043f1..137c515 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioActionPill.kt
-@@ -26,6 +26,8 @@ fun NuvioActionPill(
+@@ -26,15 +26,18 @@ fun NuvioActionPill(
      neutralBackdrop: Boolean = false,
      stationary: Boolean = false,
      containerColor: Color? = null,
 +    contentPadding: androidx.compose.foundation.layout.PaddingValues =
 +        androidx.compose.foundation.layout.PaddingValues(horizontal = 22.dp, vertical = 14.dp),
++    modRadius: androidx.compose.ui.unit.Dp = 12.dp, // Nuvio Mod: corner radius (details page buttons are rounder)
      content: @Composable RowScope.() -> Unit
  ) {
      var focused by remember { mutableStateOf(false) }
-@@ -34,7 +36,7 @@ fun NuvioActionPill(
+-    val shape = remember { RoundedCornerShape(12.dp) }
++    val shape = remember(modRadius) { RoundedCornerShape(modRadius) }
+     val cinematic = com.nuvio.tv.ui.v2.appearance.LocalV2Appearance.current?.visualStyle ==
          com.nuvio.tv.domain.model.VisualStyle.CINEMATIC_GLASS
      val surface = when {
          containerColor != null -> Modifier.background(containerColor, shape)
@@ -170,7 +241,7 @@ index b0043f1..63e022c 100644
          else -> Modifier.background(NuvioTheme.colors.BackgroundElevated, shape)
      }
      Button(
-@@ -47,11 +49,11 @@ fun NuvioActionPill(
+@@ -47,11 +50,11 @@ fun NuvioActionPill(
          scale = ButtonDefaults.scale(focusedScale = 1f),
          colors = ButtonDefaults.colors(
              containerColor = Color.Transparent,
@@ -293,10 +364,10 @@ index d55c84d..264089a 100644
      // Do not create per-card animation jobs, draw caches and glint state for an invisible edge.
      // This also keeps idle cards out of the artwork/theme observation path.
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
-index d8fd359..bcecba4 100644
+index d8fd359..ae3d6f2 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/components/NuvioGlassSurface.kt
-@@ -89,6 +89,78 @@ fun Modifier.nuvioGlass(
+@@ -89,6 +89,79 @@ fun Modifier.nuvioGlass(
      hazeState: HazeState? = null,
      trailingEdgeOnly: Boolean = false,
      neutralBackdrop: Boolean = false
@@ -331,22 +402,23 @@ index d8fd359..bcecba4 100644
 +    val backdrop = if (role == GlassRole.MODAL) popupBackdrop?.state else LocalGlassBackdrop.current
 +    val cinematic = appearance?.visualStyle == VisualStyle.CINEMATIC_GLASS
 +    // A trailer playing behind a surface cannot be blurred: the surface turns plain instead.
-+    val smoke = LocalGlassVideoSmoke.current.takeIf { cinematic && role != GlassRole.MODAL }
++    val smoke = LocalGlassVideoSmoke.current.takeIf { cinematic && role != GlassRole.MODAL && !ModTrailerGlass.live } // Nuvio Mod: no plain glass when the trailer is in the source
 +    val smoked = if (smoke != null) remember(smoke) { derivedStateOf { smoke.value >= 1f } }.value else false
 +    val source = (hazeState ?: backdrop).takeIf {
 +        !smoked && !neutralBackdrop && !dark && tokens.liveBlur && role != GlassRole.CARD_FOCUS &&
 +            (it === popupBackdrop?.state || it?.areas?.isNotEmpty() == true)
 +    }
 +    val panelBlur = NuvioTheme.effects.blurPanel
-+    val refreshVideo = tokens.edgeLayers >= 3 && (popupBackdrop?.liveTrailers ?: 0) > 0
++    val refreshVideo = (tokens.edgeLayers >= 3 && (popupBackdrop?.liveTrailers ?: 0) > 0) || ModTrailerGlass.live // Nuvio Mod: follow the details trailer
 +    val blur = if (source != null) Modifier.hazeEffect(state = source) {
 +        backgroundColor = Color(0xFF080A0C)
 +        blurRadius = panelBlur
 +        noiseFactor = 0f // Nuvio Mod: no grain in the frosted glass
 +        inputScale = HazeInputScale.Fixed(0.66f)
 +        forceInvalidateOnPreDraw = refreshVideo
++        tints = ModLook.glassTints() // Nuvio Mod: the page's colours bleed through, darkened
 +    } else Modifier
-+    val bodyAlpha = if (source != null) ModLook.GLASS_FROSTED else ModLook.GLASS_PLAIN // Nuvio Mod: one glass for the whole app (ModLook)
++    val bodyAlpha = if (source != null) ModLook.GLASS_VEIL else ModLook.GLASS_PLAIN // Nuvio Mod: one glass for the whole app (ModLook)
 +    return clip(shape)
 +        .then(blur)
 +        .background(ModLook.GlassTint.copy(alpha = bodyAlpha), shape)

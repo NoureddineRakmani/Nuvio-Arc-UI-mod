@@ -100,6 +100,19 @@ index f0d8312..e578803 100644
          glow = cardGlow
      ) {
          Box(
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/MDBListRatingsRow.kt b/app/src/main/java/com/nuvio/tv/ui/components/MDBListRatingsRow.kt
+index 404c14e..1be4320 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/MDBListRatingsRow.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/MDBListRatingsRow.kt
+@@ -114,7 +114,7 @@ private fun RatingBadge(
+         }
+         Text(
+             text = formatMDBListRating(provider, rating),
+-            style = MaterialTheme.typography.labelMedium,
++            style = com.nuvio.tv.ui.v2.components.ModLook.readable(MaterialTheme.typography.labelMedium), // Nuvio Mod: readable on the details page
+             color = NuvioTheme.extendedColors.textSecondary,
+             maxLines = 1,
+             softWrap = false
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt b/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
 index cf5e3b5..c33425f 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
@@ -179,6 +192,127 @@ index 2369d7d..bc51a55 100644
              contentColor = contentColor,
              focusedContentColor = contentColor
          ),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/SourceBadgeRow.kt b/app/src/main/java/com/nuvio/tv/ui/components/SourceBadgeRow.kt
+index 4ed6709..9cb6a42 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/SourceBadgeRow.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/SourceBadgeRow.kt
+@@ -1,5 +1,9 @@
+ package com.nuvio.tv.ui.components
+ 
++import androidx.compose.foundation.layout.Box // Nuvio Mod
++
++import androidx.compose.ui.graphics.graphicsLayer // Nuvio Mod
++
+ import androidx.compose.animation.core.LinearEasing
+ import androidx.compose.animation.core.animateFloat
+ import androidx.compose.animation.core.infiniteRepeatable
+@@ -8,6 +12,7 @@ import androidx.compose.animation.core.tween
+ import androidx.compose.foundation.Canvas
+ import androidx.compose.foundation.Image
+ import androidx.compose.foundation.background
++import androidx.compose.foundation.border // Nuvio Mod
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Row
+ import androidx.compose.foundation.layout.height
+@@ -57,13 +62,15 @@ import com.nuvio.tv.domain.model.DebridStreamVisualTag
+ fun SourceBadgeRow(
+     signal: SourcePrefetchSignal?,
+     modifier: Modifier = Modifier,
+-    badgeHeight: androidx.compose.ui.unit.Dp = 22.dp
++    badgeHeight: androidx.compose.ui.unit.Dp = 22.dp,
++    modMatch: Color? = null, // Nuvio Mod: outlined badges drawn in this colour…
++    modMatchAlpha: Float = 1f // Nuvio Mod: …at this strength (the genre line's)
+ ) {
+     if (signal == null || signal.phase == SourcePrefetchPhase.EMPTY) return
+     Row(
+         modifier = modifier,
+         verticalAlignment = Alignment.CenterVertically,
+-        horizontalArrangement = Arrangement.spacedBy(9.dp)
++        horizontalArrangement = Arrangement.spacedBy(6.dp) // Nuvio Mod: closer (was 9)
+     ) {
+         when (signal.phase) {
+             SourcePrefetchPhase.SEARCHING -> {
+@@ -90,7 +97,7 @@ fun SourceBadgeRow(
+                         )
+                     }
+                 }
+-                SourceBadges(signal.facts, signal.badges, badgeHeight, signal.fileSizeBytes)
++                SourceBadges(signal.facts, signal.badges, badgeHeight, signal.fileSizeBytes, modMatch, modMatchAlpha) // Nuvio Mod
+             }
+         }
+     }
+@@ -101,7 +108,9 @@ private fun SourceBadges(
+     facts: DirectDebridStreamFilter.StreamFacts?,
+     fusionBadges: List<com.nuvio.tv.domain.model.StreamBadge>,
+     badgeHeight: androidx.compose.ui.unit.Dp,
+-    fileSizeBytes: Long?
++    fileSizeBytes: Long?,
++    modMatch: Color? = null, // Nuvio Mod
++    modMatchAlpha: Float = 1f // Nuvio Mod
+ ) {
+     val useFusion = fusionBadges.isNotEmpty()
+     val resources = if (useFusion) emptyList() else facts?.let(::sourceBadgeResources).orEmpty()
+@@ -113,7 +122,9 @@ private fun SourceBadges(
+         content = {
+             if (useFusion) {
+                 for (badge in fusionBadges) {
+-                    StreamImportedBadgeChip(badge = badge)
++                    if (modMatch != null && !badge.name.replace(" ", "").contains("pgprime", ignoreCase = true)) { // Nuvio Mod: (her PG Prime badge keeps its own picture) Apple style: the badge's name as plain text in a thin outline, genre line's grey
++                        Box(if (modMatchAlpha < 1f) Modifier.graphicsLayer { alpha = modMatchAlpha } else Modifier) { ModTextBadge(badge.name, modMatch) }
++                    } else StreamImportedBadgeChip(badge = badge)
+                 }
+             } else {
+                 for (res in resources) {
+@@ -140,7 +151,7 @@ private fun SourceBadges(
+         val placeables = measurables.map { it.measure(loose) }
+         val tail = placeables.takeLast(tailCount)
+         val badges = placeables.dropLast(tailCount)
+-        val spacingPx = 9.dp.roundToPx()
++        val spacingPx = 6.dp.roundToPx() // Nuvio Mod: closer (was 9)
+         val budget = if (constraints.hasBoundedWidth) constraints.maxWidth else Int.MAX_VALUE
+         val kept = mutableListOf<Placeable>()
+         var used = tail.sumOf { it.width } + spacingPx * (tail.size - 1).coerceAtLeast(0)
+@@ -247,4 +258,25 @@ private fun SourceLineSpinner() {
+             style = Stroke(width = 2.dp.toPx())
+         )
+     }
+-}
+\ No newline at end of file
++}
++// Nuvio Mod: details line badge, Apple style: name in normal-weight text inside a thin outline, no background.
++@Composable
++private fun ModTextBadge(name: String, color: Color) {
++    val shape = RoundedCornerShape(com.nuvio.tv.ui.v2.components.ModLook.DETAIL_BADGE_RADIUS)
++    Box(
++        modifier = Modifier
++            .height(com.nuvio.tv.ui.v2.components.ModLook.DETAIL_BADGE_HEIGHT)
++            .border(com.nuvio.tv.ui.v2.components.ModLook.DETAIL_BADGE_OUTLINE, color, shape)
++            .padding(horizontal = 7.dp),
++        contentAlignment = Alignment.Center
++    ) {
++        Text(
++            text = name,
++            fontSize = com.nuvio.tv.ui.v2.components.ModLook.DETAIL_BADGE_TEXT_SIZE,
++            fontWeight = androidx.compose.ui.text.font.FontWeight.Normal,
++            style = com.nuvio.tv.ui.v2.components.ModLook.readable(androidx.tv.material3.LocalTextStyle.current),
++            color = color,
++            maxLines = 1
++        )
++    }
++}
+diff --git a/app/src/main/java/com/nuvio/tv/ui/components/Synopsis.kt b/app/src/main/java/com/nuvio/tv/ui/components/Synopsis.kt
+index 7a23d12..1ea4e30 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/components/Synopsis.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/components/Synopsis.kt
+@@ -140,7 +140,7 @@ fun SynopsisDescription(
+     ) {
+         Text(
+             text = description,
+-            style = MaterialTheme.typography.bodyMedium.copy(
++            style = com.nuvio.tv.ui.v2.components.ModLook.readable(MaterialTheme.typography.bodyMedium).copy( // Nuvio Mod: readable on the details page
+                 textDirection = description.contentTextDirection()
+             ),
+             color = NuvioTheme.colors.TextPrimary,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/ExperienceModeSelectionScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/ExperienceModeSelectionScreen.kt
 index 6b2d4bd..a982f51 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/ExperienceModeSelectionScreen.kt
@@ -1628,8 +1762,32 @@ index 07d2e4a..08a429b 100644
              .onFocusChanged { focused = it.isFocused }
              .onPreviewKeyEvent { event ->
                  val native = event.nativeKeyEvent
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/stream/ModStreamText.kt b/app/src/main/java/com/nuvio/tv/ui/screens/stream/ModStreamText.kt
+new file mode 100644
+index 0000000..2b10710
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/stream/ModStreamText.kt
+@@ -0,0 +1,18 @@
++package com.nuvio.tv.ui.screens.stream
++
++// Nuvio Mod: stream text lines made only of invisible characters (spaces, zero-width / format characters,
++// braille blank, Hangul fillers… used by addon formatters as hidden badge markers) take no room on the card.
++
++private val blankGlyphs = setOf(0x034F, 0x115F, 0x1160, 0x17B4, 0x17B5, 0x180E, 0x2800, 0x3164, 0xFFA0)
++
++private fun isInvisible(cp: Int): Boolean =
++    Character.isWhitespace(cp) || Character.isSpaceChar(cp) ||
++        Character.getType(cp) == Character.FORMAT.toInt() || cp in blankGlyphs ||
++        cp in 0xFE00..0xFE0F || cp in 0xE0100..0xE01EF // variation selectors
++
++/** True when the text would draw nothing. */
++fun String.modIsInvisible(): Boolean = codePoints().allMatch { isInvisible(it) }
++
++/** The text without its invisible-only lines; null when nothing visible is left. */
++fun String?.modVisibleLines(): String? =
++    this?.lines()?.filterNot { it.modIsInvisible() }?.joinToString("\n")?.takeIf { it.isNotEmpty() }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
-index c38b9d5..42c465d 100644
+index c38b9d5..a68b603 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/stream/StreamScreen.kt
 @@ -2,6 +2,7 @@
@@ -1703,6 +1861,26 @@ index c38b9d5..42c465d 100644
                  modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp)
              )
          }
+@@ -1456,8 +1460,8 @@ private fun StreamCard(
+     val context = LocalContext.current
+     val density = LocalDensity.current
+     val unknownStreamLabel = stringResource(R.string.stream_unknown)
+-    val streamName = remember(stream, unknownStreamLabel) { stream.getDisplayNameOrNull() ?: unknownStreamLabel }
+-    val streamDescription = remember(stream) { stream.getDisplayDescription() }
++    val streamName = remember(stream, unknownStreamLabel) { stream.getDisplayNameOrNull()?.let { it.modVisibleLines() ?: "" } ?: unknownStreamLabel } // Nuvio Mod: invisible-only lines dropped
++    val streamDescription = remember(stream) { stream.getDisplayDescription().modVisibleLines() } // Nuvio Mod: invisible-only lines dropped
+     val hasBadges = stream.badges.isNotEmpty() || (showFileSizeBadges && stream.behaviorHints?.videoSize != null) || reserveBadgeSpace
+     val cardShape = RoundedCornerShape(NuvioTheme.radii.md)
+     val hasGradientFocusRing = NuvioTheme.palette.focusRingGradient.size > 1
+@@ -1546,7 +1550,7 @@ private fun StreamCard(
+                     Spacer(modifier = Modifier.height(NuvioTheme.spacing.xxs))
+                 }
+ 
+-                Text(
++                if (streamName.isNotEmpty()) Text( // Nuvio Mod: empty title takes no line
+                     text = streamName,
+                     modifier = Modifier.align(streamName.contentTextDirection().toAbsoluteAlignment()),
+                     style = MaterialTheme.typography.titleMedium.copy(
 @@ -1669,10 +1673,10 @@ internal fun StreamResultSurface(
      content: @Composable () -> Unit
  ) {

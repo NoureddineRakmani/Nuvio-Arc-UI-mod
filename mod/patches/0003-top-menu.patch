@@ -45,7 +45,7 @@ index 69307b7..55ca534 100644
          if (event.keyCode == KeyEvent.KEYCODE_MENU) {
              if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && calendarReminders.onMenuKey()) {
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..a9c7369 100644
+index b771237..194c759 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 @@ -1,6 +1,15 @@
@@ -153,7 +153,7 @@ index b771237..a9c7369 100644
  
      // Destination BackHandlers are composed later and retain priority for sheets/settings.
      BackHandler(enabled = visible) {
-@@ -91,46 +147,94 @@ fun V2TopNavigation(
+@@ -91,46 +147,95 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
@@ -210,9 +210,10 @@ index b771237..a9c7369 100644
 +                .then(if (modBlurOn) Modifier.hazeEffect(state = navHazeState) {
 +                    blurRadius = NuvioTheme.effects.blurPanel
 +                    noiseFactor = 0f // Nuvio Mod: no grain in the frosted glass
++                    tints = ModLook.glassTints() // Nuvio Mod: same glass as the rest of the app
 +                    inputScale = HazeInputScale.Fixed(0.66f)
 +                } else Modifier)
-+                .background(ModLook.GlassTint.copy(alpha = ModLook.GLASS_FROSTED))) {
++                .background(ModLook.GlassTint.copy(alpha = if (modBlurOn) ModLook.GLASS_VEIL else ModLook.GLASS_FROSTED))) { // Nuvio Mod: veil over the darkened blur
 +                // Nuvio Mod: same 3dp gap on every side, so the item pills sit evenly inside the bar.
 +                Row(Modifier.padding(3.dp)
 +                    .onFocusChanged {
@@ -269,7 +270,7 @@ index b771237..a9c7369 100644
                                      contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
                                      focusedContentColor = Color.White)) {
                                  when {
-@@ -143,21 +247,24 @@ fun V2TopNavigation(
+@@ -143,21 +248,24 @@ fun V2TopNavigation(
                          }
                      }
                      if (profile != null) {
