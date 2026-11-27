@@ -1,3 +1,25 @@
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/AboutScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/AboutScreen.kt
+index cc89b65..9777b35 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/AboutScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/AboutScreen.kt
+@@ -147,7 +147,7 @@ fun AboutSettingsContent(
+                                 UpdateChannelSettings(initialFocusRequester, modifier = firstRowModifier)
+                             }
+ 
+-                            SettingsActionRow(
++                            if (false) SettingsActionRow( // Nuvio Mod: section not needed
+                                 title = stringResource(R.string.about_privacy_policy),
+                                 subtitle = stringResource(R.string.about_privacy_policy_subtitle),
+                                 trailingIcon = Icons.Default.OpenInNew,
+@@ -185,7 +185,7 @@ fun AboutSettingsContent(
+                                 )
+                             }
+ 
+-                            SettingsActionRow(
++                            if (false) SettingsActionRow( // Nuvio Mod: section not needed
+                                 title = stringResource(R.string.about_licenses_attributions),
+                                 subtitle = stringResource(R.string.about_licenses_attributions_subtitle),
+                                 trailingIcon = Icons.AutoMirrored.Filled.KeyboardArrowRight,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/AnimeSkipSettingsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/AnimeSkipSettingsScreen.kt
 index d37b0e5..7579ffa 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/AnimeSkipSettingsScreen.kt
@@ -109,6 +131,28 @@ index bd968b5..8f03e97 100644
                  shape = shape
              )
          ),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/ContentDiscoverySettingsContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/ContentDiscoverySettingsContent.kt
+index d18d61d..9e001af 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/ContentDiscoverySettingsContent.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/ContentDiscoverySettingsContent.kt
+@@ -142,7 +142,7 @@ private fun ContentDiscoveryHub(
+                 leadingIcon = Icons.Default.Extension,
+                 modifier = Modifier.initialFocus(ContentDiscoveryRow.ADDONS)
+             )
+-            SettingsActionRow(
++            if (false) SettingsActionRow( // Nuvio Mod: not used
+                 title = stringResource(R.string.settings_media_servers),
+                 subtitle = stringResource(R.string.settings_media_servers_subtitle),
+                 onClick = onNavigateToServers,
+@@ -158,7 +158,7 @@ private fun ContentDiscoveryHub(
+                     modifier = Modifier.initialFocus(ContentDiscoveryRow.PLUGINS)
+                 )
+             }
+-            SettingsActionRow(
++            if (false) SettingsActionRow( // Nuvio Mod: not used
+                 title = stringResource(R.string.party_title),
+                 subtitle = stringResource(R.string.party_settings_row_subtitle),
+                 onClick = onNavigateToWatchParty,
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/CustomThemeEditor.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/CustomThemeEditor.kt
 index f40a18a..4eccd85 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/CustomThemeEditor.kt
@@ -460,6 +504,32 @@ index e82790c..02052de 100644
      ) {
          Text(
              text = stringResource(R.string.layout_reset_default),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutHomeSettings.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutHomeSettings.kt
+index ea4ca61..1462ad6 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutHomeSettings.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutHomeSettings.kt
+@@ -234,7 +234,7 @@ internal fun LayoutSidebarSection(
+             onToggle = { onEvent(LayoutSettingsEvent.SetSidebarCollapsed(!uiState.sidebarCollapsedByDefault)) }
+         )
+     }
+-    DiscoverLocationRow(
++    if (false) DiscoverLocationRow( // Nuvio Mod: Discover removed (not used)
+         selectedLocation = uiState.discoverLocation,
+         rememberedLocation = uiState.lastNonOffDiscoverLocation,
+         onLocationSelected = { location -> onEvent(LayoutSettingsEvent.SetDiscoverLocation(location)) }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsModel.kt
+index e6f9a66..84f82be 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LayoutSettingsModel.kt
+@@ -42,7 +42,7 @@ internal fun visibleLayoutSections(
+         listOf(LayoutSection.HOME_LAYOUT)
+     } else {
+         LayoutSection.entries.filter { section ->
+-            section != LayoutSection.FOCUSED_POSTER || focusedPosterHasOptions
++            section != LayoutSection.HOME_LAYOUT && section != LayoutSection.SIDEBAR /* Nuvio Mod: Sidebar section empty */ && /* Nuvio Mod: Home layout section removed (always full-screen picture) */ (section != LayoutSection.FOCUSED_POSTER || focusedPosterHasOptions)
+         }
+     }
+ 
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LicensesAttributionsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/LicensesAttributionsScreen.kt
 index 44e82f1..be0d8f3 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/LicensesAttributionsScreen.kt
@@ -617,6 +687,32 @@ index f38ae0b..14405ed 100644
                              shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
                          )
                      ),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsModel.kt
+index 9f160b9..b9e9b16 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsModel.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/PlaybackSettingsModel.kt
+@@ -40,7 +40,8 @@ internal enum class PlaybackSection(
+ 
+ internal fun visiblePlaybackSections(settings: PlayerSettings): List<PlaybackSection> =
+     PlaybackSection.entries.filter { section ->
+-        section != PlaybackSection.BUFFER_NETWORK || settings.usesExoPlayerEngine
++        section != PlaybackSection.P2P && // Nuvio Mod: P2P streaming not used (forced off in TorrentSettings)
++            (section != PlaybackSection.BUFFER_NETWORK || settings.usesExoPlayerEngine)
+     }
+ 
+ internal val PlayerSettings.usesExoPlayerEngine: Boolean
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsCatalog.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsCatalog.kt
+index e964b64..522519b 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsCatalog.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsCatalog.kt
+@@ -37,6 +37,7 @@ internal fun visibleSettingsCategories(
+     when (category) {
+         SettingsCategory.ACCOUNT,
+         SettingsCategory.PROFILES,
++        SettingsCategory.TRACKING -> false // Nuvio Mod: not edited in the app (profile button stays in the top menu)
+         SettingsCategory.BACKUP -> isPrimaryProfile
+         SettingsCategory.DEBUG -> isDebugBuild && !isEssentialMode
+         SettingsCategory.EXPERIENCE -> false
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt
 index 04cebbf..dc1c60f 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/SettingsDesignSystem.kt
@@ -1021,3 +1117,136 @@ index 1f76978..eb7621a 100644
                  shape = cardShape
              )
          ),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt
+index c20679d..542d80f 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/TrackingSettingsScreen.kt
+@@ -665,7 +665,7 @@ internal fun TrackingSettingsOverview(
+                     contentPadding = PaddingValues(bottom = NuvioTheme.spacing.md),
+                     verticalArrangement = Arrangement.spacedBy(14.dp)
+                 ) {
+-                    item(key = "tracking_accounts") {
++                    if (false) item(key = "tracking_accounts") { // Nuvio Mod: only Nuvio tracking, other services hidden
+                         SettingsGroupCard(
+                             title = stringResource(R.string.tracking_accounts_title),
+                             subtitle = stringResource(R.string.tracking_accounts_subtitle)
+@@ -745,6 +745,7 @@ internal fun TrackingSettingsOverview(
+                                 onClick = onLibrarySourceClick,
+                                 modifier = Modifier
+                                     .focusRequester(libraryFocusRequester)
++                                    .focusRequester(traktFocusRequester) // Nuvio Mod: entry focus (Trakt row hidden)
+                                     .testTag(TrackingSettingsTestTags.LIBRARY_SOURCE)
+                             )
+                             SettingsActionRow(
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/settings/V2PreferenceControls.kt b/app/src/main/java/com/nuvio/tv/ui/screens/settings/V2PreferenceControls.kt
+index 3adec22..1f153db 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/settings/V2PreferenceControls.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/settings/V2PreferenceControls.kt
+@@ -60,7 +60,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+             }
+         )
+         if (appearance != null) {
+-            SettingsToggleRow(
++            if (false) SettingsToggleRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_intro_animation_title),
+                 subtitle = stringResource(R.string.v2_intro_animation_subtitle),
+                 checked = appearance.introAnimationEnabled,
+@@ -68,7 +68,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     V2AppearancePreferenceStore.update(context) { it.copy(introAnimationEnabled = !it.introAnimationEnabled) }
+                 } }
+             )
+-            if (appearance.introAnimationEnabled) {
++            if (false && appearance.introAnimationEnabled) { // Nuvio Mod: intro off (ModFixedAppearance)
+                 SettingsToggleRow(
+                     title = stringResource(R.string.v2_intro_sound_title),
+                     subtitle = stringResource(R.string.v2_intro_sound_subtitle),
+@@ -78,7 +78,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     } }
+                 )
+             }
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_visual_style_title),
+                 selected = appearance.visualStyle,
+                 options = listOf(
+@@ -89,7 +89,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     V2AppearancePreferenceStore.update(context) { it.copy(visualStyle = value) }
+                 }
+             )
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_navigation_title),
+                 selected = appearance.navigationStyle,
+                 options = listOf(
+@@ -100,7 +100,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     V2AppearancePreferenceStore.update(context) { it.copy(navigationStyle = value) }
+                 }
+             )
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_accent_title),
+                 subtitle = stringResource(R.string.v2_accent_fixed_hint),
+                 selected = appearance.accentMode,
+@@ -112,7 +112,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     V2AppearancePreferenceStore.update(context) { it.copy(accentMode = value) }
+                 }
+             )
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_glass_tint),
+                 selected = appearance.glassTintMode,
+                 options = listOf(
+@@ -124,7 +124,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     V2AppearancePreferenceStore.update(context) { it.copy(glassTintMode = value) }
+                 }
+             )
+-            if (appearance.visualStyle == VisualStyle.CINEMATIC_GLASS) {
++            if (false && appearance.visualStyle == VisualStyle.CINEMATIC_GLASS) { // Nuvio Mod: glass fixed (ModLook)
+                 V2ChoiceRow(
+                     title = stringResource(R.string.v2_glass_preset),
+                     subtitle = if (appearance.isGlassFineTuned) stringResource(R.string.v2_glass_fine_tuned)
+@@ -163,7 +163,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     onFocused = {}
+                 )
+             }
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_focus_style_title),
+                 selected = appearance.focusStyle,
+                 options = listOf(
+@@ -174,7 +174,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     V2AppearancePreferenceStore.update(context) { it.copy(focusStyle = value) }
+                 }
+             )
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_player_chrome),
+                 selected = appearance.playerChromeStyle,
+                 options = listOf(
+@@ -185,7 +185,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                     V2AppearancePreferenceStore.update(context) { it.copy(playerChromeStyle = value) }
+                 }
+             )
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_settings_background),
+                 subtitle = stringResource(R.string.v2_settings_background_help),
+                 selected = appearance.settingsBackground,
+@@ -199,7 +199,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+                 ),
+                 onSelect = { value -> V2AppearancePreferenceStore.update(context) { it.copy(settingsBackground = value) } }
+             )
+-            V2ChoiceRow(
++            if (false) V2ChoiceRow( // Nuvio Mod: fixed (ModFixedAppearance)
+                 title = stringResource(R.string.v2_settings_presentation),
+                 selected = appearance.settingsPresentation,
+                 options = listOf(
+@@ -213,7 +213,7 @@ internal fun V2PreferenceControls(initialFocusRequester: FocusRequester? = null)
+         }
+     }
+     if (appearance != null) {
+-        SettingsGroupCard(title = stringResource(R.string.v2_quality_title)) {
++        if (false) SettingsGroupCard(title = stringResource(R.string.v2_quality_title)) { // Nuvio Mod: quality fixed on Enhanced (ModFixedAppearance)
+             V2ChoiceRow(
+                 title = stringResource(R.string.v2_quality_title),
+                 subtitle = stringResource(R.string.v2_quality_subtitle),

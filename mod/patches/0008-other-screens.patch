@@ -1,3 +1,16 @@
+diff --git a/app/src/full/java/com/nuvio/tv/core/build/AppFeaturePolicy.kt b/app/src/full/java/com/nuvio/tv/core/build/AppFeaturePolicy.kt
+index fe00a64..4c4bb4f 100644
+--- a/app/src/full/java/com/nuvio/tv/core/build/AppFeaturePolicy.kt
++++ b/app/src/full/java/com/nuvio/tv/core/build/AppFeaturePolicy.kt
+@@ -5,7 +5,7 @@ object AppFeaturePolicy {
+     val inAppUpdatesEnabled: Boolean = true
+     val inAppTrailerPlaybackEnabled: Boolean = true
+     val externalTrailerPlaybackEnabled: Boolean = true
+-    val supportNuvioEnabled: Boolean = true
++    val supportNuvioEnabled: Boolean = false // Nuvio Mod: no donation features
+     val trailerPlaybackMode: TrailerPlaybackMode = TrailerPlaybackMode.IN_APP
+     val imdbRatingLogoEnabled: Boolean = true
+ }
 diff --git a/app/src/main/AndroidManifest.xml b/app/src/main/AndroidManifest.xml
 index a2a4f89..0d80543 100644
 --- a/app/src/main/AndroidManifest.xml
@@ -51,6 +64,19 @@ index 7e52405..23600ee 100644
          state.value = SourcePrefetchSignal(key, SourcePrefetchPhase.SEARCHING, null)
          return generation
      }
+diff --git a/app/src/main/java/com/nuvio/tv/core/torrent/TorrentSettings.kt b/app/src/main/java/com/nuvio/tv/core/torrent/TorrentSettings.kt
+index 3f0eed5..46e2d58 100644
+--- a/app/src/main/java/com/nuvio/tv/core/torrent/TorrentSettings.kt
++++ b/app/src/main/java/com/nuvio/tv/core/torrent/TorrentSettings.kt
+@@ -59,7 +59,7 @@ class TorrentSettings @Inject constructor(
+ 
+     val settings: Flow<TorrentSettingsData> = context.torrentDataStore.data.map { prefs ->
+         TorrentSettingsData(
+-            p2pEnabled = prefs[Keys.P2P_ENABLED] ?: false,
++            p2pEnabled = false, // Nuvio Mod: P2P streaming not used
+             enableUpload = prefs[Keys.ENABLE_UPLOAD] ?: true,
+             hideTorrentStats = prefs[Keys.HIDE_TORRENT_STATS] ?: true,
+             torrentProfile = prefs[Keys.TORRENT_PROFILE]
 diff --git a/app/src/main/java/com/nuvio/tv/ui/brand/ArcBrandArt.kt b/app/src/main/java/com/nuvio/tv/ui/brand/ArcBrandArt.kt
 index 19210b3..bb0ed4e 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/brand/ArcBrandArt.kt
@@ -114,15 +140,16 @@ index 404c14e..1be4320 100644
              maxLines = 1,
              softWrap = false
 diff --git a/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt b/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
-index cf5e3b5..c33425f 100644
+index cf5e3b5..210d400 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/components/PanelComponents.kt
-@@ -111,7 +111,7 @@ internal fun PanelActionRow(
+@@ -110,8 +110,7 @@ internal fun PanelActionRow(
+             .fillMaxWidth()
              .then(if (focusRequester != null) Modifier.focusRequester(focusRequester) else Modifier)
              .onFocusChanged { focused = it.isFocused; if (it.isFocused) onFocused?.invoke() }
-             .then(if (v2) Modifier.nuvioV2Focus(focused, actionShape)
+-            .then(if (v2) Modifier.nuvioV2Focus(focused, actionShape)
 -                .nuvioGlass(GlassRole.CONTROL, focused, actionShape) else Modifier),
-+                .nuvioGlass(GlassRole.CONTROL, false, actionShape) else Modifier),
++            .then(if (v2) Modifier.nuvioV2Focus(focused, actionShape, stationary = true) else Modifier), // Nuvio Mod: no grow, no glass box per row; rows sit on the panel's frosted glass
          colors = CardDefaults.colors(
              containerColor = if (v2) Color.Transparent else Color.White.copy(alpha = 0.08f),
              focusedContainerColor = if (v2) Color.Transparent else Color.White.copy(alpha = 0.08f)
@@ -1639,6 +1666,16 @@ index f1b8161..acfb777 100644
                  AsyncImage(
                      model = backdropRequest,
                      contentDescription = stringResource(R.string.cd_loading_backdrop),
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerControlAvailability.kt b/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerControlAvailability.kt
+index 7d5bd8e..44dad50 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerControlAvailability.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerControlAvailability.kt
+@@ -26,4 +26,5 @@ internal fun playerControlAvailability(
+     if (state.subtitleTracks.isNotEmpty() || state.addonSubtitles.isNotEmpty()) add(PlayerControlAction.SUBTITLES)
+     if (!state.tunnelingEnabled && !appliedTunneling) add(PlayerControlAction.ASPECT)
+     if (reportsAvailable && state.playbackIssueReportsEnabled && !state.playbackIssueReportStatus.isReportBusyOrDone) add(PlayerControlAction.REPORT)
++    remove(PlayerControlAction.WATCH_PARTY) // Nuvio Mod: watch party not used
+ }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ModProfileStart.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ModProfileStart.kt
 new file mode 100644
 index 0000000..e2897a1

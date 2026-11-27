@@ -225,7 +225,7 @@ index adae93e..7a78c13 100644
                                  modifier = Modifier.focusProperties { up = backFocus; down = FocusRequester.Cancel }
                              ) {
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
-index 1c4be0f..dfb395e 100644
+index 1c4be0f..e2c173e 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/detail/EpisodesSection.kt
 @@ -142,7 +142,7 @@ fun SeasonTabs(
@@ -258,7 +258,7 @@ index 1c4be0f..dfb395e 100644
                                  val barHeight = 2.5.dp.toPx()
                                  drawRoundRect(
 -                                    color = accent,
-+                                    color = Color.White.copy(alpha = 0.7f), // Nuvio Mod: neutral, was the accent colour
++                                    color = Color.White.copy(alpha = com.nuvio.tv.ui.v2.components.ModLook.DETAIL_LINES), // Nuvio Mod: neutral, like the details lines
                                      topLeft = Offset((size.width - barWidth) / 2f, size.height - 4.dp.toPx() - barHeight),
                                      size = Size(barWidth, barHeight),
                                      cornerRadius = CornerRadius(barHeight / 2f)

@@ -1,8 +1,16 @@
 diff --git a/app/src/main/java/com/nuvio/tv/MainActivity.kt b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-index 69307b7..55ca534 100644
+index 69307b7..32d179f 100644
 --- a/app/src/main/java/com/nuvio/tv/MainActivity.kt
 +++ b/app/src/main/java/com/nuvio/tv/MainActivity.kt
-@@ -906,6 +906,7 @@ open class MainActivity : ComponentActivity() {
+@@ -768,6 +768,7 @@ open class MainActivity : ComponentActivity() {
+                     LocalAmbientIdleController provides ambientIdleController,
+                     com.nuvio.tv.core.player.LocalTrailerPlayerPool provides trailerPlayerPool
+                 ) {
++                com.nuvio.tv.ui.v2.components.ModHighlightAccent() // Nuvio Mod: highlight takes the Accent colour
+                 val transparentPlayerBackdrop = PlayerWindowBackdrop.isTransparentRequested
+                 Surface(
+                     modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
+@@ -906,6 +907,7 @@ open class MainActivity : ComponentActivity() {
                          hasSelectedProfileThisSession, profiles.size, activeProfileHasPin, v2ProfilePickerRequested
                      )
  
@@ -10,7 +18,7 @@ index 69307b7..55ca534 100644
                      if (shouldShowProfileSelection) {
                          SideEffect { startPicture.end() }
                          ProfileSelectionScreen(
-@@ -1223,6 +1224,7 @@ open class MainActivity : ComponentActivity() {
+@@ -1223,6 +1225,7 @@ open class MainActivity : ComponentActivity() {
                          }
                      }
  
@@ -18,7 +26,7 @@ index 69307b7..55ca534 100644
                      LaunchedEffect(navController, followsLaunchTargets, pendingDeepLink) {
                          val url = pendingDeepLink ?: return@LaunchedEffect
                          if (!followsLaunchTargets) return@LaunchedEffect
-@@ -1437,7 +1439,8 @@ open class MainActivity : ComponentActivity() {
+@@ -1437,7 +1440,8 @@ open class MainActivity : ComponentActivity() {
                              Box(Modifier.fillMaxSize().graphicsLayer {
                                  alpha = if (profileEntry.pending && !profileEntry.revealing) 0f else 1f
                              }) {
@@ -28,7 +36,7 @@ index 69307b7..55ca534 100644
                                  com.nuvio.tv.ui.v2.navigation.V2TopNavigation(
                                      navigationContent = navigationContent,
                                      currentRoute = currentRoute, rootRoutes = rootRoutes, items = drawerItems,
-@@ -1665,6 +1668,7 @@ open class MainActivity : ComponentActivity() {
+@@ -1665,6 +1669,7 @@ open class MainActivity : ComponentActivity() {
      }
  
      private fun captureDeepLinkIntent(intent: Intent?) {
@@ -36,7 +44,7 @@ index 69307b7..55ca534 100644
          val url = intent?.dataString?.trim()?.takeIf(String::isNotBlank) ?: return
          pendingDeepLinkUrl.value = url
      }
-@@ -1719,6 +1723,7 @@ open class MainActivity : ComponentActivity() {
+@@ -1719,6 +1724,7 @@ open class MainActivity : ComponentActivity() {
              }
              return true
          }
@@ -45,26 +53,23 @@ index 69307b7..55ca534 100644
          if (event.keyCode == KeyEvent.KEYCODE_MENU) {
              if (event.action == KeyEvent.ACTION_DOWN && event.repeatCount == 0 && calendarReminders.onMenuKey()) {
 diff --git a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-index b771237..194c759 100644
+index b771237..48a2cc4 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/v2/navigation/V2TopNavigation.kt
-@@ -1,6 +1,15 @@
+@@ -1,6 +1,12 @@
  package com.nuvio.tv.ui.v2.navigation
  
 +import com.nuvio.tv.ui.v2.components.ModLook
++import com.nuvio.tv.ui.v2.components.nuvioGlass
 +import com.nuvio.tv.ui.v2.components.modPillHighlight
  import androidx.activity.compose.BackHandler
-+import androidx.compose.foundation.background
-+import androidx.compose.ui.draw.clip
 +import androidx.compose.ui.graphics.graphicsLayer
-+import dev.chrisbanes.haze.HazeInputScale
 +import dev.chrisbanes.haze.HazeState
-+import dev.chrisbanes.haze.hazeEffect
 +import dev.chrisbanes.haze.hazeSource
  import com.nuvio.tv.ui.v2.components.nuvioV2Focus
  import androidx.compose.foundation.layout.size
  import androidx.compose.foundation.focusGroup
-@@ -13,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxSize
+@@ -13,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
  import androidx.compose.foundation.layout.fillMaxWidth
  import androidx.compose.foundation.layout.padding
  import androidx.compose.foundation.layout.width
@@ -72,7 +77,7 @@ index b771237..194c759 100644
  import androidx.compose.foundation.layout.height
  import androidx.compose.foundation.shape.RoundedCornerShape
  import androidx.compose.runtime.staticCompositionLocalOf
-@@ -25,6 +35,7 @@ import androidx.compose.foundation.lazy.items
+@@ -25,6 +32,7 @@ import androidx.compose.foundation.lazy.items
  import androidx.compose.runtime.Composable
  import androidx.compose.runtime.CompositionLocalProvider
  import androidx.compose.runtime.LaunchedEffect
@@ -80,7 +85,7 @@ index b771237..194c759 100644
  import androidx.compose.runtime.getValue
  import androidx.compose.runtime.mutableStateOf
  import androidx.compose.runtime.remember
-@@ -33,6 +44,15 @@ import androidx.compose.runtime.withFrameNanos
+@@ -33,6 +41,15 @@ import androidx.compose.runtime.withFrameNanos
  import androidx.compose.ui.Alignment
  import androidx.compose.ui.Modifier
  import androidx.compose.ui.focus.FocusDirection
@@ -96,7 +101,7 @@ index b771237..194c759 100644
  import androidx.compose.ui.focus.FocusRequester
  import androidx.compose.ui.focus.focusProperties
  import androidx.compose.ui.focus.focusRequester
-@@ -55,6 +75,17 @@ import com.nuvio.tv.ui.v2.components.NuvioAvatar
+@@ -55,6 +72,17 @@ import com.nuvio.tv.ui.v2.components.NuvioAvatar
  import com.nuvio.tv.ui.v2.components.NuvioGlassSurface
  
  val LocalV2TopChrome = staticCompositionLocalOf { false }
@@ -114,7 +119,7 @@ index b771237..194c759 100644
  
  /** Alternative chrome around the same navigation controller and destination graph. */
  @Composable
-@@ -71,13 +102,38 @@ fun V2TopNavigation(
+@@ -71,13 +99,39 @@ fun V2TopNavigation(
      onExit: () -> Unit
  ) {
      val visible = currentRoute in rootRoutes
@@ -148,19 +153,20 @@ index b771237..194c759 100644
 +    // Nuvio Mod: the page is only captured and blurred while the bar shows (like Arc's side menu, which
 +    // blurs only while open), not on every frame of every page.
 +    val modBlurOn by remember { derivedStateOf { navFocused || navBarAlpha.value > 0f } }
++    val modGlassLive = modBlurOn && com.nuvio.tv.ui.v2.quality.LocalGlassTokens.current.liveBlur // Nuvio Mod: follows the quality level like all glass
 +    val focusManager = LocalFocusManager.current
 +    val isRtl = LocalLayoutDirection.current == LayoutDirection.Rtl
  
      // Destination BackHandlers are composed later and retain priority for sheets/settings.
      BackHandler(enabled = visible) {
-@@ -91,46 +147,95 @@ fun V2TopNavigation(
+@@ -91,46 +145,88 @@ fun V2TopNavigation(
          }
      }
      Box(Modifier.fillMaxSize()) {
 -        Box(Modifier.fillMaxSize().padding(top = if (visible) 54.dp else 0.dp)
 +        // Nuvio Mod: pages fill the whole screen and the bar floats over them (no band at the top).
 +        Box(Modifier.fillMaxSize()
-+            .then(if (barShown && modBlurOn) Modifier.hazeSource(state = navHazeState) else Modifier)
++            .then(if (barShown && modGlassLive) Modifier.hazeSource(state = navHazeState) else Modifier) // Nuvio Mod: no page recording without blur
              .focusRequester(contentFocus).focusRestorer()
              .focusProperties {
                  this.onExit = {
@@ -206,14 +212,7 @@ index b771237..194c759 100644
 +            // Nuvio Mod: a centered pill that is only as wide as its content.
 +            Box(Modifier.align(Alignment.TopCenter).padding(horizontal = 36.dp, vertical = 12.dp)
 +                .graphicsLayer { alpha = navBarAlpha.value }
-+                .clip(RoundedCornerShape(50))
-+                .then(if (modBlurOn) Modifier.hazeEffect(state = navHazeState) {
-+                    blurRadius = NuvioTheme.effects.blurPanel
-+                    noiseFactor = 0f // Nuvio Mod: no grain in the frosted glass
-+                    tints = ModLook.glassTints() // Nuvio Mod: same glass as the rest of the app
-+                    inputScale = HazeInputScale.Fixed(0.66f)
-+                } else Modifier)
-+                .background(ModLook.GlassTint.copy(alpha = if (modBlurOn) ModLook.GLASS_VEIL else ModLook.GLASS_FROSTED))) { // Nuvio Mod: veil over the darkened blur
++                .nuvioGlass(GlassRole.NAVIGATION, shape = ModLook.Pill, hazeState = navHazeState)) { // Nuvio Mod: the app's one glass
 +                // Nuvio Mod: same 3dp gap on every side, so the item pills sit evenly inside the bar.
 +                Row(Modifier.padding(3.dp)
 +                    .onFocusChanged {
@@ -270,7 +269,7 @@ index b771237..194c759 100644
                                      contentColor = if (isSelected) Color.White else NuvioTheme.colors.TextSecondary,
                                      focusedContentColor = Color.White)) {
                                  when {
-@@ -143,21 +248,24 @@ fun V2TopNavigation(
+@@ -143,21 +239,24 @@ fun V2TopNavigation(
                          }
                      }
                      if (profile != null) {

@@ -1,3 +1,92 @@
+diff --git a/app/src/main/java/com/nuvio/tv/data/local/DeviceUiPreferenceStore.kt b/app/src/main/java/com/nuvio/tv/data/local/DeviceUiPreferenceStore.kt
+index f52df5e..52f0a11 100644
+--- a/app/src/main/java/com/nuvio/tv/data/local/DeviceUiPreferenceStore.kt
++++ b/app/src/main/java/com/nuvio/tv/data/local/DeviceUiPreferenceStore.kt
+@@ -47,7 +47,7 @@ internal object DeviceUiPreferenceCodec {
+             ?: VisualQualityMode.AUTOMATIC,
+         automaticQualityTier = p[automaticTier],
+         qualityAssessmentKey = p[assessmentKey]
+-    )
++    ).modFixed() // Nuvio Mod: quality fixed on Enhanced
+ }
+ 
+ /** Seed once, without modifying the Original renderer's existing scale store. */
+diff --git a/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt b/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt
+index e25e58a..7e5301a 100644
+--- a/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt
++++ b/app/src/main/java/com/nuvio/tv/data/local/LayoutPreferenceDataStore.kt
+@@ -267,7 +267,7 @@ class LayoutPreferenceDataStore @Inject constructor(
+     }
+ 
+     val modernHeroFullScreenBackdropEnabled: Flow<Boolean> = profileFlow { prefs ->
+-        prefs[modernHeroFullScreenBackdropKey] ?: false
++        true || (prefs[modernHeroFullScreenBackdropKey] ?: false) // Nuvio Mod: Home always has the full-screen picture (setting removed)
+     }
+ 
+     val heroSectionEnabled: Flow<Boolean> = profileFlow { prefs ->
+@@ -275,6 +275,7 @@ class LayoutPreferenceDataStore @Inject constructor(
+     }
+ 
+     val discoverLocation: Flow<DiscoverLocation> = profileFlow { prefs ->
++        if (true) return@profileFlow DiscoverLocation.OFF // Nuvio Mod: Discover removed (not used)
+         val stored = prefs[discoverLocationKey] ?: DiscoverLocation.IN_SEARCH.name
+         runCatching { DiscoverLocation.valueOf(stored) }
+             .getOrDefault(DiscoverLocation.IN_SEARCH)
+diff --git a/app/src/main/java/com/nuvio/tv/data/local/ModFixedAppearance.kt b/app/src/main/java/com/nuvio/tv/data/local/ModFixedAppearance.kt
+new file mode 100644
+index 0000000..42fcd6a
+--- /dev/null
++++ b/app/src/main/java/com/nuvio/tv/data/local/ModFixedAppearance.kt
+@@ -0,0 +1,36 @@
++package com.nuvio.tv.data.local
++
++import com.nuvio.tv.domain.model.AccentMode
++import com.nuvio.tv.domain.model.DeviceUiPreferences
++import com.nuvio.tv.domain.model.FocusStyle
++import com.nuvio.tv.domain.model.GlassPreset
++import com.nuvio.tv.domain.model.GlassTintMode
++import com.nuvio.tv.domain.model.NavigationStyle
++import com.nuvio.tv.domain.model.PlayerChromeStyle
++import com.nuvio.tv.domain.model.SettingsBackground
++import com.nuvio.tv.domain.model.SettingsPresentation
++import com.nuvio.tv.domain.model.V2AppearancePreferences
++import com.nuvio.tv.domain.model.VisualQualityMode
++import com.nuvio.tv.domain.model.VisualStyle
++
++/**
++ * Nuvio Mod: Appearance choices fixed to the mod's look; their rows are hidden in V2PreferenceControls.
++ * Kept in settings: Experience (V2 / Original), Interface scale; the Colour theme (Theme settings) sets the accent.
++ * The glass itself (darkness, blur) is defined in ModLook and ignores Arc's glass preset; FROSTED only keeps
++ * Arc's blur switch at full strength.
++ */
++internal fun V2AppearancePreferences.modFixed(): V2AppearancePreferences = copy(
++    visualStyle = VisualStyle.CINEMATIC_GLASS,
++    navigationStyle = NavigationStyle.TOP_NAVIGATION,
++    focusStyle = FocusStyle.GLASS_LIFT,
++    accentMode = AccentMode.FIXED_THEME, // the accent is the Colour theme's colour (it also colours the highlight)
++    glassTintMode = GlassTintMode.NEUTRAL,
++    settingsPresentation = SettingsPresentation.GLASS,
++    settingsBackground = SettingsBackground.HERO,
++    playerChromeStyle = PlayerChromeStyle.INVISIBLE,
++    introAnimationEnabled = false,
++    introSoundEnabled = false
++).withGlassPreset(GlassPreset.FROSTED)
++
++/** Nuvio Mod: blur always on, no Maximum extras (Home trailer re-blur), no automatic level changes. */
++internal fun DeviceUiPreferences.modFixed(): DeviceUiPreferences = copy(visualQualityMode = VisualQualityMode.ENHANCED)
+diff --git a/app/src/main/java/com/nuvio/tv/data/local/V2AppearancePreferenceStore.kt b/app/src/main/java/com/nuvio/tv/data/local/V2AppearancePreferenceStore.kt
+index c863064..faa3906 100644
+--- a/app/src/main/java/com/nuvio/tv/data/local/V2AppearancePreferenceStore.kt
++++ b/app/src/main/java/com/nuvio/tv/data/local/V2AppearancePreferenceStore.kt
+@@ -62,7 +62,7 @@ object V2AppearancePreferenceStore {
+             glassPreset = preset,
+             glassTransparencyPercent = (p[transparency] ?: preset.transparencyPercent).coerceIn(0, 100),
+             glassBlurStrengthPercent = (p[blurStrength] ?: preset.blurStrengthPercent).coerceIn(0, 100)
+-        )
++        ).modFixed() // Nuvio Mod: choices fixed to the mod's look
+     }
+ 
+     fun flow(context: Context) = context.v2AppearanceDataStore.data
 diff --git a/app/src/main/java/com/nuvio/tv/data/mapper/CatalogMapper.kt b/app/src/main/java/com/nuvio/tv/data/mapper/CatalogMapper.kt
 index f6ac648..d7bc579 100644
 --- a/app/src/main/java/com/nuvio/tv/data/mapper/CatalogMapper.kt
