@@ -1179,10 +1179,10 @@ index 0000000..7c696af
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt
 new file mode 100644
-index 0000000..73982e6
+index 0000000..ca45f58
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,136 @@
 +package com.nuvio.tv.ui.screens.home
 +
 +import androidx.compose.animation.core.AnimationState
@@ -1192,6 +1192,8 @@ index 0000000..73982e6
 +import androidx.compose.animation.core.tween
 +import androidx.compose.foundation.gestures.scrollBy
 +import androidx.compose.foundation.lazy.LazyListState
++import androidx.compose.ui.Modifier
++import androidx.compose.ui.graphics.graphicsLayer
 +import java.util.WeakHashMap
 +import kotlinx.coroutines.CoroutineScope
 +import kotlinx.coroutines.launch
@@ -1214,8 +1216,15 @@ index 0000000..73982e6
 +     */
 +    val ROW_GAP = MODERN_ROW_CARD_BOTTOM_ROOM
 +    private const val GLIDE_MS = 280
-+    /** Soft start, long soft landing (the usual "ease" curve). */
-+    private val GLIDE_EASING = CubicBezierEasing(0.25f, 0.1f, 0.25f, 1f)
++    private fun <T> slideSpec() = tween<T>(GLIDE_MS, easing = GLIDE_EASING)
++    /** The hero title block's move between rows of different card heights: same curve, quicker than the rows. */
++    private const val HERO_BLOCK_MS = 180
++    fun <T> heroBlockSpec() = tween<T>(HERO_BLOCK_MS, easing = GLIDE_EASING)
++    /** A leaving row is fully faded after this share of the distance to the rows area's top (no thin last line). */
++    private const val FADE_SHARE = 0.7f
++    /** Even speed with soft ends: on a box running animations at 0.5x the slide has ~9 frames, and this curve
++     *  keeps the biggest step per frame low (63 px instead of 88 for a row), so it reads as a slide, not a jump. */
++    private val GLIDE_EASING = CubicBezierEasing(0.33f, 0f, 0.67f, 1f)
 +
 +    private class Glide {
 +        /** Where a resting row's bottom edge is (px from the top of the rows area). */
@@ -1289,7 +1298,7 @@ index 0000000..73982e6
 +        gliding = true
 +        try {
 +            scroll {
-+                AnimationState(0f).animateTo(distance, tween(GLIDE_MS, easing = GLIDE_EASING), sequentialAnimation = true) {
++                AnimationState(0f).animateTo(distance, slideSpec(), sequentialAnimation = true) {
 +                    scrollBy(value - done)
 +                    done = value
 +                }
@@ -1299,9 +1308,19 @@ index 0000000..73982e6
 +        }
 +        g.unfinished = false
 +    }
++
++    /**
++     * A row moving up out of the rows area fades away by the time its cards reach the area's top (the tallest
++     * cards sit [MODERN_ROW_HEADER_FOCUS_INSET] below it), so it never slides across the hero text; going up,
++     * the row arriving from above fades in the same way. Resting rows (offset 0) and rows below stay opaque.
++     */
++    fun Modifier.modRowFade(state: LazyListState, index: Int): Modifier = graphicsLayer {
++        val top = state.layoutInfo.visibleItemsInfo.firstOrNull { it.index == index }?.offset ?: 0
++        alpha = if (top >= 0) 1f else (1f + top / (MODERN_ROW_HEADER_FOCUS_INSET.toPx() * FADE_SHARE)).coerceIn(0f, 1f)
++    }
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index c353a5a..e4b8316 100644
+index c353a5a..d9de107 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 @@ -668,7 +668,7 @@ fun ModernHomeContent(
@@ -1313,15 +1332,12 @@ index c353a5a..e4b8316 100644
              .collect { selection ->
                  // Publish artwork/text and request enrichment from the same settled identity.
                  settledHeroSelection.value = selection
-@@ -1043,13 +1043,24 @@ fun ModernHomeContent(
-                 (normalHeight * if (trailerPlaybackTarget == FocusedPosterTrailerPlaybackTarget.FEATHERED_WINDOW) 1.12f else 1f)
+@@ -1044,12 +1044,18 @@ fun ModernHomeContent(
                      .coerceAtMost(screenHeight)
              }
-+            val heroFocusedCardHeightPx = remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
              val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
 -                val topInsetPx = with(localDensity) { MODERN_ROW_HEADER_FOCUS_INSET.toPx() }
 +                // Nuvio Mod: bring the focused card's bottom edge to the bottom of the rows area.
-+                // The focused card's real height is remembered so the title block can sit right above any row.
 +                val bottomRoomPx = with(localDensity) { MODERN_ROW_CARD_BOTTOM_ROOM.toPx() }
                  @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
                  object : BringIntoViewSpec {
@@ -1329,9 +1345,6 @@ index c353a5a..e4b8316 100644
 -                    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float =
 -                        verticalRowScrollDistance(offset, topInsetPx, verticalRowListState.canScrollBackward)
 +                    override fun calculateScrollDistance(offset: Float, size: Float, containerSize: Float): Float {
-+                        if (size > 0f && kotlin.math.abs(heroFocusedCardHeightPx.floatValue - size) > 1f) {
-+                            heroFocusedCardHeightPx.floatValue = size
-+                        }
 +                        if (ModHomeRowGlide.gliding) return 0f // Nuvio Mod: a row slide is already taking it there
 +                        val distance = (offset + size) - (containerSize - bottomRoomPx)
 +                        if (kotlin.math.abs(distance) < 1f) return 0f
@@ -1341,7 +1354,7 @@ index c353a5a..e4b8316 100644
                  }
              }
              val contentFocusRequester = LocalContentFocusRequester.current
-@@ -1065,6 +1076,11 @@ fun ModernHomeContent(
+@@ -1065,6 +1071,11 @@ fun ModernHomeContent(
                  }.coerceAtLeast(1)
              }
  
@@ -1353,7 +1366,7 @@ index c353a5a..e4b8316 100644
              val isFullScreenState = remember(liveHeroSceneState) {
                  derivedStateOf { liveHeroSceneState.value.fullScreenBackdrop }
              }
-@@ -1100,7 +1116,8 @@ fun ModernHomeContent(
+@@ -1100,7 +1111,8 @@ fun ModernHomeContent(
              // Fade content rows when ANY hero media (catalog trailer or collection
              // hero video) is playing in fullscreen — not just catalog trailers.
              val trailerContentAlphaState = animateFloatAsState(
@@ -1363,27 +1376,26 @@ index c353a5a..e4b8316 100644
                  animationSpec = tween(durationMillis = 480),
                  label = "trailerContentFade"
              )
-@@ -1113,9 +1130,26 @@ fun ModernHomeContent(
+@@ -1113,9 +1125,25 @@ fun ModernHomeContent(
              val foregroundModifier = remember(sidebarPageLayout, heroLayoutDirection) {
                  Modifier.sidebarPageContent(sidebarPageLayout, heroLayoutDirection)
              }
 -            val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight, screenHeight, foregroundModifier) {
 +            // Nuvio Mod: the title/description block sits just above the current row. Rows with
-+            // shorter cards (continue watching, landscape) leave room, so the block slides down.
++            // shorter cards (continue watching, landscape) leave room, so the block slides down. The row type is
++            // known at the press, and the block moves quickly (ModHomeRowGlide), so a taller row never runs into it.
 +            val heroRowIsWide by remember {
 +                derivedStateOf {
 +                    val key = activeRowKey.value
-+                    key == MODERN_CONTINUE_WATCHING_ROW_KEY || key == MODERN_UPCOMING_ROW_KEY
++                    key == MODERN_CONTINUE_WATCHING_ROW_KEY || key == MODERN_UPCOMING_ROW_KEY || key == MODERN_COMING_UP_ROW_KEY
 +                }
 +            }
-+            val heroMeasuredCardHeightPx = heroFocusedCardHeightPx.floatValue
 +            val heroTextDropTarget = (tallestRowCardHeight - when {
-+                heroMeasuredCardHeightPx > 0f -> with(localDensity) { heroMeasuredCardHeightPx.toDp() }
 +                heroRowIsWide -> continueWatchingCardHeight
 +                useLandscapePosters -> landscapeCatalogCardHeight
 +                else -> portraitCatalogCardHeight
 +            }).coerceAtLeast(0.dp)
-+            val heroTextDrop = androidx.compose.animation.core.animateDpAsState(heroTextDropTarget, label = "modHeroTextDrop")
++            val heroTextDrop = androidx.compose.animation.core.animateDpAsState(heroTextDropTarget, ModHomeRowGlide.heroBlockSpec(), label = "modHeroTextDrop")
 +            val heroMetadataModifier = remember(rowHorizontalPadding, rowsViewportHeight, screenHeight, foregroundModifier, heroTextDrop) {
                  foregroundModifier
                      .align(Alignment.BottomStart)
@@ -1391,7 +1403,7 @@ index c353a5a..e4b8316 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1129,9 +1163,10 @@ fun ModernHomeContent(
+@@ -1129,9 +1157,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -1405,7 +1417,7 @@ index c353a5a..e4b8316 100644
              }
              val heroTrailerShowing = remember {
                  { !isRapidHorizontalNav.value && shouldPlayTrailerLambda() && heroTrailerRenderedLambda() }
-@@ -1150,7 +1185,8 @@ fun ModernHomeContent(
+@@ -1150,7 +1179,8 @@ fun ModernHomeContent(
                  showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                  mdbListShowOnHero = uiState.mdbListShowOnHero,
                  mdbListRatingOrder = uiState.mdbListRatingOrder,
@@ -1415,7 +1427,7 @@ index c353a5a..e4b8316 100644
                  descriptionMaxLines = heroDescriptionMaxLines,
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                  titleModifier = heroMetadataModifier
-@@ -1286,7 +1322,7 @@ fun ModernHomeContent(
+@@ -1286,7 +1316,7 @@ fun ModernHomeContent(
                  blockLeftOnFirstExpandedItem = blockLeftOnFirstExpandedItem,
                  isVerticalRowsScrollingState = isVerticalRowsScrollingState,
                  verticalMoveInFlight = verticalMoveInFlight,
@@ -1904,7 +1916,7 @@ index 6d3f3c2..cb0f03a 100644
  /** Height the hero text block may take: the space above the rows, less a thin margin at the screen edge. */
  internal fun modernHeroTextMaxHeight(screenHeight: Dp, rowsViewportHeight: Dp): Dp =
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
-index 67c06a3..e3a2496 100644
+index 67c06a3..31842ed 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 @@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -2009,7 +2021,7 @@ index 67c06a3..e3a2496 100644
 +                // Nuvio Mod: every row takes the full height of the rows area and sits at its bottom,
 +                // so short (landscape) cards hug the bottom of the screen like tall (portrait) ones.
 +                Box(
-+                    modifier = Modifier.fillMaxWidth().heightIn(min = rowsViewportHeight - MODERN_ROW_CARD_BOTTOM_ROOM),
++                    modifier = with(ModHomeRowGlide) { Modifier.fillMaxWidth().heightIn(min = rowsViewportHeight - MODERN_ROW_CARD_BOTTOM_ROOM).modRowFade(verticalRowListState, rowIndex) },
 +                    contentAlignment = Alignment.BottomStart
 +                ) {
                  androidx.compose.runtime.CompositionLocalProvider(
