@@ -338,10 +338,10 @@ index 5069566..b4af125 100644
          delay(HomeViewModel.EXTERNAL_META_PREFETCH_ADJACENT_DEBOUNCE_MS + focusStepPace.extraWaitNowMs)
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt
 new file mode 100644
-index 0000000..7c696af
+index 0000000..712ff17
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt
-@@ -0,0 +1,864 @@
+@@ -0,0 +1,881 @@
 +package com.nuvio.tv.ui.screens.home
 +
 +import androidx.compose.animation.core.Animatable
@@ -695,6 +695,11 @@ index 0000000..7c696af
 +        val ctx = appContext
 +        pageDescHeight = 0f // a page without a description reports none
 +        val desc = pieces.getValue(Piece.DESCRIPTION).homeCoords?.takeIf { it.isAttached }?.let { homeDescription }
++        heldId = id
++        heldDescription = desc
++        heldGenres = pieces.getValue(Piece.GENRE).homeFullText?.split(" • ")?.filter { it.isNotBlank() }?.takeIf { it.isNotEmpty() }
++        heldDate = pieces.getValue(Piece.DATE).homeText?.takeIf { it.isNotBlank() }
++        heldRuntime = pieces.getValue(Piece.RUNTIME).homeText?.takeIf { it.isNotBlank() }
 +        measureGrow()
 +        val aim = (lastSlot ?: ctx?.let { ModHeroReserve.logoSlot(it) })?.let { slot -> predictLogoSlot(ctx, slot, desc) }
 +        clearDescHold()
@@ -826,6 +831,18 @@ index 0000000..7c696af
 +        } else null
 +
 +    // ---- Title page ------------------------------------------------------------------------
++
++    // Home's description and genres for the title that last flew in: its page shows them until its final details
++    // are in (ModDetailsComplete), since the addon's first details often word them differently than Home (TMDB).
++    private var heldId: String? = null
++    private var heldDescription: String? = null
++    private var heldGenres: List<String>? = null
++    fun homeDescriptionFor(id: String): String? = heldDescription?.takeIf { id == heldId && it.isNotBlank() }
++    fun homeGenresFor(id: String): List<String>? = heldGenres?.takeIf { id == heldId }
++    private var heldDate: String? = null
++    private var heldRuntime: String? = null
++    fun homeDateFor(id: String): String? = heldDate?.takeIf { id == heldId }
++    fun homeRuntimeFor(id: String): String? = heldRuntime?.takeIf { id == heldId }
 +
 +    /** In the title page's destination: calls the move off when this page isn't the title flying in. */
 +    @Composable
@@ -1554,7 +1571,7 @@ index c353a5a..3f54810 100644
                      .align(Alignment.BottomStart)
                      .onFocusChanged { contentHasFocus.value = it.hasFocus }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
-index ef918a3..a149059 100644
+index ef918a3..fef3ff0 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeHero.kt
 @@ -182,6 +182,7 @@ internal fun ModernHeroMediaLayer(
@@ -1634,20 +1651,126 @@ index ef918a3..a149059 100644
                          brush = verticalGradient,
                          topLeft = Offset(0f, bottomStripStartY),
                          size = Size(size.width, size.height - bottomStripStartY)
-@@ -524,7 +540,7 @@ private fun HeroTitleContent(
+@@ -520,11 +536,12 @@ private fun HeroTitleContent(
+         verticalArrangement = Arrangement.spacedBy(titleSpacing)
+     ) {
+         // Text remains readable on logo failure/timeout; both choices occupy the same slot.
+-        Box(Modifier.height(100.dp).fillMaxWidth(), contentAlignment = Alignment.CenterStart) {
++        // Nuvio Mod: the logo sits on the lines under it (bottom of its slot), in a frame of its own shape.
++        Box(Modifier.height(100.dp).fillMaxWidth(), contentAlignment = Alignment.BottomStart) {
              if (preparedLogo != null) {
                  Image(
                      painter = preparedLogo.asPainter(context), contentDescription = preview.title,
 -                    modifier = Modifier.widthIn(max = 220.dp).fillMaxSize().graphicsLayer { alpha = metaAlpha },
-+                    modifier = with(ModHeroFlight) { Modifier.widthIn(max = 220.dp).fillMaxSize().graphicsLayer { alpha = metaAlpha }.modFlightHomeLogo(preparedLogo) }, // Nuvio Mod: the logo glides to the title page
++                    modifier = with(ModHeroFlight) { Modifier.widthIn(max = 220.dp).aspectRatio((preparedLogo.width.toFloat() / preparedLogo.height.coerceAtLeast(1)).coerceAtLeast(0.1f), matchHeightConstraintsFirst = true).graphicsLayer { alpha = metaAlpha }.modFlightHomeLogo(preparedLogo) }, // Nuvio Mod: the logo glides to the title page
                      contentScale = ContentScale.Fit, alignment = Alignment.CenterStart
                  )
              } else if (!logoPending) {
-@@ -535,7 +551,24 @@ private fun HeroTitleContent(
+@@ -534,8 +551,6 @@ private fun HeroTitleContent(
+                     modifier = Modifier.graphicsLayer { alpha = metaAlpha })
              }
          }
- 
+-
 -        Column(verticalArrangement = Arrangement.spacedBy(titleSpacing)) {
+         // Read with the configuration as a key, so a language change still shows the new words.
+         val configuration = LocalConfiguration.current
+         val secondaryMeta = remember(
+@@ -572,6 +587,9 @@ private fun HeroTitleContent(
+         val showImdbInPrimaryWithHighlight = showImdbRatings && reserveImdbInPrimaryWithHighlight
+         val showImdbInSecondary = showImdbRatings && reserveImdbInSecondary
+ 
++        // Nuvio Mod: the genre line sits at the top of the block, under the logo (same order as the title page);
++        // it leaves with the logo like the other lines.
++        Box(with(ModHeroFlight) { Modifier.modFlightHomeText() }) {
+         Row(
+             modifier = Modifier
+                 .fillMaxWidth()
+@@ -579,6 +597,8 @@ private fun HeroTitleContent(
+             verticalAlignment = Alignment.CenterVertically,
+             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
+         ) {
++            // Nuvio Mod: this line leaves at the start of a glide, except the date, which glides to the page's.
++            val modLeaving = with(ModHeroFlight) { Modifier.modFlightHomeLeaving() }
+             val leadingMetaText = remember(preview.contentTypeText, preview.genres, context) {
+                 buildList {
+                     preview.contentTypeText?.takeIf { it.isNotBlank() }?.let(::add)
+@@ -595,156 +615,182 @@ private fun HeroTitleContent(
+                 !yearText.isNullOrBlank() ||
+                 reserveImdbInPrimaryWithHighlight
+ 
+-            if (hasLeadingMeta) {
++            // Nuvio Mod: the title page's order: year • duration • type • genre (then IMDb); the date, duration and genre
++            // glide to the page's, the rest leaves at the start of a glide.
++            val modType = preview.contentTypeText?.takeIf { it.isNotBlank() }
++            val modGenre = preview.genres.firstOrNull()?.takeIf { it.isNotBlank() }?.let { com.nuvio.tv.ui.util.localizedGenreLabel(context, it) }
++            var modAfterFirst = false
++            if (!yearText.isNullOrBlank()) {
+                 Text(
+-                    text = leadingMetaText,
++                    text = yearText,
+                     style = labelMedium,
+                     color = NuvioTheme.colors.TextSecondary,
+                     maxLines = 1,
+-                    overflow = TextOverflow.Ellipsis,
+-                    modifier = if (hasTrailingMeta) {
+-                        Modifier.weight(1f, fill = false)
+-                    } else {
+-                        Modifier
+-                    }
++                    modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.DATE, movesWithLogo = true, text = yearText, style = labelMedium) }
+                 )
++                modAfterFirst = true
+             }
+-
+-            if (hasTrailingMeta) {
+-                if (hasLeadingMeta) {
+-                    HeroMetaDivider(metaScale)
++            if (!runtimeText.isNullOrBlank()) {
++                if (modAfterFirst) Box(modLeaving) { HeroMetaDivider(metaScale) }
++                Text(
++                    text = runtimeText,
++                    style = labelMedium,
++                    color = NuvioTheme.colors.TextSecondary,
++                    maxLines = 1,
++                    modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.RUNTIME, movesWithLogo = true, text = runtimeText, style = labelMedium) }
++                )
++                modAfterFirst = true
++            }
++            if (hasLeadingMeta) {
++                if (modAfterFirst) Box(modLeaving) { HeroMetaDivider(metaScale) }
++                Row(modifier = Modifier.weight(1f, fill = false)) {
++                    if (modType != null) Text(
++                        text = if (modGenre != null) "$modType • " else modType,
++                        style = labelMedium,
++                        color = NuvioTheme.colors.TextSecondary,
++                        maxLines = 1,
++                        modifier = modLeaving
++                    )
++                    if (modGenre != null) Text(
++                        text = modGenre,
++                        style = labelMedium,
++                        color = NuvioTheme.colors.TextSecondary,
++                        maxLines = 1,
++                        overflow = TextOverflow.Ellipsis,
++                        modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.GENRE, movesWithLogo = true, text = modGenre, style = labelMedium,
++                            fullText = preview.genres.filter { it.isNotBlank() }.take(6).joinToString(" • ") { com.nuvio.tv.ui.util.localizedGenreLabel(context, it) }) } // as the page writes them, to know how far its genres open
++                    )
+                 }
+-                Row(
++            }
++            if (reserveImdbInPrimaryWithHighlight) Box(modLeaving) {
++                HeroImdbMeta(
++                    imdbText = preview.imdbText.orEmpty(),
++                    textStyle = labelMedium,
++                    textColor = NuvioTheme.colors.TextSecondary,
++                    logoSize = NuvioTheme.spacing.xl * metaScale,
++                    spacing = imdbMetaSpacing,
++                    visible = showImdbInPrimaryWithHighlight
++                )
++            }
++        }
++        }
++
 +        // Nuvio Mod: the description sits right under the title (Arc puts it under the other lines).
 +        // The block sits on the rows and grows upwards, so a short description leaves no gap above them.
 +        // Weighted, the description is measured last and gives up lines first when the hero is short.
@@ -1664,15 +1787,7 @@ index ef918a3..a149059 100644
 +                        .modFlightHomeDescShape(scaledDescriptionStyle.copy(textDirection = description.contentTextDirection())) }) // Nuvio Mod: glides to the page's description, which keeps its line breaks
 +            )
 +        }
-+
 +        Column(with(ModHeroFlight) { Modifier.modFlightHomeText() }, verticalArrangement = Arrangement.spacedBy(titleSpacing)) { // Nuvio Mod: leaves with the logo
-         // Read with the configuration as a key, so a language change still shows the new words.
-         val configuration = LocalConfiguration.current
-         val secondaryMeta = remember(
-@@ -572,6 +605,110 @@ private fun HeroTitleContent(
-         val showImdbInPrimaryWithHighlight = showImdbRatings && reserveImdbInPrimaryWithHighlight
-         val showImdbInSecondary = showImdbRatings && reserveImdbInSecondary
- 
 +        // Nuvio Mod: the rating line comes before the genre line (her choice).
 +        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty() || hasMdbListRatings) {
 +            Row(
@@ -1685,26 +1800,39 @@ index ef918a3..a149059 100644
 +                // Nuvio Mod: everything but the ratings leaves at the start of a glide; the ratings glide to the page's.
 +                if (secondaryHighlightText != null || ageRatingBadge != null || statusBadge != null || reserveImdbInSecondary || secondaryDetails.isNotEmpty()) Row(
 +                    modifier = Modifier.weight(1f, fill = false).then(with(ModHeroFlight) { Modifier.modFlightHomeLeaving() }),
-+                    verticalAlignment = Alignment.CenterVertically,
-+                    horizontalArrangement = Arrangement.spacedBy(metaSpacing)
-+                ) {
+                     verticalAlignment = Alignment.CenterVertically,
+                     horizontalArrangement = Arrangement.spacedBy(metaSpacing)
+                 ) {
+-                    if (!runtimeText.isNullOrBlank()) {
 +                    val semiBoldLabelMedium = remember(labelMedium) { labelMedium.copy(fontWeight = FontWeight.SemiBold) }
 +            secondaryHighlightText?.let { text ->
-+                        Text(
+                         Text(
+-                            text = runtimeText,
+-                            style = labelMedium,
+-                            color = NuvioTheme.colors.TextSecondary,
+-                            maxLines = 1
 +                            text = text,
 +                            modifier = Modifier.weight(1f, fill = false),
 +                            style = semiBoldLabelMedium,
 +                            color = NuvioTheme.colors.TextPrimary,
 +                            maxLines = 1,
 +                            overflow = TextOverflow.Ellipsis
-+                        )
-+                    }
+                         )
+                     }
+-                    if (!runtimeText.isNullOrBlank() && !yearText.isNullOrBlank()) {
+-                        HeroMetaDivider(metaScale)
 +                    if (secondaryHighlightText != null && (hasSecondaryBadge || reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
 +                        HeroMetaDivider(
 +                            scale = metaScale,
 +                            visible = hasSecondaryBadge || showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
 +                        )
-+                    }
+                     }
+-                    if (!yearText.isNullOrBlank()) {
+-                        Text(
+-                            text = yearText,
+-                            style = labelMedium,
+-                            color = NuvioTheme.colors.TextSecondary,
+-                            maxLines = 1
 +                    if (ageRatingBadge != null && statusBadge != null) {
 +                        HeroCombinedMetaBadge(
 +                            leftText = ageRatingBadge,
@@ -1732,141 +1860,24 @@ index ef918a3..a149059 100644
 +                        HeroMetaDivider(
 +                            scale = metaScale,
 +                            visible = showImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings
-+                        )
-+                    }
-+                    if (reserveImdbInSecondary) {
-+                        HeroImdbMeta(
-+                            imdbText = preview.imdbText.orEmpty(),
-+                            textStyle = labelMedium,
-+                            textColor = NuvioTheme.colors.TextSecondary,
-+                            logoSize = NuvioTheme.spacing.xl * metaScale,
-+                            spacing = imdbMetaSpacing,
-+                            visible = showImdbInSecondary
-+                        )
-+                    }
-+                    if (reserveImdbInSecondary && secondaryDetails.isNotEmpty()) {
-+                        HeroMetaDivider(
-+                            scale = metaScale,
-+                            visible = showImdbInSecondary
-+                        )
-+                    }
-+                    secondaryDetails.forEachIndexed { index, value ->
-+                        Text(
-+                            text = value,
-+                            style = labelMedium,
-+                            color = NuvioTheme.colors.TextTertiary,
-+                            maxLines = 1,
-+                            overflow = TextOverflow.Ellipsis
-+                        )
-+                        if (index < secondaryDetails.lastIndex) {
-+                            HeroMetaDivider(metaScale)
-+                        }
-+                    }
-+                    if (showImdbRatings && hasMdbListRatings && (showImdbInSecondary || secondaryDetails.isNotEmpty())) {
-+                        HeroMetaDivider(metaScale)
-+                    }
-+                }
-+                if (showImdbRatings && hasMdbListRatings) {
-+                    com.nuvio.tv.ui.components.MDBListRatingsRow(
-+                        ratings = preview.mdbListRatings!!,
-+                        maxItems = 3,
-+                        order = mdbListRatingOrder,
-+                        modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.RATINGS, movesWithLogo = true) } // Nuvio Mod: glides to the page's ratings
-+                    )
-+                }
-+            }
-+        }
-+
-         Row(
-             modifier = Modifier
-                 .fillMaxWidth()
-@@ -579,6 +716,8 @@ private fun HeroTitleContent(
-             verticalAlignment = Alignment.CenterVertically,
-             horizontalArrangement = Arrangement.spacedBy(metaSpacing)
-         ) {
-+            // Nuvio Mod: this line leaves at the start of a glide, except the date, which glides to the page's.
-+            val modLeaving = with(ModHeroFlight) { Modifier.modFlightHomeLeaving() }
-             val leadingMetaText = remember(preview.contentTypeText, preview.genres, context) {
-                 buildList {
-                     preview.contentTypeText?.takeIf { it.isNotBlank() }?.let(::add)
-@@ -596,23 +735,32 @@ private fun HeroTitleContent(
-                 reserveImdbInPrimaryWithHighlight
- 
-             if (hasLeadingMeta) {
--                Text(
--                    text = leadingMetaText,
--                    style = labelMedium,
--                    color = NuvioTheme.colors.TextSecondary,
--                    maxLines = 1,
--                    overflow = TextOverflow.Ellipsis,
--                    modifier = if (hasTrailingMeta) {
--                        Modifier.weight(1f, fill = false)
--                    } else {
--                        Modifier
--                    }
--                )
-+                // Nuvio Mod: the type and the genre are separate, so the genre can glide to the page's genres.
-+                val modType = preview.contentTypeText?.takeIf { it.isNotBlank() }
-+                val modGenre = preview.genres.firstOrNull()?.takeIf { it.isNotBlank() }?.let { com.nuvio.tv.ui.util.localizedGenreLabel(context, it) }
-+                Row(modifier = if (hasTrailingMeta) Modifier.weight(1f, fill = false) else Modifier) {
-+                    if (modType != null) Text(
-+                        text = if (modGenre != null) "$modType • " else modType,
-+                        style = labelMedium,
-+                        color = NuvioTheme.colors.TextSecondary,
-+                        maxLines = 1,
-+                        modifier = modLeaving
-+                    )
-+                    if (modGenre != null) Text(
-+                        text = modGenre,
-+                        style = labelMedium,
-+                        color = NuvioTheme.colors.TextSecondary,
-+                        maxLines = 1,
-+                        overflow = TextOverflow.Ellipsis,
-+                        modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.GENRE, movesWithLogo = true, text = modGenre, style = labelMedium,
-+                            fullText = preview.genres.filter { it.isNotBlank() }.take(6).joinToString(" • ") { com.nuvio.tv.ui.util.localizedGenreLabel(context, it) }) } // as the page writes them, to know how far its genres open
-+                    )
-+                }
-             }
- 
-             if (hasTrailingMeta) {
-                 if (hasLeadingMeta) {
--                    HeroMetaDivider(metaScale)
-+                    Box(modLeaving) { HeroMetaDivider(metaScale) }
-                 }
-                 Row(
-                     verticalAlignment = Alignment.CenterVertically,
-@@ -623,21 +771,23 @@ private fun HeroTitleContent(
-                             text = runtimeText,
-                             style = labelMedium,
-                             color = NuvioTheme.colors.TextSecondary,
--                            maxLines = 1
-+                            maxLines = 1,
-+                            modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.RUNTIME, movesWithLogo = true, text = runtimeText, style = labelMedium) } // Nuvio Mod: glides to the page's duration, like the date
-                         )
-                     }
-                     if (!runtimeText.isNullOrBlank() && !yearText.isNullOrBlank()) {
--                        HeroMetaDivider(metaScale)
-+                        Box(modLeaving) { HeroMetaDivider(metaScale) }
-                     }
-                     if (!yearText.isNullOrBlank()) {
-                         Text(
-                             text = yearText,
-                             style = labelMedium,
-                             color = NuvioTheme.colors.TextSecondary,
--                            maxLines = 1
-+                            maxLines = 1,
-+                            modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.DATE, movesWithLogo = true, text = yearText, style = labelMedium) }
                          )
                      }
 -                    if (reserveImdbInPrimaryWithHighlight) {
-+                    if (reserveImdbInPrimaryWithHighlight) Box(modLeaving) {
++                    if (reserveImdbInSecondary) {
                          HeroImdbMeta(
                              imdbText = preview.imdbText.orEmpty(),
                              textStyle = labelMedium,
-@@ -651,124 +801,12 @@ private fun HeroTitleContent(
-             }
-         }
- 
+                             textColor = NuvioTheme.colors.TextSecondary,
+                             logoSize = NuvioTheme.spacing.xl * metaScale,
+                             spacing = imdbMetaSpacing,
+-                            visible = showImdbInPrimaryWithHighlight
++                            visible = showImdbInSecondary
+                         )
+                     }
+-                }
+-            }
+-        }
+-
 -        if (secondaryHighlightText != null || ageRatingBadge != null || reserveImdbInSecondary || statusBadge != null || secondaryDetails.isNotEmpty() || hasMdbListRatings) {
 -            Row(
 -                modifier = Modifier
@@ -1905,15 +1916,29 @@ index ef918a3..a149059 100644
 -                            text = badge,
 -                            textStyle = labelMedium,
 -                            contentColor = NuvioTheme.colors.TextPrimary
--                        )
--                    }
++                    if (reserveImdbInSecondary && secondaryDetails.isNotEmpty()) {
++                        HeroMetaDivider(
++                            scale = metaScale,
++                            visible = showImdbInSecondary
+                         )
+                     }
 -                    statusBadge?.let { badge ->
 -                        HeroMetaBadge(
 -                            text = badge,
 -                            textStyle = labelMedium,
 -                            contentColor = NuvioTheme.colors.TextPrimary
--                        )
--                    }
++                    secondaryDetails.forEachIndexed { index, value ->
++                        Text(
++                            text = value,
++                            style = labelMedium,
++                            color = NuvioTheme.colors.TextTertiary,
++                            maxLines = 1,
++                            overflow = TextOverflow.Ellipsis
+                         )
++                        if (index < secondaryDetails.lastIndex) {
++                            HeroMetaDivider(metaScale)
++                        }
+                     }
 -                }
 -                if ((ageRatingBadge != null || statusBadge != null) && (reserveImdbInSecondary || secondaryDetails.isNotEmpty() || hasMdbListRatings)) {
 -                    HeroMetaDivider(
@@ -1946,26 +1971,28 @@ index ef918a3..a149059 100644
 -                        overflow = TextOverflow.Ellipsis
 -                    )
 -                    if (index < secondaryDetails.lastIndex) {
--                        HeroMetaDivider(metaScale)
--                    }
--                }
++                    if (showImdbRatings && hasMdbListRatings && (showImdbInSecondary || secondaryDetails.isNotEmpty())) {
+                         HeroMetaDivider(metaScale)
+                     }
+                 }
 -                // MDBList ratings inline after other secondary meta.
--                if (showImdbRatings && hasMdbListRatings) {
+                 if (showImdbRatings && hasMdbListRatings) {
 -                    // Divider before MDBList ratings is already handled by the
 -                    // badge/IMDb/details divider logic above — only add one
 -                    // when IMDb or details were the last visible element.
 -                    if (showImdbInSecondary || secondaryDetails.isNotEmpty()) {
 -                        HeroMetaDivider(metaScale)
 -                    }
--                    com.nuvio.tv.ui.components.MDBListRatingsRow(
--                        ratings = preview.mdbListRatings!!,
--                        maxItems = 3,
+                     com.nuvio.tv.ui.components.MDBListRatingsRow(
+                         ratings = preview.mdbListRatings!!,
+                         maxItems = 3,
 -                        order = mdbListRatingOrder
--                    )
--                }
--            }
--        }
--
++                        order = mdbListRatingOrder,
++                        modifier = with(ModHeroFlight) { Modifier.modFlightHomePiece(ModHeroFlight.Piece.RATINGS, movesWithLogo = true) } // Nuvio Mod: glides to the page's ratings
+                     )
+                 }
+             }
+@@ -753,22 +799,9 @@ private fun HeroTitleContent(
          }
  
          if (preview.logos.isNotEmpty()) {
@@ -1989,7 +2016,7 @@ index ef918a3..a149059 100644
      }
  }
  
-@@ -931,7 +969,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
+@@ -931,7 +964,7 @@ private fun HeroBackdropImages(image: coil3.Image?, modifier: Modifier) {
              outgoing = current
              current = image
              alpha.snapTo(0f)
