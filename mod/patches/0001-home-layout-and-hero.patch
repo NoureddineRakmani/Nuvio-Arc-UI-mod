@@ -272,7 +272,7 @@ index b2e0ab5..0fe86c8 100644
  private const val WATCH_PROGRESS_SETTLE_MS = 2_000L
  private const val COMING_UP_START_DELAY_MS = 1_500L
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
-index 5c6d8ac..c78c6ed 100644
+index 5c6d8ac..aff8c9c 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModel.kt
 @@ -79,6 +79,7 @@ class HomeViewModel @Inject constructor(
@@ -283,6 +283,15 @@ index 5c6d8ac..c78c6ed 100644
      internal val layoutPreferenceDataStore: LayoutPreferenceDataStore,
      internal val playerSettingsDataStore: PlayerSettingsDataStore,
      internal val tmdbSettingsDataStore: TmdbSettingsDataStore,
+@@ -895,7 +896,7 @@ class HomeViewModel @Inject constructor(
+ 
+     /** The card focus lands on in the row above or below: fetched to disk only, in its own two-job pool. */
+     fun preloadAdjacentRowItem(item: MetaPreview) =
+-        preloadAdjacentItemPipeline(item, adjacentRowPrefetchJobs, warmDecode = false)
++        preloadAdjacentItemPipeline(item, adjacentRowPrefetchJobs, warmDecode = true) // Nuvio Mod: decoded too, so a row change shows its picture at once
+ 
+     private fun loadHomeCatalogOrderPreference() = loadHomeCatalogOrderPreferencePipeline()
+ 
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
 index 593d008..82f8ba1 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelCatalogPipeline.kt
@@ -307,6 +316,26 @@ index 593d008..82f8ba1 100644
              .distinctUntilChanged()
              .debounce(300)
              .collectLatest { collections ->
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelPresentationPipeline.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelPresentationPipeline.kt
+index 5069566..b4af125 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelPresentationPipeline.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/HomeViewModelPresentationPipeline.kt
+@@ -880,10 +880,14 @@ internal fun HomeViewModel.preloadAdjacentItemPipeline(
+     jobs: AdjacentPrefetchJobs = adjacentItemPrefetchJobs,
+     warmDecode: Boolean = true
+ ) {
+-    if (startupGracePeriodActive) return
++    // Nuvio Mod: the rows above and below wait for the startup grace instead of being skipped (the first row
++    // change after opening the app found nothing ready, since Home asks for them only once per row).
++    val rowNeighbour = jobs === adjacentRowPrefetchJobs
++    if (startupGracePeriodActive && !rowNeighbour) return
+     if (pendingTmdbEnrichItemId == item.id) return
+     val launchedAtMs = android.os.SystemClock.elapsedRealtime()
+     jobs.launch(viewModelScope, item.id, Dispatchers.IO) {
++        if (rowNeighbour) delay(remainingStartupGraceMs()) // Nuvio Mod
+         val tmdbEnabledForCurrentLayout = currentTmdbSettings.enabled &&
+             (_uiState.value.homeLayout != HomeLayout.MODERN || currentTmdbSettings.modernHomeEnabled)
+         delay(HomeViewModel.EXTERNAL_META_PREFETCH_ADJACENT_DEBOUNCE_MS + focusStepPace.extraWaitNowMs)
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHeroFlight.kt
 new file mode 100644
 index 0000000..7c696af
@@ -1179,10 +1208,10 @@ index 0000000..7c696af
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt
 new file mode 100644
-index 0000000..de4a669
+index 0000000..988e317
 --- /dev/null
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModHomeRowGlide.kt
-@@ -0,0 +1,144 @@
+@@ -0,0 +1,182 @@
 +package com.nuvio.tv.ui.screens.home
 +
 +import androidx.compose.animation.core.AnimationState
@@ -1224,6 +1253,44 @@ index 0000000..de4a669
 +     * slide ends), so the hero block moves together with the rows instead of after them.
 +     */
 +    val headingRowKey = androidx.compose.runtime.mutableStateOf<String?>(null)
++    /** The card focus is expected to land on in [headingRowKey]'s row, so Home's picture and text change at the press. */
++    val headingCardIndex = androidx.compose.runtime.mutableIntStateOf(0)
++
++    /** The card an Up/Down press would land on in a row (set by the rows list: same column, like the press). */
++    var predictLandingCard: ((HeroCarouselRow) -> Int)? = null
++
++    /**
++     * The cards Up and Down would land on, so their pictures are ready before the press. Arc preloads the row's
++     * remembered card instead, which is another card as soon as the column has moved. Null until the list is up.
++     */
++    fun landingNeighbourCards(rows: List<HeroCarouselRow>, rowKey: String): List<ModernCarouselItem>? {
++        val predict = predictLandingCard ?: return null
++        val index = rows.indexOfFirst { it.key == rowKey }
++        if (index < 0) return emptyList()
++        return listOfNotNull(rows.getOrNull(index - 1), rows.getOrNull(index + 1)).mapNotNull { row ->
++            row.items.list.getOrNull(predict(row))
++        }
++    }
++
++    /**
++     * Continue watching, Upcoming and Coming up cards have no catalog preview, so Arc's preload skips them: their
++     * Home picture (the card's own hero art, as Home picks it) is fetched and decoded here, under Arc's memory rule.
++     */
++    fun warmCardPicture(context: android.content.Context, item: ModernCarouselItem) {
++        val hero = item.heroPreview
++        val url = landscapeHeroArtwork(item.key, hero.poster, hero.backdrop, null, hero.backdrop, hero.poster).urls.firstOrNull() ?: return
++        val width = HeroImageRequests.width
++        val height = HeroImageRequests.height
++        if (width <= 0 || height <= 0) return
++        val manager = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as android.app.ActivityManager
++        val info = android.app.ActivityManager.MemoryInfo().also(manager::getMemoryInfo)
++        val loader = coil3.SingletonImageLoader.get(context)
++        val decode = !info.lowMemory && canWarmDecodedHero(manager.isLowRamDevice, info.totalMem, loader.memoryCache?.maxSize ?: 0, width, height)
++        val request = HeroImageRequests.backdrop(context, url, width, height)
++        if (!decode) request.memoryCachePolicy(coil3.request.CachePolicy.DISABLED).decoderFactory(coil3.decode.BlackholeDecoder.Factory())
++        loader.enqueue(request.build())
++        hero.logo?.takeIf(String::isNotBlank)?.let { loader.enqueue(HeroImageRequests.logo(context, it).build()) }
++    }
 +    /** A leaving row is fully faded after this share of the distance to the rows area's top: 0.7 still left a
 +     *  faded strip of it between the hero text and the new row during the move (screen recording 2026-11-28). */
 +    private const val FADE_SHARE = 0.35f
@@ -1328,11 +1395,19 @@ index 0000000..de4a669
 +    }
 +}
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-index c353a5a..adb0c0a 100644
+index c353a5a..3f54810 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeContent.kt
-@@ -668,7 +668,7 @@ fun ModernHomeContent(
-                 activeRowState.value?.heroSelectionAt(clampedActiveItemIndexState.value),
+@@ -664,27 +664,44 @@ fun ModernHomeContent(
+     val latestOnSeriesHeroSettled by rememberUpdatedState(onSeriesHeroSettled)
+     LaunchedEffect(verticalRowListState) {
+         snapshotFlow {
++            // Nuvio Mod: on Up/Down, the card focus is heading to (known at the press), not the one it leaves.
++            val headingRow = ModHomeRowGlide.headingRowKey.value?.let { latestRowByKey.value[it] }
+             ModernHeroFocus(
+-                activeRowState.value?.heroSelectionAt(clampedActiveItemIndexState.value),
++                headingRow?.heroSelectionAt(ModHomeRowGlide.headingCardIndex.intValue.coerceIn(0, (headingRow.items.size - 1).coerceAtLeast(0)))
++                    ?: activeRowState.value?.heroSelectionAt(clampedActiveItemIndexState.value),
                  heroFocusSettleDelayMs.longValue
              )
 -        }.settledModernHeroSelections(snapshotFlow { homeRowsMoving(verticalRowListState.isScrollInProgress, verticalMoveInFlight) })
@@ -1340,7 +1415,41 @@ index c353a5a..adb0c0a 100644
              .collect { selection ->
                  // Publish artwork/text and request enrichment from the same settled identity.
                  settledHeroSelection.value = selection
-@@ -1044,12 +1044,18 @@ fun ModernHomeContent(
+-                val settledItem = activeRowState.value?.takeIf { it.key == selection.rowKey }
++                val settledItem = latestRowByKey.value[selection.rowKey] // Nuvio Mod: may be the row focus is heading to
+                     ?.items?.firstOrNull { it.key == selection.itemKey }
+                 settledItem?.metaPreview?.let { latestOnHeroItemFocus(it) }
+                 settledItem?.heroSeriesRef()?.let { latestOnSeriesHeroSettled(it) }
+             }
+     }
+ 
++    val modAppContext = LocalContext.current.applicationContext // Nuvio Mod: preload of plain cards
+     val latestRowsForPreload by rememberUpdatedState(carouselRows.list)
+     val latestOnPreloadAdjacentRowItem by rememberUpdatedState(onPreloadAdjacentRowItem)
+     LaunchedEffect(Unit) {
+-        snapshotFlow { settledHeroSelection.value?.rowKey }.distinctUntilChanged().collect { rowKey ->
+-            if (rowKey == null) return@collect
+-            adjacentRowPreviews(latestRowsForPreload, rowKey, focusedItemByRow).forEach(latestOnPreloadAdjacentRowItem)
++        // Nuvio Mod: also after a move along the row, since the cards Up/Down land on follow the column.
++        val modPreloadStartMs = android.os.SystemClock.elapsedRealtime()
++        val modPreloadContext = modAppContext
++        snapshotFlow { settledHeroSelection.value }.distinctUntilChanged().collectLatest { selection ->
++            val rowKey = selection?.rowKey ?: return@collectLatest
++            val cards = ModHomeRowGlide.landingNeighbourCards(latestRowsForPreload, rowKey)
++            if (cards == null) {
++                adjacentRowPreviews(latestRowsForPreload, rowKey, focusedItemByRow).forEach(latestOnPreloadAdjacentRowItem)
++                return@collectLatest
++            }
++            cards.mapNotNull { it.metaPreview }.forEach(latestOnPreloadAdjacentRowItem)
++            val plain = cards.filter { it.metaPreview == null }
++            if (plain.isEmpty()) return@collectLatest
++            // Like Arc's preload: nothing during the startup grace, then the cards still wanted.
++            delay((HomeViewModel.STARTUP_GRACE_PERIOD_MS - (android.os.SystemClock.elapsedRealtime() - modPreloadStartMs)).coerceAtLeast(0L))
++            plain.forEach { ModHomeRowGlide.warmCardPicture(modPreloadContext, it) }
+         }
+     }
+ 
+@@ -1044,12 +1061,18 @@ fun ModernHomeContent(
                      .coerceAtMost(screenHeight)
              }
              val verticalRowBringIntoViewSpec = remember(localDensity, defaultBringIntoViewSpec) {
@@ -1362,7 +1471,7 @@ index c353a5a..adb0c0a 100644
                  }
              }
              val contentFocusRequester = LocalContentFocusRequester.current
-@@ -1065,6 +1071,11 @@ fun ModernHomeContent(
+@@ -1065,6 +1088,11 @@ fun ModernHomeContent(
                  }.coerceAtLeast(1)
              }
  
@@ -1374,7 +1483,7 @@ index c353a5a..adb0c0a 100644
              val isFullScreenState = remember(liveHeroSceneState) {
                  derivedStateOf { liveHeroSceneState.value.fullScreenBackdrop }
              }
-@@ -1100,7 +1111,8 @@ fun ModernHomeContent(
+@@ -1100,7 +1128,8 @@ fun ModernHomeContent(
              // Fade content rows when ANY hero media (catalog trailer or collection
              // hero video) is playing in fullscreen — not just catalog trailers.
              val trailerContentAlphaState = animateFloatAsState(
@@ -1384,7 +1493,7 @@ index c353a5a..adb0c0a 100644
                  animationSpec = tween(durationMillis = 480),
                  label = "trailerContentFade"
              )
-@@ -1113,9 +1125,25 @@ fun ModernHomeContent(
+@@ -1113,9 +1142,25 @@ fun ModernHomeContent(
              val foregroundModifier = remember(sidebarPageLayout, heroLayoutDirection) {
                  Modifier.sidebarPageContent(sidebarPageLayout, heroLayoutDirection)
              }
@@ -1411,7 +1520,7 @@ index c353a5a..adb0c0a 100644
                      .padding(
                          start = rowHorizontalPadding,
                          end = NuvioTheme.spacing.xxxl,
-@@ -1129,9 +1157,10 @@ fun ModernHomeContent(
+@@ -1129,9 +1174,10 @@ fun ModernHomeContent(
              val uiScaleFlow = remember(appContext) { com.nuvio.tv.data.local.UiScalePreference.flow(appContext) }
              val heroDescriptionScalePercent by uiScaleFlow.collectAsState(initial = 100)
              val heroDescriptionMaxLines = when {
@@ -1425,7 +1534,7 @@ index c353a5a..adb0c0a 100644
              }
              val heroTrailerShowing = remember {
                  { !isRapidHorizontalNav.value && shouldPlayTrailerLambda() && heroTrailerRenderedLambda() }
-@@ -1150,7 +1179,8 @@ fun ModernHomeContent(
+@@ -1150,7 +1196,8 @@ fun ModernHomeContent(
                  showImdbRatings = uiState.homeImdbRatingsVisibility.showRatings,
                  mdbListShowOnHero = uiState.mdbListShowOnHero,
                  mdbListRatingOrder = uiState.mdbListRatingOrder,
@@ -1435,7 +1544,7 @@ index c353a5a..adb0c0a 100644
                  descriptionMaxLines = heroDescriptionMaxLines,
                  descriptionAutoScrollEnabled = uiState.heroDescriptionAutoScrollEnabled,
                  titleModifier = heroMetadataModifier
-@@ -1286,7 +1316,7 @@ fun ModernHomeContent(
+@@ -1286,7 +1333,7 @@ fun ModernHomeContent(
                  blockLeftOnFirstExpandedItem = blockLeftOnFirstExpandedItem,
                  isVerticalRowsScrollingState = isVerticalRowsScrollingState,
                  verticalMoveInFlight = verticalMoveInFlight,
@@ -1924,7 +2033,7 @@ index 6d3f3c2..cb0f03a 100644
  /** Height the hero text block may take: the space above the rows, less a thin margin at the screen edge. */
  internal fun modernHeroTextMaxHeight(screenHeight: Dp, rowsViewportHeight: Dp): Dp =
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
-index 67c06a3..75d0a84 100644
+index 67c06a3..e33dac7 100644
 --- a/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 +++ b/app/src/main/java/com/nuvio/tv/ui/screens/home/ModernHomeRowsList.kt
 @@ -9,7 +9,9 @@ import androidx.compose.foundation.gestures.LocalBringIntoViewSpec
@@ -1956,7 +2065,18 @@ index 67c06a3..75d0a84 100644
  @Composable
  internal fun ModernHomeRowsList(
      isVerticalRowsScrollingState: State<Boolean>,
-@@ -247,6 +254,11 @@ internal fun ModernHomeRowsList(
+@@ -240,6 +247,10 @@ internal fun ModernHomeRowsList(
+         }
+         return (focusedItemByRowMap[row.key] ?: 0).coerceIn(0, last) to "remembered"
+     }
++    androidx.compose.runtime.DisposableEffect(Unit) { // Nuvio Mod: preload the cards Up/Down will land on
++        ModHomeRowGlide.predictLandingCard = { row -> columnTarget(row, focusedCardCenter()).first }
++        onDispose { ModHomeRowGlide.predictLandingCard = null }
++    }
+     fun logColumnMove(from: String?, centerPx: Int?, to: String, index: Int, reason: String) {
+         if (!android.util.Log.isLoggable("HomeColumn", android.util.Log.DEBUG)) return
+         android.util.Log.d("HomeColumn", "move from=$from col=${centerPx ?: "none"}px to=$to index=$index reason=$reason")
+@@ -247,6 +258,11 @@ internal fun ModernHomeRowsList(
  
      val density = LocalDensity.current
      val rowRestInsetPx = with(density) { MODERN_ROW_HEADER_FOCUS_INSET.roundToPx() }
@@ -1968,15 +2088,16 @@ index 67c06a3..75d0a84 100644
      val context = LocalContext.current
      val layoutDirection = LocalLayoutDirection.current
      val verticalPrefetchImageLoader = context.imageLoader
-@@ -530,6 +542,7 @@ internal fun ModernHomeRowsList(
+@@ -530,6 +546,8 @@ internal fun ModernHomeRowsList(
                              val target = carouselRows.list[targetIndex]
                              val column = if (heading) verticalHeading.column else focusedCardCenter()
                              verticalHeading.rowKey = target.key
++                            ModHomeRowGlide.headingCardIndex.intValue = columnTarget(target, column).first // Nuvio Mod: hero picture changes at the press
 +                            ModHomeRowGlide.headingRowKey.value = target.key // Nuvio Mod: hero block moves with the rows
                              verticalHeading.column = column
                              verticalHeading.atMs = android.os.SystemClock.uptimeMillis()
                              val moveToken = verticalMoveInFlight.begin()
-@@ -537,7 +550,10 @@ internal fun ModernHomeRowsList(
+@@ -537,7 +555,10 @@ internal fun ModernHomeRowsList(
                              verticalFocusJob = navigationScope.launch {
                                  try {
                                      val attached = verticalRowListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
@@ -1988,15 +2109,19 @@ index 67c06a3..75d0a84 100644
                                          // Glide to where the row rests rather than jumping it to the top edge.
                                          verticalRowListState.animateScrollToItem(targetIndex, -rowRestInsetPx)
                                          withFrameNanos { }
-@@ -562,6 +578,7 @@ internal fun ModernHomeRowsList(
+@@ -561,7 +582,11 @@ internal fun ModernHomeRowsList(
+                                     val moved = runCatching { itemTarget?.requestFocus() == true }.getOrDefault(false)
                                      logColumnMove(fromRow, column, target.key, saved, if (moved) reason else "$reason+row")
                                      if (!moved) runCatching { rowFocusRequesters[target.key]?.requestFocus() }
++                                    if (!moved && rowFocusRequesters[target.key] == null && ModHomeRowGlide.headingRowKey.value == target.key) ModHomeRowGlide.headingRowKey.value = null // Nuvio Mod: focus stays put
                                  } finally {
-+                                    if (ModHomeRowGlide.headingRowKey.value == target.key) ModHomeRowGlide.headingRowKey.value = null // Nuvio Mod
++                                    // Nuvio Mod: the landing card reports its focus a frame later (FocusedCardWork) and clears the
++                                    // heading then; clearing it here showed the old row's picture for that frame.
++                                    if (ModHomeRowGlide.headingRowKey.value == target.key && activeRowKey.value == target.key) ModHomeRowGlide.headingRowKey.value = null
                                      verticalMoveInFlight.end(moveToken)
                                  }
                              }
-@@ -620,7 +637,9 @@ internal fun ModernHomeRowsList(
+@@ -620,7 +645,9 @@ internal fun ModernHomeRowsList(
                                  it.offset > -it.size / 2
                              }
                          } else null
@@ -2007,7 +2132,7 @@ index 67c06a3..75d0a84 100644
                              lastRowAtBottom -> lastIdx
                              upwardTopRow != null -> upwardTopRow.index
                              else ->
-@@ -629,12 +648,14 @@ internal fun ModernHomeRowsList(
+@@ -629,12 +656,14 @@ internal fun ModernHomeRowsList(
                                      ?: verticalRowListState.firstVisibleItemIndex
                          }
                          val targetRow = carouselRows.list.getOrNull(targetRowIndex)
@@ -2022,7 +2147,7 @@ index 67c06a3..75d0a84 100644
                              // The landing card claims focus from the row's remembered card: point that at the column.
                              focusedItemByRowMap[targetRow.key] = savedIdx
                              latestOnActiveRowKeyChange.value(targetRow.key)
-@@ -647,7 +668,8 @@ internal fun ModernHomeRowsList(
+@@ -647,7 +676,8 @@ internal fun ModernHomeRowsList(
                      },
                  ),
              contentPadding = PaddingValues(bottom = rowsViewportHeight),
@@ -2032,7 +2157,7 @@ index 67c06a3..75d0a84 100644
          ) {
              itemsIndexed(
                  items = carouselRows.list,
-@@ -664,7 +686,11 @@ internal fun ModernHomeRowsList(
+@@ -664,11 +694,16 @@ internal fun ModernHomeRowsList(
                          
                          if (rowBecameActive || itemChanged) {
                              val now = System.currentTimeMillis()
@@ -2045,7 +2170,12 @@ index 67c06a3..75d0a84 100644
                              imageViewport.lastFocusMoveAtMs = android.os.SystemClock.uptimeMillis()
                              onLastHeroNavigationAtMsChange(now)
                              onActiveRowKeyChange(rowKey)
-@@ -704,6 +730,12 @@ internal fun ModernHomeRowsList(
+                             onActiveItemIndexChange(index)
++                            if (ModHomeRowGlide.headingRowKey.value == rowKey) ModHomeRowGlide.headingRowKey.value = null // Nuvio Mod: focus has landed
+                         }
+ 
+                         // Always keep the focusedItemByRow map in sync for ALL rows
+@@ -704,6 +739,12 @@ internal fun ModernHomeRowsList(
                          }
                      }
                  }
@@ -2058,7 +2188,7 @@ index 67c06a3..75d0a84 100644
                  androidx.compose.runtime.CompositionLocalProvider(
                      com.nuvio.tv.core.image.LocalHomePosterPriority provides
                          com.nuvio.tv.core.image.HomePosterPriority(imageViewport, rowIndex)
-@@ -712,7 +744,7 @@ internal fun ModernHomeRowsList(
+@@ -712,7 +753,7 @@ internal fun ModernHomeRowsList(
                      row = row,
                      isActiveRow = isActiveRowLambda,
                      rowFocusRequester = rowFocusRequesters.getOrPut(row.key) { FocusRequester() },
@@ -2067,7 +2197,7 @@ index 67c06a3..75d0a84 100644
                      defaultBringIntoViewSpec = defaultBringIntoViewSpec,
                      focusStateCatalogRowScrollIndex = focusState.catalogRowScrollStates[row.key] ?: 0,
                      focusStateCatalogRowScrollAnchor = focusState.catalogRowScrollAnchors[row.key],
-@@ -769,6 +801,7 @@ internal fun ModernHomeRowsList(
+@@ -769,6 +810,7 @@ internal fun ModernHomeRowsList(
                      }
                  )
                  }

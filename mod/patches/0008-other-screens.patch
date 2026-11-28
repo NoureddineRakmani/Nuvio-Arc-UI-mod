@@ -34,6 +34,37 @@ index 0000000..96f14e1
 +# Nuvio Mod: Android pre-compiles ALL of the app's code when it installs or updates (like `cmd package compile -m speed`),
 +# not only the parts in Arc's own list (generated/baselineProfiles). Without it about 30% was compiled (35 vs 122 MB).
 +HSPL**->**(**)**
+diff --git a/app/src/main/java/com/nuvio/tv/core/party/PartyRuntime.kt b/app/src/main/java/com/nuvio/tv/core/party/PartyRuntime.kt
+index 2718283..ff2742d 100644
+--- a/app/src/main/java/com/nuvio/tv/core/party/PartyRuntime.kt
++++ b/app/src/main/java/com/nuvio/tv/core/party/PartyRuntime.kt
+@@ -262,7 +262,7 @@ class PartyRuntime @Inject constructor(
+                 if (_invite.value == null) _invite.value = invites.firstOrNull()
+             }
+         }
+-        scope.launch {
++        if (false) scope.launch { // Nuvio Mod: watch party not used (no avatar catalogue download)
+             memberAccess.access
+                 .map { it.entitlements.includes(CosmeticEntitlement.PROFILE_AVATARS) }
+                 .distinctUntilChanged()
+@@ -290,7 +290,7 @@ class PartyRuntime @Inject constructor(
+         scope.launch {
+             state.map { it.code }.distinctUntilChanged().collect { code -> cancelInvitesNotFor(code) }
+         }
+-        scope.launch {
++        if (false) scope.launch { // Nuvio Mod: watch party not used (no invite inbox)
+             combine(appVisible, friendStore.friends, profileManager.profiles) { visible, all, profiles ->
+                 if (visible) all.keys.intersect(profiles.map { it.id }.toSet()) else emptySet()
+             }
+@@ -303,7 +303,7 @@ class PartyRuntime @Inject constructor(
+                     inbox.listen(tags.keys) { event -> onInviteEvent(event) }
+                 }
+         }
+-        scope.launch {
++        if (false) scope.launch { // Nuvio Mod: watch party not used (no inbox check every second)
+             appVisible.collectLatest { visible ->
+                 if (!visible) {
+                     delay(INBOX_HIDDEN_TICK_MS)
 diff --git a/app/src/main/java/com/nuvio/tv/core/profile/ProfileManager.kt b/app/src/main/java/com/nuvio/tv/core/profile/ProfileManager.kt
 index f9a7d83..c8f4839 100644
 --- a/app/src/main/java/com/nuvio/tv/core/profile/ProfileManager.kt
@@ -64,6 +95,18 @@ index 7e52405..23600ee 100644
          state.value = SourcePrefetchSignal(key, SourcePrefetchPhase.SEARCHING, null)
          return generation
      }
+diff --git a/app/src/main/java/com/nuvio/tv/core/sync/MediaServerSyncService.kt b/app/src/main/java/com/nuvio/tv/core/sync/MediaServerSyncService.kt
+index 460f1ce..3115994 100644
+--- a/app/src/main/java/com/nuvio/tv/core/sync/MediaServerSyncService.kt
++++ b/app/src/main/java/com/nuvio/tv/core/sync/MediaServerSyncService.kt
+@@ -219,6 +219,7 @@ class MediaServerSyncService @Inject constructor(
+     }
+ 
+     private fun canSync(profileId: Int): Boolean =
++        false && // Nuvio Mod: media servers not used, no account sync
+         authManager.authState.value is AuthState.FullAccount &&
+             profileManager.activeProfileId.value == profileId
+ 
 diff --git a/app/src/main/java/com/nuvio/tv/core/torrent/TorrentSettings.kt b/app/src/main/java/com/nuvio/tv/core/torrent/TorrentSettings.kt
 index 3f0eed5..46e2d58 100644
 --- a/app/src/main/java/com/nuvio/tv/core/torrent/TorrentSettings.kt
@@ -1676,6 +1719,19 @@ index 7d5bd8e..44dad50 100644
      if (reportsAvailable && state.playbackIssueReportsEnabled && !state.playbackIssueReportStatus.isReportBusyOrDone) add(PlayerControlAction.REPORT)
 +    remove(PlayerControlAction.WATCH_PARTY) // Nuvio Mod: watch party not used
  }
+diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerScreen.kt b/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerScreen.kt
+index d5df468..6772fda 100644
+--- a/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerScreen.kt
++++ b/app/src/main/java/com/nuvio/tv/ui/screens/player/PlayerScreen.kt
+@@ -256,7 +256,7 @@ fun PlayerScreen(
+     val isV2 = LocalV2Appearance.current != null
+     val uiState = savedUiState.copy(controlLayout = com.nuvio.tv.data.local.PlayerControlLayout.effective(savedUiState.controlLayout, isV2))
+     val playerBadges = rememberPlayerBadges(viewModel, uiState)
+-    PartyPlayerBinding(viewModel)
++    if (false) PartyPlayerBinding(viewModel) // Nuvio Mod: watch party not used
+     val partyState by rememberPartyRuntime().state.collectAsState()
+     val cinematicGlass = LocalV2Appearance.current?.visualStyle == com.nuvio.tv.domain.model.VisualStyle.CINEMATIC_GLASS
+     val v2Focus = remember { V2PlayerFocusState() }
 diff --git a/app/src/main/java/com/nuvio/tv/ui/screens/profile/ModProfileStart.kt b/app/src/main/java/com/nuvio/tv/ui/screens/profile/ModProfileStart.kt
 new file mode 100644
 index 0000000..e2897a1

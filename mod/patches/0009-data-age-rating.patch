@@ -101,6 +101,18 @@ index f6ac648..d7bc579 100644
          released = released,
          country = country,
          imdbId = imdbId,
+diff --git a/app/src/main/java/com/nuvio/tv/data/mediaserver/ServerUserStateProjection.kt b/app/src/main/java/com/nuvio/tv/data/mediaserver/ServerUserStateProjection.kt
+index de8d825..d621e11 100644
+--- a/app/src/main/java/com/nuvio/tv/data/mediaserver/ServerUserStateProjection.kt
++++ b/app/src/main/java/com/nuvio/tv/data/mediaserver/ServerUserStateProjection.kt
+@@ -66,6 +66,7 @@ class ServerUserStateProjection internal constructor(
+     private val externalIdCache = ConcurrentHashMap<String, TrackingExternalIds>()
+ 
+     fun start() {
++        if (true) return // Nuvio Mod: media servers not used
+         scope.launch {
+             catalog.detailsLoaded.collect { details ->
+                 guarded("apply server user state") { apply(details) }
 diff --git a/app/src/main/java/com/nuvio/tv/data/remote/dto/CatalogResponseDto.kt b/app/src/main/java/com/nuvio/tv/data/remote/dto/CatalogResponseDto.kt
 index dd56595..9c88148 100644
 --- a/app/src/main/java/com/nuvio/tv/data/remote/dto/CatalogResponseDto.kt
